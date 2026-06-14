@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Outback Helicopter Airwork NT — Flight Paperwork</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -31,7 +34,7 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
-  font-family:-apple-system,'SF Pro Text','Helvetica Neue',Arial,sans-serif;
+  font-family:'Inter',-apple-system,'Helvetica Neue',Arial,sans-serif;
   font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;}
 body{padding-bottom:env(safe-area-inset-bottom);}
 button{font-family:inherit;}
@@ -90,17 +93,22 @@ h1.page{font-size:19px;font-weight:800;letter-spacing:-.2px;margin:2px 0 14px;co
 /* ── Buttons ─────────────────────────────────────────────── */
 .btn{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
-  min-height:52px;border-radius:var(--r);border:0;font-size:15.5px;font-weight:700;
-  letter-spacing:.1px;cursor:pointer;padding:10px 18px;transition:filter .1s,transform .1s;
+  min-height:54px;border-radius:var(--r);border:2px solid transparent;font-size:16px;font-weight:700;
+  letter-spacing:.2px;cursor:pointer;padding:10px 18px;transition:filter .12s,transform .1s,box-shadow .12s;
+  -webkit-tap-highlight-color:transparent;
 }
-.btn:active{transform:scale(.982);filter:brightness(.93);}
-.btn.primary{background:var(--navy);color:#fff;}
+.btn:active{transform:scale(.975);filter:brightness(.88);}
+.btn.primary{background:var(--navy);color:#fff;border-color:var(--navy);}
+.btn.primary:active{background:var(--navy-mid);}
 .btn.amber{
-  background:var(--orange);color:#fff;
-  box-shadow:0 2px 6px rgba(200,95,10,.3);
+  background:var(--orange);color:#fff;border-color:var(--orange-dk);
+  box-shadow:0 3px 10px rgba(200,95,10,.4);
+  font-size:17px;letter-spacing:.3px;
 }
-.btn.ghost{background:var(--card);color:var(--navy);border:1px solid #C8CAD4;}
-.btn.danger{background:var(--red);color:#fff;}
+.btn.amber:active{background:var(--orange-dk);box-shadow:none;}
+.btn.ghost{background:#fff;color:var(--navy);border:2px solid var(--navy);font-weight:700;}
+.btn.ghost:active{background:#EEF0F8;}
+.btn.danger{background:var(--red);color:#fff;border-color:#9B1A14;}
 .btn.small{min-height:40px;font-size:14px;width:auto;padding:7px 16px;}
 .btn[disabled]{opacity:.38;pointer-events:none;}
 .btnrow{display:flex;gap:10px;margin-top:12px;}
@@ -315,16 +323,25 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 }
 .form-cat:first-of-type{border-top:0;margin-top:0;}
 .form-item{
-  display:flex;align-items:center;gap:10px;padding:10px 8px;
-  border-radius:7px;cursor:pointer;border:1px solid transparent;transition:background .08s;
+  display:flex;align-items:center;gap:12px;padding:13px 12px;
+  border-radius:9px;cursor:pointer;border:2px solid transparent;
+  transition:background .1s,border-color .1s;margin-bottom:2px;
+  -webkit-tap-highlight-color:transparent;
 }
-.form-item:active,.form-item.sel{background:rgba(24,34,74,.06);border-color:rgba(24,34,74,.25);}
-.form-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.form-item:active{background:rgba(24,34,74,.1);border-color:var(--navy);}
+.form-item.sel{
+  background:var(--navy);border-color:var(--orange);
+  box-shadow:0 2px 8px rgba(14,22,60,.25);
+}
+.form-item.sel .fname{color:#fff;}
+.form-item.sel .fno{color:rgba(255,255,255,.65);}
+.form-item.sel .form-dot{box-shadow:0 0 0 2px rgba(255,255,255,.35);}
+.form-dot{width:9px;height:9px;border-radius:50%;flex:none;}
 .dot-safety{background:var(--orange);}
-.dot-flight{background:var(--navy);}
+.dot-flight{background:#4C8EEF;}
 .dot-maint{background:var(--mut);}
-.form-item .fname{font-weight:700;font-size:14.5px;color:var(--navy);flex:1;}
-.form-item .fno{color:var(--mut);font-size:12px;white-space:nowrap;}
+.form-item .fname{font-weight:700;font-size:15px;color:var(--navy);flex:1;}
+.form-item .fno{color:var(--mut);font-size:12.5px;white-space:nowrap;font-weight:600;}
 
 /* ── VH- entry ───────────────────────────────────────────── */
 .vh-entry{display:flex;align-items:stretch;gap:0;}
@@ -1043,7 +1060,107 @@ const FORM_DEFS = [{
    Weights in kg. Arms in mm from datum per AFM.
    Aircraft without iBal data are flagged verified:false.
    ================================================================ */
-function makeWb(bew, bewArm, bewLat, mtow, fuelDensity, source, verified) {
+/* ── CG envelope polygons extracted from iBal PDFs ───────────── */
+/* All arms in mm from datum, weights in kg. Polygon vertices listed
+   clockwise starting from lower-left (Fwd, MinTOW). */
+const CG_R22 = {
+  pilotArm:1981, paxArm:1981, fuelArm:2700, baggageArm:2515,
+  poly:[[2426,417],[2591,417],[2591,533],[2540,621],[2451,621],[2426,578]],
+  armMin:2350, armMax:2750, wMin:350, wMax:700
+};
+const CG_CABRI = {
+  pilotArm:1300, paxArm:1300, fuelArm:1833, baggageArm:1854,
+  poly:[[1850,471],[2120,471],[1915,550],[1915,700],[1850,700]],
+  armMin:1750, armMax:2300, wMin:400, wMax:750
+};
+const CG_BELL206 = {
+  pilotArm:1651, paxArm:2147, fuelArm:2797, baggageArm:3759,
+  poly:[[2692,907],[2901,907],[2901,1100],[2835,1452],[2814,1520],[2715,1520],[2692,1452]],
+  armMin:2600, armMax:3050, wMin:800, wMax:1600
+};
+const CG_BELL206S = {
+  pilotArm:1651, paxArm:2147, fuelArm:2797, baggageArm:3759,
+  poly:[[2692,907],[2901,907],[2901,1100],[2835,1452],[2692,1452]],
+  armMin:2600, armMax:3100, wMin:700, wMax:1500
+};
+const CG_R44I = {
+  pilotArm:1257, paxArm:1638, fuelArm:2642, baggageArm:1118,
+  poly:[[2337,703],[2604,703],[2604,907],[2489,1089],[2362,1089],[2337,998]],
+  armMin:2200, armMax:2800, wMin:600, wMax:1200
+};
+const CG_R44II = {
+  pilotArm:1257, paxArm:1638, fuelArm:2642, baggageArm:1118,
+  poly:[[2337,726],[2604,726],[2604,953],[2489,1134],[2362,1134],[2337,1043]],
+  armMin:2200, armMax:2800, wMin:600, wMax:1300
+};
+
+/* Point-in-polygon ray-casting (arm=x, kg=y) */
+function cgInPoly(arm, kg, poly) {
+  let inside = false;
+  for (let i=0,j=poly.length-1; i<poly.length; j=i++) {
+    const [xi,yi]=poly[i],[xj,yj]=poly[j];
+    if ((yi>kg)!==(yj>kg) && arm<(xj-xi)*(kg-yi)/(yj-yi)+xi) inside=!inside;
+  }
+  return inside;
+}
+
+/* SVG balance map — call after every wbCalc update */
+function cgMapSvg(cgArm, weight, W) {
+  const E = W.cgEnv; if (!E||!E.poly) return '';
+  const VW=340, VH=215, L=48, R=12, T=24, B=38;
+  const CW=VW-L-R, CH=VH-T-B;
+  const toX = a => L+(a-E.armMin)/(E.armMax-E.armMin)*CW;
+  const toY = w => T+(1-(w-E.wMin)/(E.wMax-E.wMin))*CH;
+  const fx = v => v.toFixed(1);
+
+  /* grid */
+  const aRange=E.armMax-E.armMin, wRange=E.wMax-E.wMin;
+  const aStep=aRange<=300?50:aRange<=500?100:200;
+  const wStep=wRange<=300?50:wRange<=600?100:200;
+  let g='';
+  for(let a=Math.ceil(E.armMin/aStep)*aStep;a<=E.armMax;a+=aStep){
+    const x=fx(toX(a));
+    g+=`<line x1="${x}" y1="${T}" x2="${x}" y2="${T+CH}" stroke="#EAEAEA" stroke-width="0.7"/>`;
+    g+=`<text x="${x}" y="${T+CH+13}" text-anchor="middle" font-size="9" fill="#AAA">${a}</text>`;
+  }
+  for(let w=Math.ceil(E.wMin/wStep)*wStep;w<=E.wMax;w+=wStep){
+    const y=fx(toY(w));
+    g+=`<line x1="${L}" y1="${y}" x2="${L+CW}" y2="${y}" stroke="#EAEAEA" stroke-width="0.7"/>`;
+    g+=`<text x="${L-4}" y="${(parseFloat(y)+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="#AAA">${w}</text>`;
+  }
+
+  /* envelope polygon */
+  const pts=E.poly.map(([a,w])=>`${fx(toX(a))},${fx(toY(w))}`).join(' ');
+
+  /* CG & BEW */
+  const hasData = weight>0 && cgArm>0;
+  const inside  = hasData ? cgInPoly(cgArm,weight,E.poly) : null;
+  const dotC    = inside===true?'#15803d':inside===false?'#dc2626':'#9ca3af';
+  const bewX=fx(toX(W.emptyLongArm)), bewY=fx(toY(W.emptyWeight));
+  const cgX=hasData?fx(toX(cgArm)):null, cgY=hasData?fx(toY(weight)):null;
+  const statusTxt = inside===true ? `✓ CG WITHIN LIMITS — ${cgArm} mm / ${weight} kg`
+                  : inside===false? `✗ CG OUTSIDE LIMITS — ${cgArm} mm / ${weight} kg`
+                  : `BEW ref — ${W.emptyLongArm} mm / ${W.emptyWeight} kg`;
+  const statusC = inside===true?'#15803d':inside===false?'#dc2626':'#999';
+
+  return `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:${VW}px;height:auto;display:block">
+  <text x="${VW/2}" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#18224A" font-family="system-ui,sans-serif">LONGITUDINAL BALANCE MAP</text>
+  ${g}
+  <rect x="${L}" y="${T}" width="${CW}" height="${CH}" fill="none" stroke="#CCC" stroke-width="0.7"/>
+  <polygon points="${pts}" fill="#DCFCE7" fill-opacity="0.8" stroke="#16a34a" stroke-width="1.8"/>
+  <text x="${L+6}" y="${T+11}" font-size="8" fill="#16a34a" font-family="system-ui,sans-serif" font-weight="600">SAFE ZONE</text>
+  <text x="${L+6}" y="${T+CH-5}" font-size="8" fill="#888" font-family="system-ui,sans-serif">FWD →</text>
+  <text x="${L+CW-6}" y="${T+CH-5}" font-size="8" fill="#888" text-anchor="end" font-family="system-ui,sans-serif">← AFT</text>
+  <text x="${L-3}" y="${T-4}" font-size="8" fill="#AAA" text-anchor="end" font-family="system-ui,sans-serif">kg</text>
+  <text x="${L+CW/2}" y="${VH-2}" font-size="8" fill="#AAA" text-anchor="middle" font-family="system-ui,sans-serif">Longitudinal arm (mm from datum)</text>
+  <circle cx="${bewX}" cy="${bewY}" r="4" fill="#9ca3af"/>
+  <text x="${(parseFloat(bewX)+7).toFixed(1)}" y="${(parseFloat(bewY)+3.5).toFixed(1)}" font-size="8" fill="#9ca3af" font-family="system-ui,sans-serif">BEW</text>
+  ${hasData?`<circle cx="${cgX}" cy="${cgY}" r="8" fill="${dotC}" stroke="white" stroke-width="2.5"/>`:''}
+  <text x="${VW/2}" y="${VH-15}" text-anchor="middle" font-size="9" fill="${statusC}" font-weight="700" font-family="system-ui,sans-serif">${statusTxt}</text>
+</svg>`;
+}
+
+function makeWb(bew, bewArm, bewLat, mtow, fuelDensity, source, verified, cgData) {
   return {
     dummy: !verified,
     verified: !!verified,
@@ -1053,6 +1170,7 @@ function makeWb(bew, bewArm, bewLat, mtow, fuelDensity, source, verified) {
     emptyLatArm: bewLat,
     mtow: mtow,
     fuelDensity: fuelDensity || 0.720,
+    cgEnv: cgData || null,
     /* CG limits not entered — weight-only dispatch check is used */
     cgFwd: 0, cgAft: 0, latMin: 0, latMax: 0,
     seats: [], baggage: [], fuel: []
@@ -1073,30 +1191,29 @@ const DEFAULT_SETTINGS = {
   fleet: [
     /* iBal-verified aircraft ------------------------------------ */
     { id:"a2", callsign:"VH-RYT", type:"Robinson R22 Beta II",
-      wb: makeWb(411.0, 2650.0, -22.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(411.0, 2650.0, -22.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
     { id:"a3", callsign:"VH-HYG", type:"Robinson R22 Beta II",
-      wb: makeWb(420.0, 2666.0,   0.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(420.0, 2666.0,   0.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
     { id:"a4", callsign:"VH-RYO", type:"Robinson R22 Beta II",
-      wb: makeWb(405.0, 2644.0,  -1.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(405.0, 2644.0,  -1.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
     { id:"a5", callsign:"VH-8OH", type:"Guimbal Cabri G2",
-      wb: makeWb(428.1, 2226.5, -15.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(428.1, 2226.5, -15.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_CABRI) },
     { id:"a6", callsign:"VH-8G2", type:"Guimbal Cabri G2",
-      wb: makeWb(431.0, 2211.0, -12.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true) },
-    /* W&B data not yet supplied — enter BEW & MaxTOW in Settings */
+      wb: makeWb(431.0, 2211.0, -12.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_CABRI) },
     { id:"a1",  callsign:"VH-FJB", type:"Bell 206B3 JetRanger (increased GW)",
-      wb: makeWb(873.0, 2958.0,  -1.0, 1519.5, 0.800, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(873.0, 2958.0,  -1.0, 1519.5, 0.800, 'iBal Solution 14 Jun 2026', true, CG_BELL206) },
     { id:"a1s", callsign:"VH-FJB", type:"Bell 206B3 JetRanger (Spray equipped)",
-      wb: makeWb(797.0, 2992.0,  -1.0, 1451.5, 0.800, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(797.0, 2992.0,  -1.0, 1451.5, 0.800, 'iBal Solution 14 Jun 2026', true, CG_BELL206S) },
     { id:"a7",  callsign:"VH-OBA", type:"Robinson R44 Raven I",
-      wb: makeWb(680.0, 2706.0,  0.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(680.0, 2706.0,  0.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44I) },
     { id:"a7s", callsign:"VH-OBA", type:"Robinson R44 Raven I (Spray equipped)",
-      wb: makeWb(747.0, 2649.0, 94.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(747.0, 2649.0, 94.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44I) },
     { id:"a8",  callsign:"VH-BEG", type:"Robinson R44 Raven II (Bladder tanks)",
-      wb: makeWb(693.0, 2718.0, -4.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(693.0, 2718.0, -4.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) },
     { id:"a9",  callsign:"VH-IBS", type:"Robinson R44 Raven II (Bladder tanks)",
-      wb: makeWb(711.1, 2712.0,  -6.8, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true) },
+      wb: makeWb(711.1, 2712.0,  -6.8, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) },
     { id:"a9s", callsign:"VH-IBS", type:"Robinson R44 Raven II (Spray equipped)",
-      wb: makeWb(778.0, 2658.0,  -5.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true) }
+      wb: makeWb(778.0, 2658.0,  -5.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) }
   ]
 };
 
@@ -1415,17 +1532,34 @@ const App = {
     const due = this.flights.filter(f => f.status === 'queued' || f.status === 'failed');
     if (!due.length) return;
     this._sending = true; this.updatePill();
+    let sent = 0, failed = 0;
     for (const f of due) {
-      await new Promise(r => setTimeout(r, 1200));   // simulate network
-      /* STUB — real version: email via ops mailbox + upload to Google Drive
-         folder  <driveFolder>/<callsign>/<YYYY-MM>/<bundleName>.pdf  with retry */
-      f.status = 'sent'; f.sentAt = Date.now();
-      f.sendNote = 'SIMULATED — sending is stubbed in this build. Nothing left the iPad.';
+      try {
+        const payload = { ...f, opsEmail: this.S.opsEmail };
+        const res = await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json.ok) {
+          f.status = 'sent'; f.sentAt = Date.now();
+          f.sendNote = json.spacesUrl ? 'Archived to DO Spaces' : 'Emailed to ops';
+          sent++;
+        } else {
+          f.status = 'failed'; f.failNote = json.error || ('HTTP ' + res.status);
+          failed++;
+        }
+      } catch (err) {
+        f.status = 'failed'; f.failNote = err.message;
+        failed++;
+      }
       await DB.put('flights', f);
     }
     this._sending = false; this.updatePill();
     if ($('scr-home').classList.contains('active')) this.renderHome();
-    toast('✓ ' + due.length + ' bundle' + (due.length > 1 ? 's' : '') + ' sent (simulated)');
+    if (sent)   toast('✓ ' + sent   + ' bundle' + (sent   > 1 ? 's' : '') + ' emailed to ops');
+    if (failed) toast('⚠ ' + failed + ' bundle' + (failed > 1 ? 's' : '') + ' failed — will retry');
   },
   showQueue() {
     const items = this.flights.filter(f => f.status !== 'draft');
@@ -1495,7 +1629,8 @@ const App = {
     $('start-acinfo').innerHTML = '<b>' + esc(ac.callsign) + '</b> · ' + esc(ac.type) + '<br>' + wbStatus;
   },
   async beginFlight() {
-    const ac = this.S.fleet.find(a => a.id === $('start-config').value);
+    let ac = this.S.fleet.find(a => a.id === $('start-config').value);
+    if (!ac) ac = this.S.fleet.find(a => a.callsign === $('start-callsign').value);
     if (!ac) return toast('Select a helicopter');
     const formId = this._selectedFormId || FORM_DEFS[0].id;
     if (!FORM_DEFS.find(d => d.id === formId)) return toast('Select a form before beginning');
@@ -2019,7 +2154,8 @@ const App = {
 
   /* ================== STEP 2 — WEIGHT & BALANCE ================== */
   renderWb() {
-    const ac = (this.settings.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
+    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+               (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     const f = this.flight.wb;
     if (!f.kg) f.kg = { pilot: 0, pax: 0, fuel: 0, baggage: 0 };
@@ -2096,6 +2232,9 @@ const App = {
       '<div id="wb-verdict">Enter weights above</div>' +
       '</div>' +
 
+      /* Balance map */
+      (W.cgEnv ? '<div id="wb-cg" style="margin:14px 0 4px;padding:0 2px"></div>' : '') +
+
       '<div class="btnrow" style="margin-top:16px;">' +
       '<button class="btn ghost" onclick="App.gotoStep(0)">‹ Back</button>' +
       '<button class="btn amber" onclick="App.completeWb()">Confirm &amp; continue ›</button></div>';
@@ -2106,7 +2245,8 @@ const App = {
 
   wbToggleFuelMode() {
     const f = this.flight.wb;
-    const W = ((this.settings.fleet || []).find(a => a.callsign === this.flight.callsign) || {}).wb || {};
+    const W = ((this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+               (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {}).wb || {};
     const fuelDens = W.fuelDensity || 0.720;
     /* preserve current fuel value converted to new unit */
     const el = $('wb-fuel');
@@ -2124,7 +2264,8 @@ const App = {
   },
 
   wbCalc() {
-    const ac = (this.settings.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
+    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+               (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     const f = this.flight.wb;
     if (!f.kg) f.kg = {};
@@ -2141,7 +2282,8 @@ const App = {
 
     const bew  = W.emptyWeight || 0;
     const mtow = W.mtow || 0;
-    const total = bew + f.kg.pilot + f.kg.pax + (fuelMode === 'kg' ? f.kg.fuel : fuelKg) + f.kg.baggage;
+    const fuelKgFinal = fuelMode === 'kg' ? f.kg.fuel : fuelKg;
+    const total = bew + f.kg.pilot + f.kg.pax + fuelKgFinal + f.kg.baggage;
 
     const totalEl = $('wb-total');
     if (totalEl) totalEl.textContent = total.toFixed(1);
@@ -2149,6 +2291,18 @@ const App = {
     const entered = f.kg.pilot > 0 || f.kg.pax > 0 || fuelKg > 0 || f.kg.baggage > 0;
     const pass = entered && mtow > 0 && total <= mtow;
     const over = mtow > 0 && total > mtow;
+
+    /* ── CG arm from moments ─────────────────────────────────── */
+    let cgArm = W.emptyLongArm || 0;
+    if (W.cgEnv && total > 0) {
+      const E = W.cgEnv;
+      const bewMom   = bew            * (W.emptyLongArm || 0);
+      const pilotMom = f.kg.pilot     * (E.pilotArm    || W.emptyLongArm);
+      const paxMom   = f.kg.pax       * (E.paxArm      || W.emptyLongArm);
+      const fuelMom  = fuelKgFinal    * (E.fuelArm     || W.emptyLongArm);
+      const bagMom   = f.kg.baggage   * (E.baggageArm  || W.emptyLongArm);
+      cgArm = (bewMom + pilotMom + paxMom + fuelMom + bagMom) / total;
+    }
 
     const box = $('wb-result'), verdict = $('wb-verdict');
     const row = $('wb-total-row');
@@ -2170,17 +2324,31 @@ const App = {
       }
     }
 
-    f.result = { total: +total.toFixed(1), mtow, fuelKg: +fuelKg.toFixed(2), pass, entered };
+    /* ── Update balance map ──────────────────────────────────── */
+    const cgEl = $('wb-cg');
+    if (cgEl && W.cgEnv) {
+      cgEl.innerHTML = cgMapSvg(+cgArm.toFixed(1), +total.toFixed(1), W);
+    }
+
+    f.result = { total: +total.toFixed(1), mtow, fuelKg: +fuelKg.toFixed(2), pass, entered,
+                 cgArm: +cgArm.toFixed(1), cgInLimits: W.cgEnv ? cgInPoly(cgArm, total, W.cgEnv.poly) : null };
     this.saveDraft();
   },
 
   completeWb() {
-    const ac = (this.settings.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
+    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+               (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     if (!W.verified || !W.emptyWeight) return toast('Enter aircraft W&B data in Settings first');
     const r = this.flight.wb.result;
     if (!r || !r.entered) return toast('Enter at least pilot weight or fuel before continuing');
     if (!r.pass) return toast('Over MTOW — reduce load before continuing');
+    /* Copy CG envelope + BEW reference into flight bundle so server can draw the chart */
+    if (W.cgEnv) {
+      this.flight.wb.cgEnv = W.cgEnv;
+      this.flight.wb.emptyLongArm = W.emptyLongArm || 0;
+      this.flight.wb.emptyWeight  = W.emptyWeight  || 0;
+    }
     this.flight.wb.done = true;
     this.flight.wb.completedAt = Date.now();
     this.saveDraftNow();

@@ -1,7 +1,7 @@
 'use strict';
 /* ============================================================
    Outback Helicopter Airwork NT — Flight Paperwork API
-   POST /send  →  generate PDF, send via Office 365, file to OneDrive
+   POST /api/send  →  generate PDF, send via Office 365, file to OneDrive
    All via Microsoft Graph API — one set of credentials for everything
    ============================================================ */
 
@@ -204,6 +204,11 @@ function buildPDF(bundle) {
         kv('Fuel',    (kg.fuel    || 0) + ' kg  (' + (bundle.wb.fuelL || 0) + ' L)');
         kv('Baggage', (kg.baggage || 0) + ' kg');
       }
+      /* CG balance map */
+      if (bundle.wb.cgEnv && wb.cgArm) {
+        drawCgChart(doc, bundle.wb.cgEnv, wb.cgArm, wb.total,
+                    bundle.wb.emptyLongArm || 0, bundle.wb.emptyWeight || 0);
+      }
     }
 
     /* SWMS acknowledgments */
@@ -274,6 +279,105 @@ function buildPDF(bundle) {
 
     doc.end();
   });
+}
+
+/* ── CG balance map (PDFKit vector drawing) ───────────────── */
+function drawCgChart(doc, E, cgArm, weight, bewArm, bewWeight) {
+  const L = 70, T = doc.y + 10, CW = 340, CH = 180;
+  const R = L + CW, B = T + CH;
+
+  /* axis range */
+  const aMin = E.armMin, aMax = E.armMax, wMin = E.wMin, wMax = E.wMax;
+  const toX = a => L + (a - aMin) / (aMax - aMin) * CW;
+  const toY = w => T + (1 - (w - wMin) / (wMax - wMin)) * CH;
+
+  /* check height — add page if needed */
+  if (T + CH + 40 > 750) { doc.addPage(); return drawCgChart(doc, E, cgArm, weight, bewArm, bewWeight); }
+
+  const NAVY = '#18224A', GREEN = '#16a34a', RED = '#dc2626', MUT = '#73778A';
+
+  /* title */
+  doc.font('Helvetica-Bold').fontSize(9).fillColor(NAVY)
+     .text('LONGITUDINAL BALANCE MAP', L, T - 14, { width: CW, align: 'center' });
+
+  /* grid */
+  const aRange = aMax - aMin, wRange = wMax - wMin;
+  const aStep = aRange <= 300 ? 50 : aRange <= 500 ? 100 : 200;
+  const wStep = wRange <= 300 ? 50 : wRange <= 600 ? 100 : 200;
+  doc.save();
+  for (let a = Math.ceil(aMin / aStep) * aStep; a <= aMax; a += aStep) {
+    const x = toX(a);
+    doc.moveTo(x, T).lineTo(x, B).stroke('#EAEAEA');
+    doc.font('Helvetica').fontSize(7).fillColor(MUT).text(String(a), x - 14, B + 3, { width: 28, align: 'center' });
+  }
+  for (let w = Math.ceil(wMin / wStep) * wStep; w <= wMax; w += wStep) {
+    const y = toY(w);
+    doc.moveTo(L, y).lineTo(R, y).stroke('#EAEAEA');
+    doc.font('Helvetica').fontSize(7).fillColor(MUT).text(String(w), L - 30, y - 4, { width: 26, align: 'right' });
+  }
+  doc.restore();
+
+  /* border */
+  doc.rect(L, T, CW, CH).lineWidth(0.5).stroke('#CCCCCC');
+
+  /* envelope polygon (filled) */
+  if (E.poly && E.poly.length >= 3) {
+    const pts = E.poly.map(([a, w]) => ({ x: toX(a), y: toY(w) }));
+    doc.save();
+    doc.moveTo(pts[0].x, pts[0].y);
+    pts.slice(1).forEach(p => doc.lineTo(p.x, p.y));
+    doc.closePath().fillColor('#DCFCE7').fill();
+    doc.moveTo(pts[0].x, pts[0].y);
+    pts.slice(1).forEach(p => doc.lineTo(p.x, p.y));
+    doc.closePath().lineWidth(1.5).stroke(GREEN);
+    doc.restore();
+    doc.font('Helvetica-Bold').fontSize(7).fillColor(GREEN).text('SAFE ZONE', L + 4, T + 4);
+  }
+
+  /* axis labels */
+  doc.font('Helvetica').fontSize(7).fillColor(MUT)
+     .text('kg', L - 28, T - 4)
+     .text('Longitudinal arm (mm from datum)', L, B + 13, { width: CW, align: 'center' })
+     .text('FWD →', L + 4, B - 12)
+     .text('← AFT', R - 30, B - 12);
+
+  /* BEW dot */
+  if (bewArm && bewWeight) {
+    const bx = toX(bewArm), by = toY(bewWeight);
+    doc.circle(bx, by, 3).fillColor('#9CA3AF').fill();
+    doc.font('Helvetica').fontSize(6).fillColor('#9CA3AF').text('BEW', bx + 4, by - 3);
+  }
+
+  /* CG dot */
+  const inside = cgInPolyPdf(cgArm, weight, E.poly);
+  const dotColor = inside === true ? '#15803d' : inside === false ? RED : '#9CA3AF';
+  const cx = toX(cgArm), cy = toY(weight);
+  if (cx >= L && cx <= R && cy >= T && cy <= B) {
+    doc.circle(cx, cy, 6).fillColor(dotColor).fill();
+    doc.circle(cx, cy, 6).lineWidth(1.5).stroke('#FFFFFF');
+  }
+
+  /* status line */
+  const statusTxt = inside === true
+    ? `✓ CG WITHIN LIMITS — ${cgArm} mm / ${weight} kg`
+    : inside === false
+    ? `✗ CG OUTSIDE LIMITS — ${cgArm} mm / ${weight} kg`
+    : `CG: ${cgArm} mm / ${weight} kg`;
+  doc.font('Helvetica-Bold').fontSize(8).fillColor(dotColor)
+     .text(statusTxt, L, B + 22, { width: CW, align: 'center' });
+
+  doc.y = B + 36;
+  doc.fillColor('#1C1F28');
+}
+
+function cgInPolyPdf(arm, kg, poly) {
+  if (!poly || poly.length < 3) return null;
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > kg) !== (yj > kg) && arm < (xj - xi) * (kg - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 /* ── Escape HTML ──────────────────────────────────────────── */

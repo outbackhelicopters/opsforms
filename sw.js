@@ -1,9 +1,23 @@
 /* Heli Ops PWA service worker — caches the app shell so it works fully offline. */
-const CACHE = 'heliops-v19';
-const ASSETS = ['./', './index.html', './flight-ops.html', './job-advice.html', './job-sw.js'];
+const CACHE = 'heliops-v20';
+/* Core files that MUST cache (fail SW install if any missing) */
+const CORE = ['./', './index.html', './sw.js'];
+/* Extra files — cached best-effort so SW install still succeeds even if temporarily 404 */
+const EXTRA = ['./flight-ops.html', './job-advice.html', './job-sw.js'];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then(async (c) => {
+      await c.addAll(CORE);
+      /* Cache extras gracefully — don't abort install if they're temporarily unavailable */
+      for (const url of EXTRA) {
+        try {
+          const res = await fetch(url);
+          if (res.ok) await c.put(url, res);
+        } catch (_) { /* ignore */ }
+      }
+    }).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {

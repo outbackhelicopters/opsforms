@@ -1,7 +1,7 @@
 'use strict';
 /* ============================================================
    Outback Helicopter Airwork NT — Flight Paperwork API
-   POST /api/send  →  generate PDF, send via Office 365, file to OneDrive
+   POST /send  →  generate PDF, send via Office 365, file to OneDrive
    All via Microsoft Graph API — one set of credentials for everything
    ============================================================ */
 
@@ -15,10 +15,10 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
 /* ── Health check ─────────────────────────────────────────── */
-app.get('/api/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
 /* ── Send bundle ──────────────────────────────────────────── */
-app.post('/api/send', async (req, res) => {
+app.post('/send', async (req, res) => {
   const bundle = req.body;
   if (!bundle || !bundle.callsign) return res.status(400).json({ ok: false, error: 'Invalid bundle' });
 

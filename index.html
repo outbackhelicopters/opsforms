@@ -2448,7 +2448,7 @@ const App = {
       '<div class="kv"><div class="k">Email to</div><div class="v">' + esc(this.S.opsEmail) + '</div></div>' +
       '<div class="kv"><div class="k">Google Drive</div><div class="v">' + esc(this.S.driveFolder) + ' / ' + esc(f.callsign) + ' / ' + ns.date.slice(0, 7) + ' /</div></div>' +
       '<div class="kv"><div class="k">If offline</div><div class="v">Saved on this iPad and sent automatically when a connection returns</div></div>' +
-      '<div class="note">Sending is <b>stubbed</b> in this build — the bundle is queued and marked "sent (simulated)" so you can test the full flow.</div></div>' +
+      '</div>' +
       '<div class="btnrow"><button class="btn ghost" onclick="App.gotoStep(2)">‹ Back</button>' +
       '<button class="btn amber bigaction" ' + (allOk ? '' : 'disabled ') + 'onclick="App.finalize()">Complete flight paperwork ✓</button></div>';
   },
@@ -2457,6 +2457,14 @@ const App = {
     f.bundleName = f.callsign + '_' + ns.date + '_' + ns.time.replace(':', '');
     f.status = 'queued';
     f.queuedAt = Date.now();
+    /* Capture GPS location at time of submission */
+    if (navigator.geolocation) {
+      try {
+        const pos = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 60000, enableHighAccuracy: true }));
+        f.location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy) };
+      } catch (_) { /* GPS unavailable or denied — omit silently */ }
+    }
     await DB.put('flights', f);
     const fl = f;
     this.goHome();

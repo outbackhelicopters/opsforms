@@ -355,6 +355,15 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .count-badge.part{background:var(--or-bg);color:var(--or-t);}
 .warn-banner{background:#FEF1F0;border:2px solid var(--red);border-radius:var(--r);padding:10px 14px;font-weight:800;color:var(--red);font-size:14.5px;margin:8px 0;text-transform:uppercase;letter-spacing:.5px;text-align:center;}
 
+/* ── Crew rows ───────────────────────────────────────────── */
+.crew-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);}
+.crew-row:last-child{border-bottom:0;}
+.crew-row .crew-num{width:22px;font-size:12px;font-weight:700;color:var(--mut);flex:none;text-align:center;}
+.crew-row input{flex:1;min-width:0;font-size:15px;padding:8px 10px;min-height:40px;}
+.crew-row input.arn{flex:0 0 110px;font-size:14px;}
+.crew-row .crew-del{background:transparent;border:0;color:var(--mut);font-size:20px;cursor:pointer;padding:4px 6px;flex:none;line-height:1;}
+.crew-row .crew-del:hover{color:var(--red);}
+
 /* ── Toggle field rows (HIR/MDR) ─────────────────────────── */
 .tgl-field{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);}
 .tgl-field:last-of-type{border-bottom:0;}
@@ -1151,18 +1160,28 @@ class SigPad {
     this.c = canvas; this.onChange = onChange || (() => {});
     this.empty = true; this._setup();
   }
-  _setup() {
+  _initCtx() {
     const c = this.c, dpr = window.devicePixelRatio || 1;
-    const w = c.clientWidth || c.parentElement.clientWidth || 600;
-    const h = c.clientHeight || 190;
-    c.width = w * dpr; c.height = h * dpr;
+    const w = c.clientWidth || c.parentElement?.clientWidth || 600;
+    const h = c.clientHeight || 170;
+    if (w < 10) return false; // not laid out yet
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
     const x = this.ctx = c.getContext('2d');
-    x.scale(dpr, dpr);
+    x.setTransform(1,0,0,1,0,0); x.scale(dpr, dpr);
     x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
     x.lineWidth = 2.6; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = '#10131A';
+    return true;
+  }
+  _setup() {
+    const c = this.c, dpr = window.devicePixelRatio || 1;
+    this._initCtx();
+    // Re-init after layout settles (canvas may be inside hidden container)
+    requestAnimationFrame(() => { if (!this._initCtx()) setTimeout(() => this._initCtx(), 120); });
     let pts = [];
     const pos = e => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     c.addEventListener('pointerdown', e => {
+      // Re-init canvas dimensions if they don't match actual display size
+      if (c.clientWidth > 10 && Math.abs(c.width - c.clientWidth * dpr) > 4) { this._initCtx(); }
       e.preventDefault(); c.setPointerCapture(e.pointerId);
       pts = [pos(e)]; this._drawing = true;
     });
@@ -1322,6 +1341,36 @@ const App = {
       const [name, arn] = l.split(',').map(x => (x || '').trim());
       return { name, arn: arn || '' };
     });
+  },
+  _crewRowHtml(c, i) {
+    return '<div class="crew-row" id="crew-row-' + i + '">' +
+      '<span class="crew-num">' + (i+1) + '</span>' +
+      '<input type="text" class="crew-name" placeholder="Full name" value="' + esc(c.name||'') + '" oninput="App._renumberCrew()">' +
+      '<input type="text" class="crew-arn arn" placeholder="ARN" value="' + esc(c.arn||'') + '" inputmode="numeric" maxlength="7">' +
+      '<button class="crew-del" onclick="App.removeCrewRow(this)" title="Remove">×</button>' +
+      '</div>';
+  },
+  addCrewRow() {
+    const rows = document.getElementById('crew-rows');
+    const i = rows.children.length;
+    const div = document.createElement('div');
+    div.innerHTML = this._crewRowHtml({name:'',arn:''}, i);
+    rows.appendChild(div.firstChild);
+    rows.lastElementChild.querySelector('.crew-name').focus();
+  },
+  removeCrewRow(btn) {
+    const row = btn.closest('.crew-row');
+    if (document.querySelectorAll('.crew-row').length <= 1) return toast('At least one pilot is required');
+    row.remove(); this._renumberCrew();
+  },
+  _renumberCrew() {
+    document.querySelectorAll('.crew-row').forEach((r,i) => { const n = r.querySelector('.crew-num'); if(n) n.textContent = i+1; });
+  },
+  _collectCrewRows() {
+    return Array.from(document.querySelectorAll('.crew-row')).map(r => ({
+      name: (r.querySelector('.crew-name')?.value || '').trim(),
+      arn: (r.querySelector('.crew-arn')?.value || '').trim()
+    })).filter(c => c.name);
   },
 
   /* ---------- home ---------- */
@@ -2308,8 +2357,9 @@ const App = {
       '<span class="acklab">Data verified against iBal / POH for ' + esc(A.callsign) + '</span>' +
       '<button type="button" class="tgl' + (W.verified ? ' on' : '') + '" id="set-verified" onclick="this.classList.toggle(\'on\')"></button></div></div>' +
 
-      '<div class="card"><h2>Pilot List</h2><p class="sub">One per line: Name, ARN</p>' +
-      '<textarea id="set-crew" rows="5">' + esc(S.crew.map(c => c.name + ', ' + c.arn).join('\n')) + '</textarea></div>' +
+      '<div class="card"><h2>Pilot List</h2><p class="sub">Add every pilot who flies with Outback Helicopter. Their name will appear in the crew dropdown on every form.</p>' +
+      '<div id="crew-rows">' + S.crew.map((c,i) => App._crewRowHtml(c,i)).join('') + '</div>' +
+      '<button class="btn ghost small" style="margin-top:10px;" onclick="App.addCrewRow()">+ Add pilot</button></div>' +
 
       '<div class="card"><h2>Sending</h2><div class="grid2">' +
       inp('set-email', 'Operations email', S.opsEmail, 'email') +
@@ -2388,7 +2438,8 @@ const App = {
     const invalidAc = S.fleet.find(a => !validateVH(a.callsign));
     if (invalidAc) return toast('Invalid registration: ' + invalidAc.callsign + ' — must match VH-XXX format (2–3 alphanumeric characters after VH-)');
     S.opsEmail = g('set-email'); S.driveFolder = g('set-drive'); S.pin = pin;
-    S.crew = this.parseCrew($('set-crew').value);
+    S.crew = this._collectCrewRows();
+    if (!S.crew.length) return toast('Add at least one pilot');
     await this.saveSettings();
     toast('Settings saved');
     this.goHome();

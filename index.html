@@ -581,6 +581,20 @@ J. Blore, 0111222</textarea>
     <p class="sub">Select the paperwork required for this operation.</p>
     <div id="form-list-mount"></div>
   </div>
+  <div class="card">
+    <h2>Flight date &amp; time</h2>
+    <p class="sub">Defaults to now — adjust if completing paperwork after the fact.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:140px;">
+        <label class="fl">Date <span class="req">*</span></label>
+        <input type="date" id="start-date" style="width:100%;">
+      </div>
+      <div style="flex:1;min-width:120px;">
+        <label class="fl">Time <span class="req">*</span></label>
+        <input type="time" id="start-time" style="width:100%;">
+      </div>
+    </div>
+  </div>
   <div class="btnrow">
     <button class="btn ghost" onclick="App.goHome()">&lsaquo; Cancel</button>
     <button class="btn amber" onclick="App.beginFlight()">Begin paperwork &rsaquo;</button>
@@ -1595,6 +1609,11 @@ const App = {
     this.startAcCallsign();
     if (!this._selectedFormId) this._selectedFormId = 'form14';
     this.renderFormSelector();
+    /* Pre-fill date/time to now */
+    const _now = new Date();
+    const _pad = n => String(n).padStart(2,'0');
+    $('start-date').value = _now.getFullYear() + '-' + _pad(_now.getMonth()+1) + '-' + _pad(_now.getDate());
+    $('start-time').value = _pad(_now.getHours()) + ':' + _pad(_now.getMinutes());
     this.show('scr-start');
   },
   startAcCallsign() {
@@ -1646,9 +1665,13 @@ const App = {
     if (!ac) return toast('Select a helicopter');
     const formId = this._selectedFormId || FORM_DEFS[0].id;
     if (!FORM_DEFS.find(d => d.id === formId)) return toast('Select a form before beginning');
+    const _fd = $('start-date').value || todayISO();
+    const _ft = $('start-time').value || (() => { const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); })();
     this.flight = {
       id: 'f_' + Date.now(),
       createdAt: Date.now(),
+      flightDate: _fd,
+      flightTime: _ft,
       aircraftId: ac.id,
       callsign: ac.callsign,
       aircraftType: ac.type,
@@ -2457,14 +2480,6 @@ const App = {
     f.bundleName = f.callsign + '_' + ns.date + '_' + ns.time.replace(':', '');
     f.status = 'queued';
     f.queuedAt = Date.now();
-    /* Capture GPS location at time of submission */
-    if (navigator.geolocation) {
-      try {
-        const pos = await new Promise((res, rej) =>
-          navigator.geolocation.getCurrentPosition(res, rej, { timeout: 6000, maximumAge: 60000, enableHighAccuracy: true }));
-        f.location = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy) };
-      } catch (_) { /* GPS unavailable or denied — omit silently */ }
-    }
     await DB.put('flights', f);
     const fl = f;
     this.goHome();

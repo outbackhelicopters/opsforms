@@ -1,5 +1,5 @@
 /* Heli Ops PWA service worker — caches the app shell so it works fully offline. */
-const CACHE = 'heliops-v16';
+const CACHE = 'heliops-v17';
 const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', (e) => {

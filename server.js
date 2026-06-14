@@ -149,17 +149,6 @@ async function uploadToOneDrive(token, pdfBuffer, filename, callsign, month) {
 
 /* ── PDF builder ──────────────────────────────────────────── */
 async function buildPDF(bundle) {
-  /* Pre-fetch satellite map image if location + API key available */
-  let mapImageBuffer = null;
-  if (bundle.location?.lat && process.env.GOOGLE_MAPS_KEY) {
-    try {
-      const { lat, lng } = bundle.location;
-      const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=480x280&maptype=satellite&markers=color:red%7C${lat},${lng}&key=${process.env.GOOGLE_MAPS_KEY}`;
-      const mapRes = await fetch(mapUrl);
-      if (mapRes.ok) mapImageBuffer = Buffer.from(await mapRes.arrayBuffer());
-    } catch (e) { console.error('Map image fetch failed (non-fatal):', e.message); }
-  }
-
   return new Promise((resolve, reject) => {
     const doc    = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
     const chunks = [];
@@ -219,25 +208,14 @@ async function buildPDF(bundle) {
     kv('Form',     bundle.formName || '—');
     kv('Pilot',    bundle.sms?.values?.pilotName);
     kv('ARN',      bundle.sms?.values?.pilotArn);
-    kv('Date',     acstDate(ts) + ' (ACST)');
-    kv('Time',     acstTime(ts) + ' (ACST)');
+    /* Use pilot-set flight date/time if available, fall back to submission time */
+    const flightDateStr = bundle.flightDate
+      ? new Date(bundle.flightDate + 'T12:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' })
+      : acstDate(ts);
+    const flightTimeStr = bundle.flightTime || acstTime(ts);
+    kv('Date', flightDateStr);
+    kv('Time', flightTimeStr);
     if (bundle.sms?.values?.trainerName) kv('Trainer', bundle.sms.values.trainerName);
-
-    /* ── Location ── */
-    if (bundle.location?.lat) {
-      const { lat, lng, accuracy } = bundle.location;
-      secHead('LOCATION AT SUBMISSION');
-      kv('Latitude',  lat.toFixed(6) + '°');
-      kv('Longitude', lng.toFixed(6) + '°');
-      if (accuracy) kv('Accuracy', accuracy + ' m');
-      if (mapImageBuffer) {
-        doc.moveDown(0.4);
-        const imgY = doc.y;
-        if (imgY + 180 > 750) doc.addPage();
-        doc.image(mapImageBuffer, 50, doc.y, { width: W, height: 180 });
-        doc.y += 188;
-      }
-    }
 
     /* ── W&B ── */
     if (bundle.wb?.result) {

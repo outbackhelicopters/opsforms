@@ -49,9 +49,10 @@ button{font-family:inherit;}
   display:flex;align-items:center;gap:11px;
 }
 #topbar .logo{width:34px;height:34px;flex:none;opacity:.95;}
-#topbar .brandtxt{line-height:1.2;}
-#topbar .brandtxt .b1{font-weight:800;font-size:13px;letter-spacing:2.5px;color:#fff;}
-#topbar .brandtxt .b2{font-weight:600;font-size:10px;letter-spacing:2px;color:#9AA3C7;text-transform:uppercase;}
+#topbar .brandtxt{line-height:1.15;}
+#topbar .brandtxt .b1{font-weight:800;font-size:13px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;}
+#topbar .brandtxt .b2{font-weight:800;font-size:13px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;}
+#topbar .brandtxt .b3{font-weight:500;font-size:9px;letter-spacing:2.5px;color:#7A84B0;text-transform:uppercase;margin-top:1px;}
 #topbar .callsign{
   background:var(--orange);color:#fff;font-weight:700;
   border-radius:6px;padding:4px 11px;font-size:13.5px;
@@ -131,6 +132,17 @@ input[type=email],input[type=password],select,textarea{
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2373778A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
 input:focus,select:focus,textarea:focus{
   outline:2px solid var(--orange);outline-offset:0;border-color:var(--orange);
+}
+/* Suppress browser autofill / credential-manager styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+select:-webkit-autofill {
+  -webkit-box-shadow:0 0 0 1000px var(--card) inset !important;
+  box-shadow:0 0 0 1000px var(--card) inset !important;
+  -webkit-text-fill-color:var(--ink) !important;
+  caret-color:var(--ink);
+  transition:background-color 9999s ease-in-out 0s;
 }
 input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
@@ -486,7 +498,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 
 <div id="topbar">
   <img class="logo" src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
-  <div class="brandtxt"><div class="b1">OUTBACK</div><div class="b2">HELICOPTER &middot; AIRWORK NT</div></div>
+  <div class="brandtxt"><div class="b1">OUTBACK</div><div class="b2">HELICOPTER</div><div class="b3">AIRWORK NT</div></div>
   <span class="callsign" id="tb-callsign">—</span>
   <span class="spacer"></span>
   <button id="syncpill" class="ok" onclick="App.showQueue()"><span class="dot"></span><span id="syncpill-txt">All sent</span></button>
@@ -1181,7 +1193,7 @@ function makeDummyWb() { return makeWb(0, 0, 0, 0, 0.720, '', false); }
 const DEFAULT_SETTINGS = {
   configured: true,
   pin: "1234",
-  opsEmail: "ops@outbackhelicopter.com.au",
+  opsEmail: "pilots@outbackhelicopters.com.au",
   driveFolder: "Helicopter Paperwork",
   crew: [
     { name: "J. Blore",   arn: "0111222" },
@@ -1307,17 +1319,18 @@ class SigPad {
       pts.push(pos(e));
       if (pts.length >= 3) {
         const [a, b, m] = [pts[pts.length-3], pts[pts.length-2], pts[pts.length-1]];
-        x.beginPath();
-        x.moveTo((a.x+b.x)/2, (a.y+b.y)/2);
-        x.quadraticCurveTo(b.x, b.y, (b.x+m.x)/2, (b.y+m.y)/2);
-        x.stroke();
+        const ctx = this.ctx; if (!ctx) return;
+        ctx.beginPath();
+        ctx.moveTo((a.x+b.x)/2, (a.y+b.y)/2);
+        ctx.quadraticCurveTo(b.x, b.y, (b.x+m.x)/2, (b.y+m.y)/2);
+        ctx.stroke();
       }
       this.empty = false;
     });
     const up = e => {
       if (!this._drawing) return; this._drawing = false;
       if (pts.length < 3 && pts.length > 0) { // a dot/tap
-        x.beginPath(); x.arc(pts[0].x, pts[0].y, 1.6, 0, 7); x.fillStyle = '#10131A'; x.fill();
+        const ctx = this.ctx; if (ctx) { ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 1.6, 0, 7); ctx.fillStyle = '#10131A'; ctx.fill(); }
         this.empty = false;
       }
       pts = []; this._refresh();
@@ -1725,14 +1738,14 @@ const App = {
 
     const showTrainer = !!v.showTrainer;
     h += '<div class="card"><h2>Sign-on</h2><div class="grid2">' +
-      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" value="' + esc(v.pilotArn || '') + '" oninput="App.smsField()"></div>' +
-      '<div><label class="fl">Review Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
+      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn || '') + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Review Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '</div>' +
       (showTrainer
         ? '<div class="grid2" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">' +
-          '<div><label class="fl">Trainer / Examiner Name</label><select id="sms-trainerName" onchange="App.smsCrewPick(\'trainer\')">' + crewOpts(v.trainerName) + '</select></div>' +
-          '<div><label class="fl">ARN (Trainer)</label><input type="text" id="sms-trainerArn" inputmode="numeric" value="' + esc(v.trainerArn || '') + '" oninput="App.smsField()"></div>' +
+          '<div><label class="fl">Trainer / Examiner Name</label><select id="sms-trainerName" autocomplete="off" onchange="App.smsCrewPick(\'trainer\')">' + crewOpts(v.trainerName) + '</select></div>' +
+          '<div><label class="fl">ARN (Trainer)</label><input type="text" id="sms-trainerArn" inputmode="numeric" autocomplete="off" value="' + esc(v.trainerArn || '') + '" oninput="App.smsField()"></div>' +
           '</div><button type="button" class="btn ghost small" style="margin-top:8px;" onclick="App.toggleTrainer(false)">✕ Remove trainer</button>'
         : '<button type="button" class="btn ghost small" style="margin-top:10px;" onclick="App.toggleTrainer(true)">＋ Add trainer / examiner</button>') +
       '</div>';
@@ -1858,9 +1871,9 @@ const App = {
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + '</div></div>';
     h += '<div class="card"><h2>Pilot sign-on</h2><div class="grid2">' +
-      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
-      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
+      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '</div></div>';
     h += '<div class="card"><h2>Flight entries</h2>' +
       '<div class="dor-scroll"><table class="dor-table">' +
@@ -1951,9 +1964,9 @@ const App = {
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + '</div></div>';
     h += '<div class="card"><h2>Pilot sign-on</h2><div class="grid2">' +
-      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
-      '<div><label class="fl">Flight date <span class="req">*</span></label><input type="date" id="sms-reviewDate" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
+      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Flight date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Number of passengers briefed <span class="req">*</span></label><input type="number" id="psbr-numpax" min="1" step="1" value="' + (v.numPax||'') + '" oninput="App.psbrField()"></div>' +
       '</div></div>';
     h += '<div class="card"><h2>Safety briefing checklist</h2>' +
@@ -2006,9 +2019,9 @@ const App = {
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>';
     h += '<div class="card"><h2>Report details</h2><div class="grid2">' +
-      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
-      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
+      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Time of occurrence</label><input type="time" id="hir-time" value="' + esc(v.hirTime||ns.time) + '" oninput="App.hirField()"></div>' +
       '<div><label class="fl">Location <span class="req">*</span></label><input type="text" id="hir-location" value="' + esc(v.location||'') + '" placeholder="e.g. 15 NM NE Darwin" oninput="App.hirField()"></div>' +
       '<div><label class="fl">Type of report <span class="req">*</span></label><select id="hir-type" onchange="App.hirField()"><option value="">— Select —</option>' + selOpt(['Hazard','Near-miss','Incident','Accident'], v.reportType) + '</select></div>' +
@@ -2074,9 +2087,9 @@ const App = {
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>';
     if (grounded) h += '<div class="warn-banner">⚠ AIRCRAFT GROUNDED — NOT AIRWORTHY</div>';
     h += '<div class="card"><h2>Defect details</h2><div class="grid2">' +
-      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
-      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
+      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
+      '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Total aircraft hours at time of defect</label><input type="number" id="mdr-hours" min="0" step="0.1" value="' + esc(v.aircraftHours||'') + '" oninput="App.mdrField()"></div>' +
       '<div><label class="fl">System affected <span class="req">*</span></label><select id="mdr-system" onchange="App.mdrField()"><option value="">— Select —</option>' + selOpt(SYSTEMS, v.systemAffected) + '</select></div>' +
       '</div>' +

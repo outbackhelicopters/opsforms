@@ -1580,7 +1580,6 @@ const App = {
       '<div class="kv"><div class="k">Connection</div><div class="v">' + (navigator.onLine ? 'Online' : '<b style="color:var(--red)">Offline</b> — everything is saved on this iPad and will send automatically when a connection returns') + '</div></div>' +
       '<div class="kv"><div class="k">Waiting to send</div><div class="v">' + this.queuedCount() + '</div></div>' +
       '<div class="kv"><div class="k">Sent</div><div class="v">' + items.filter(f => f.status === 'sent').length + '</div></div>' +
-      '<div class="note">Sending is <b>stubbed</b> in this build: bundles are marked "sent (simulated)" and nothing leaves the iPad. Tap any bundle on the home screen to see exactly what would be sent.</div>' +
       '<button class="btn primary small" style="margin-top:8px;" onclick="Modal.hide()">Close</button>');
   },
 
@@ -2483,7 +2482,6 @@ const App = {
       '<div class="kv"><div class="k">3. Passengers</div><div class="v">' + (f.noPax ? 'None carried' : f.pax.map(p => esc(p.name) + ' — signed ' + esc(p.date) + ' ' + esc(p.time)).join('<br>')) + '</div></div>' +
       (f.sms.sigs.pilotSig ? '<div class="kv"><div class="k">Pilot signature</div><div class="v"><img src="' + f.sms.sigs.pilotSig + '" style="height:54px;border:1px solid var(--line);border-radius:6px;"></div></div>' : '') +
       (f.pax.length ? '<div class="kv"><div class="k">Pax signatures</div><div class="v">' + f.pax.map(p => '<img src="' + p.sig + '" style="height:46px;border:1px solid var(--line);border-radius:6px;margin:2px 4px 2px 0;">').join('') + '</div></div>' : '') +
-      '<div class="note">This is exactly what the real send will contain. In this build nothing leaves the iPad.</div>' +
       '<div class="btnrow"><button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
     );
   },

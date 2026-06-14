@@ -1,6 +1,6 @@
 /* Heli Ops PWA service worker — caches the app shell so it works fully offline. */
-const CACHE = 'heliops-v18';
-const ASSETS = ['./', './index.html'];
+const CACHE = 'heliops-v19';
+const ASSETS = ['./', './index.html', './flight-ops.html', './job-advice.html', './job-sw.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

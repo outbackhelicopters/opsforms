@@ -8,7 +8,15 @@
 const express     = require('express');
 const cors        = require('cors');
 const PDFDocument = require('pdfkit');
+const fs          = require('fs');
+const path        = require('path');
 const { ClientSecretCredential } = require('@azure/identity');
+
+/* ── ACST helpers (Australia/Darwin = UTC+9:30, no DST) ─────── */
+const ACST_TZ = 'Australia/Darwin';
+function acstDate(ts)  { return new Intl.DateTimeFormat('en-AU', { timeZone: ACST_TZ, day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(ts)); }
+function acstTime(ts)  { return new Intl.DateTimeFormat('en-AU', { timeZone: ACST_TZ, hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(ts)); }
+function acstFull(ts)  { return new Intl.DateTimeFormat('en-AU', { timeZone: ACST_TZ, day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(ts)); }
 
 const app = express();
 app.use(cors());
@@ -140,7 +148,18 @@ async function uploadToOneDrive(token, pdfBuffer, filename, callsign, month) {
 }
 
 /* ── PDF builder ──────────────────────────────────────────── */
-function buildPDF(bundle) {
+async function buildPDF(bundle) {
+  /* Pre-fetch satellite map image if location + API key available */
+  let mapImageBuffer = null;
+  if (bundle.location?.lat && process.env.GOOGLE_MAPS_KEY) {
+    try {
+      const { lat, lng } = bundle.location;
+      const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=480x280&maptype=satellite&markers=color:red%7C${lat},${lng}&key=${process.env.GOOGLE_MAPS_KEY}`;
+      const mapRes = await fetch(mapUrl);
+      if (mapRes.ok) mapImageBuffer = Buffer.from(await mapRes.arrayBuffer());
+    } catch (e) { console.error('Map image fetch failed (non-fatal):', e.message); }
+  }
+
   return new Promise((resolve, reject) => {
     const doc    = new PDFDocument({ margin: 50, size: 'A4', bufferPages: true });
     const chunks = [];
@@ -150,51 +169,81 @@ function buildPDF(bundle) {
 
     const NAVY   = '#18224A';
     const ORANGE = '#E8750E';
-    const MUT    = '#73778A';
+    const MUT    = '#6B7280';
     const W      = 495;
 
-    /* Header */
-    doc.rect(50, 50, W, 64).fill(NAVY);
-    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(15)
-       .text('OUTBACK HELICOPTER AIRWORK NT', 66, 63, { width: W - 32 });
-    doc.font('Helvetica').fontSize(10).fillColor('#9AA3C7')
-       .text('Flight Paperwork Bundle', 66, 83, { width: W - 32 });
-    doc.rect(50, 114, W, 2).fill(ORANGE);
-    doc.moveDown(3);
+    /* ── Header ── */
+    const HDR_H = 72;
+    doc.rect(50, 50, W, HDR_H).fill(NAVY);
 
+    const logoPath = path.join(__dirname, 'logo.png');
+    let textX = 68;
+    if (fs.existsSync(logoPath)) {
+      doc.image(logoPath, 64, 57, { height: 52, width: 52 });
+      textX = 126;
+    }
+
+    doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(16)
+       .text('OUTBACK HELICOPTER AIRWORK NT', textX, 64, { width: W - (textX - 50) - 16, lineBreak: false });
+    doc.font('Helvetica').fontSize(9.5).fillColor('#9AA3C7')
+       .text('Flight Paperwork Bundle — Outback Helicopter Airwork NT Pty Ltd', textX, 85, { width: W - (textX - 50) - 16 });
+
+    doc.rect(50, 50 + HDR_H, W, 3).fill(ORANGE);
+    doc.y = 50 + HDR_H + 3 + 18;
+
+    /* ── Section heading ── */
     const secHead = title => {
-      doc.moveDown(0.5);
-      doc.rect(50, doc.y, W, 22).fill('#F0F1F5');
-      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(10)
-         .text(title, 58, doc.y - 17, { width: W - 16 });
-      doc.moveDown(0.8);
+      doc.moveDown(0.6);
+      const y = doc.y;
+      doc.rect(50, y, W, 20).fill('#E8EBF5');
+      doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9.5)
+         .text(title, 58, y + 5, { width: W - 16, lineBreak: false });
+      doc.y = y + 26;
       doc.fillColor('#1C1F28');
     };
 
+    /* ── Key/value row ── */
     const kv = (k, v, color) => {
-      doc.font('Helvetica-Bold').fontSize(10).fillColor(MUT)
-         .text(k, 50, doc.y, { width: 130 });
-      doc.font('Helvetica').fillColor(color || '#1C1F28')
-         .text(String(v || '—'), 185, doc.y - doc.currentLineHeight(), { width: W - 135 });
-      doc.moveDown(0.15);
+      const y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(MUT)
+         .text(k, 50, y, { width: 128, lineBreak: false });
+      doc.font('Helvetica').fontSize(9.5).fillColor(color || '#1C1F28')
+         .text(String(v === null || v === undefined ? '—' : v), 185, y, { width: W - 135, lineBreak: false });
+      doc.y = y + 17;
     };
 
-    /* Flight details */
+    /* ── Flight details ── */
+    const ts = bundle.queuedAt || bundle.createdAt || Date.now();
     secHead('FLIGHT DETAILS');
-    const dt = new Date(bundle.queuedAt || bundle.createdAt || Date.now());
     kv('Aircraft', bundle.callsign);
-    kv('Form',     bundle.formName);
+    kv('Form',     bundle.formName || '—');
     kv('Pilot',    bundle.sms?.values?.pilotName);
     kv('ARN',      bundle.sms?.values?.pilotArn);
-    kv('Date',     dt.toLocaleDateString('en-AU', { dateStyle: 'long' }));
-    kv('Time',     dt.toLocaleTimeString('en-AU', { timeStyle: 'short' }));
+    kv('Date',     acstDate(ts) + ' (ACST)');
+    kv('Time',     acstTime(ts) + ' (ACST)');
     if (bundle.sms?.values?.trainerName) kv('Trainer', bundle.sms.values.trainerName);
 
-    /* W&B */
+    /* ── Location ── */
+    if (bundle.location?.lat) {
+      const { lat, lng, accuracy } = bundle.location;
+      secHead('LOCATION AT SUBMISSION');
+      kv('Latitude',  lat.toFixed(6) + '°');
+      kv('Longitude', lng.toFixed(6) + '°');
+      if (accuracy) kv('Accuracy', accuracy + ' m');
+      if (mapImageBuffer) {
+        doc.moveDown(0.4);
+        const imgY = doc.y;
+        if (imgY + 180 > 750) doc.addPage();
+        doc.image(mapImageBuffer, 50, doc.y, { width: W, height: 180 });
+        doc.y += 188;
+      }
+    }
+
+    /* ── W&B ── */
     if (bundle.wb?.result) {
       const wb = bundle.wb.result;
       secHead('WEIGHT & BALANCE');
-      kv('Result',       wb.pass ? 'PASS' : 'FAIL — OVER MTOW', wb.pass ? '#1E7A3C' : '#C0241C');
+      kv('Result',       wb.pass ? 'PASS' : 'FAIL — OVER MTOW', wb.pass ? '#15803D' : '#B91C1C');
       kv('Total weight', wb.total + ' kg');
       kv('MTOW',         wb.mtow  + ' kg');
       if (bundle.wb.kg) {
@@ -204,49 +253,49 @@ function buildPDF(bundle) {
         kv('Fuel',    (kg.fuel    || 0) + ' kg  (' + (bundle.wb.fuelL || 0) + ' L)');
         kv('Baggage', (kg.baggage || 0) + ' kg');
       }
-      /* CG balance map */
       if (bundle.wb.cgEnv && wb.cgArm) {
         drawCgChart(doc, bundle.wb.cgEnv, wb.cgArm, wb.total,
                     bundle.wb.emptyLongArm || 0, bundle.wb.emptyWeight || 0);
       }
     }
 
-    /* SWMS acknowledgments */
+    /* ── SWMS acknowledgments ── */
     if (bundle.sms?.acks && Object.keys(bundle.sms.acks).length) {
       secHead('SAFETY MANAGEMENT — SECTION ACKNOWLEDGMENTS');
       Object.entries(bundle.sms.acks).forEach(([i, v]) => {
-        doc.font('Helvetica').fontSize(10).fillColor(v ? '#1E7A3C' : '#C0241C')
-           .text((v ? '✓' : '✗') + '  Section ' + (parseInt(i) + 1), 50, doc.y, { width: W });
-        doc.moveDown(0.15);
+        const y = doc.y;
+        doc.font('Helvetica').fontSize(9.5).fillColor(v ? '#15803D' : '#B91C1C')
+           .text((v ? '✓  ' : '✗  ') + 'Section ' + (parseInt(i) + 1), 50, y, { width: W, lineBreak: false });
+        doc.y = y + 16;
       });
     }
 
-    /* Passengers */
+    /* ── Passengers ── */
     if ((bundle.pax || []).length) {
       secHead('PASSENGERS');
-      doc.font('Helvetica-Bold').fontSize(9).fillColor(MUT);
-      doc.text('NAME', 50, doc.y, { width: 200 });
-      doc.text('WEIGHT', 255, doc.y - doc.currentLineHeight(), { width: 70 });
-      doc.text('BRIEFED', 330, doc.y - doc.currentLineHeight(), { width: 70 });
-      doc.text('SIGNED',  405, doc.y - doc.currentLineHeight(), { width: 70 });
-      doc.moveDown(0.4);
-      doc.rect(50, doc.y, W, 0.5).fill('#E6E5E0');
-      doc.moveDown(0.4);
+      const hY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(MUT);
+      doc.text('NAME',    50,  hY, { width: 190, lineBreak: false });
+      doc.text('WEIGHT', 245,  hY, { width:  70, lineBreak: false });
+      doc.text('BRIEFED', 320, hY, { width:  70, lineBreak: false });
+      doc.text('SIGNED',  400, hY, { width:  70, lineBreak: false });
+      doc.y = hY + 14;
+      doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB');
+      doc.y += 6;
       bundle.pax.forEach((p, i) => {
         const y = doc.y;
-        if (i % 2 === 0) doc.rect(50, y - 2, W, 16).fill('#FAFAF8');
-        doc.font('Helvetica').fontSize(10).fillColor('#1C1F28')
-           .text(p.name || '—', 50, y, { width: 200 });
-        doc.text((p.weight || '—') + ' kg', 255, y, { width: 70 });
-        doc.fillColor(p.briefed ? '#1E7A3C' : MUT).text(p.briefed ? 'Yes' : 'No', 330, y, { width: 70 });
-        doc.fillColor(p.sig    ? '#1E7A3C' : MUT).text(p.sig    ? 'Yes' : 'No', 405, y, { width: 70 });
-        doc.moveDown(0.5);
+        if (i % 2 === 0) { doc.rect(50, y - 2, W, 17).fill('#F9FAFB'); doc.fillColor('#1C1F28'); }
+        doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28').text(p.name || '—', 50, y, { width: 190, lineBreak: false });
+        doc.text((p.weight || '—') + ' kg',    245, y, { width: 70, lineBreak: false });
+        doc.fillColor(p.briefed ? '#15803D' : MUT).text(p.briefed ? 'Yes' : 'No', 320, y, { width: 70, lineBreak: false });
+        doc.fillColor(p.sig     ? '#15803D' : MUT).text(p.sig     ? 'Yes' : 'No', 400, y, { width: 70, lineBreak: false });
+        doc.y = y + 17;
       });
     }
 
-    /* Signatures */
+    /* ── Signatures ── */
     const sigDefs = [
-      { id: 'pilotSig',   label: 'PILOT SIGNATURE',             nameKey: 'pilotName'   },
+      { id: 'pilotSig',   label: 'PILOT SIGNATURE',              nameKey: 'pilotName'   },
       { id: 'trainerSig', label: 'TRAINER / EXAMINER SIGNATURE', nameKey: 'trainerName' },
     ];
     sigDefs.forEach(({ id, label, nameKey }) => {
@@ -255,25 +304,25 @@ function buildPDF(bundle) {
       secHead(label);
       try {
         const raw = data.replace(/^data:image\/png;base64,/, '');
-        doc.image(Buffer.from(raw, 'base64'), 50, doc.y, { width: 220, height: 80 });
-        doc.moveDown(5.5);
+        doc.image(Buffer.from(raw, 'base64'), 50, doc.y, { width: 240, height: 80 });
+        doc.y += 88;
       } catch (_) {}
-      doc.rect(50, doc.y, 220, 0.5).fill('#1C1F28');
-      doc.moveDown(0.3);
-      doc.font('Helvetica').fontSize(10).fillColor('#1C1F28')
-         .text(bundle.sms?.values?.[nameKey] || '', 50, doc.y, { width: 220 });
-      doc.moveDown(0.8);
+      doc.rect(50, doc.y, 240, 0.5).fill('#1C1F28');
+      doc.y += 5;
+      doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28')
+         .text(bundle.sms?.values?.[nameKey] || '', 50, doc.y, { width: 240, lineBreak: false });
+      doc.y += 20;
     });
 
-    /* Footer on every page */
+    /* ── Footer on every page ── */
     const pages = doc.bufferedPageRange();
     for (let i = 0; i < pages.count; i++) {
       doc.switchToPage(pages.start + i);
-      doc.rect(50, 780, W, 0.5).fill('#E6E5E0');
-      doc.font('Helvetica').fontSize(8).fillColor(MUT)
+      doc.rect(50, 778, W, 0.5).fill('#D1D5DB');
+      doc.font('Helvetica').fontSize(7.5).fillColor(MUT)
          .text(
-           `Outback Helicopter Airwork NT · Page ${i + 1} of ${pages.count} · Generated ${new Date().toLocaleString('en-AU')}`,
-           50, 787, { width: W, align: 'center' }
+           `Outback Helicopter Airwork NT Pty Ltd  ·  Page ${i + 1} of ${pages.count}  ·  Generated ${acstFull(Date.now())} ACST`,
+           50, 783, { width: W, align: 'center' }
          );
     }
 

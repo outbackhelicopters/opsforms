@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Outback Helicopter — Job Advice Sheet</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Job Advice">
+<meta name="theme-color" content="#0D1228">
+<style>
+:root{
+  --navy:#18224A;--navy-deep:#0D1228;--navy-mid:#2A3572;
+  --orange:#E8720C;--orange-dk:#C5600A;--orange-lt:#FFF0E6;
+  --ink:#1A1D28;--ink2:#383B4A;--mut:#6B7080;--line:#E4E3DE;
+  --bg:#EDEBE8;--card:#FFFFFF;
+  --green:#16753A;--green-bg:#E8F5EE;--green-dk:#125C2E;
+  --red:#BC2018;--red-bg:#FCECEA;
+  --or-t:#964808;--or-bg:#FEF2E6;
+  --blue:#1565C0;--blue-bg:#E3F2FD;
+  --r:14px;--r-lg:18px;
+  --shadow:0 1px 3px rgba(10,14,40,.06),0 4px 16px rgba(10,14,40,.06);
+  --shadow-md:0 2px 8px rgba(10,14,40,.10),0 12px 32px rgba(10,14,40,.08);
+  --shadow-lg:0 8px 24px rgba(10,14,40,.14),0 24px 48px rgba(10,14,40,.10);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;
+  font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;}
+body{padding-bottom:env(safe-area-inset-bottom);}
+button{font-family:inherit;}
+.hidden{display:none !important;}
+
+/* Top bar */
+#topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(13,18,40,.95);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1.5px solid rgba(232,114,12,.7);
+  padding:calc(10px + env(safe-area-inset-top)) 18px 10px;
+  display:flex;align-items:center;gap:12px;
+}
+#topbar .b1{font-weight:800;font-size:12px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;}
+#topbar .b2{font-weight:500;font-size:9px;letter-spacing:2px;color:#6A75A8;text-transform:uppercase;margin-top:2px;}
+.spacer{flex:1;}
+#sync-badge{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
+  color:#A8AECF;border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+}
+#sync-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;}
+#sync-badge.pending{color:#FFB060;border-color:rgba(232,114,12,.4);background:rgba(232,114,12,.15);}
+#btn-settings{
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#A8AECF;
+  border-radius:10px;min-width:40px;min-height:38px;font-size:17px;cursor:pointer;
+}
+
+/* Tab bar */
+#tabbar{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  background:rgba(13,18,40,.97);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(255,255,255,.1);
+  display:flex;padding-bottom:env(safe-area-inset-bottom);
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 4px 12px;cursor:pointer;gap:4px;
+  color:#6A75A8;border:0;background:transparent;font-family:inherit;
+  transition:color .15s;position:relative;
+}
+.tab.active{color:var(--orange);}
+.tab .ti{font-size:22px;line-height:1;}
+.tab .tl{font-size:10px;font-weight:600;letter-spacing:.3px;}
+.tab-pip{
+  position:absolute;top:8px;right:calc(50% - 14px);
+  background:var(--orange);color:#fff;border-radius:10px;
+  font-size:9px;font-weight:800;padding:1px 5px;min-width:16px;text-align:center;display:none;
+}
+.tab-pip.show{display:block;}
+
+/* Screens */
+.screen{display:none;max-width:760px;margin:0 auto;padding:20px 16px 96px;}
+.screen.active{display:block;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;margin-bottom:14px;box-shadow:var(--shadow);}
+h1.page{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 16px;color:var(--navy);}
+.card-title{font-size:15px;font-weight:700;margin:0 0 14px;color:var(--navy);display:flex;align-items:center;gap:8px;}
+
+/* Buttons */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  min-height:52px;border-radius:999px;border:2px solid transparent;font-size:16px;font-weight:700;
+  letter-spacing:.2px;cursor:pointer;padding:10px 22px;
+  transition:filter .12s,transform .1s;-webkit-tap-highlight-color:transparent;
+}
+.btn:active{transform:scale(.97);filter:brightness(.88);}
+.btn.primary{background:linear-gradient(135deg,var(--navy-mid),var(--navy));color:#fff;box-shadow:0 2px 10px rgba(10,14,60,.25);}
+.btn.amber{background:linear-gradient(135deg,#F07C14,var(--orange-dk));color:#fff;box-shadow:0 4px 16px rgba(200,90,10,.45);font-size:17px;}
+.btn.green{background:linear-gradient(135deg,#1D8A46,var(--green));color:#fff;box-shadow:0 4px 16px rgba(22,117,58,.4);}
+.btn.ghost{background:transparent;color:var(--navy);border:2px solid var(--line);font-weight:700;}
+.btn.ghost:active{background:rgba(24,34,74,.06);}
+.btn.small{min-height:40px;font-size:14px;width:auto;padding:7px 20px;}
+.btn[disabled]{opacity:.35;pointer-events:none;}
+.btnrow{display:flex;gap:10px;margin-top:14px;}
+.btnrow .btn{flex:1;}
+
+/* Inputs */
+label.fl{display:block;font-weight:600;font-size:12px;margin:14px 0 5px;color:var(--ink2);letter-spacing:.5px;text-transform:uppercase;}
+label.fl .req{color:var(--orange);}
+input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{
+  width:100%;font-size:16px;padding:11px 14px;
+  border:1.5px solid var(--line);border-radius:12px;
+  background:#FAFAF8;color:var(--ink);min-height:48px;
+  font-family:inherit;appearance:none;-webkit-appearance:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.15);}
+input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
+.err{color:var(--red);font-size:12px;margin:3px 0 0 2px;display:none;}
+.err.show{display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+@media(max-width:520px){.grid2{grid-template-columns:1fr;}}
+
+/* Segmented hire type */
+.seg{display:flex;gap:0;background:var(--line);border-radius:12px;padding:4px;margin:6px 0;}
+.seg-btn{
+  flex:1;text-align:center;padding:10px 8px;border-radius:9px;
+  font-weight:600;font-size:13px;background:transparent;color:var(--mut);border:0;cursor:pointer;
+  transition:background .15s,color .15s,box-shadow .15s;line-height:1.3;
+}
+.seg-btn.active{background:var(--card);color:var(--navy);font-weight:700;box-shadow:0 1px 4px rgba(10,14,40,.14);}
+.seg-btn.active[data-hire=dry]{background:var(--or-bg);color:var(--or-t);}
+.seg-btn.active[data-hire=dual]{background:var(--blue-bg);color:var(--blue);}
+
+/* Hire banners */
+.hire-banner{border-radius:var(--r);padding:10px 14px;margin-bottom:12px;font-size:13.5px;font-weight:600;display:flex;gap:10px;align-items:flex-start;}
+.hire-banner.dry{background:var(--or-bg);color:var(--or-t);border:1px solid #EED4A0;}
+.hire-banner.dual{background:var(--blue-bg);color:var(--blue);border:1px solid #BBDAF7;}
+
+/* Job lines — hours only */
+.lines-hdr{
+  display:grid;grid-template-columns:1fr 100px 36px;
+  gap:6px;padding:7px 10px;background:var(--navy);color:#fff;
+  border-radius:10px 10px 0 0;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+}
+.job-line{
+  display:grid;grid-template-columns:1fr 100px 36px;
+  gap:6px;padding:8px 8px;border-bottom:1px solid var(--line);align-items:center;
+}
+.job-line:last-child{border-bottom:none;}
+.job-line:nth-child(even){background:#FAFAF8;}
+.job-line input{min-height:44px;font-size:15px;}
+.line-del{
+  background:none;border:1px solid var(--line);color:var(--mut);
+  border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;
+  display:flex;align-items:center;justify-content:center;
+}
+.line-del:active{background:var(--red-bg);color:var(--red);}
+#add-line-btn{
+  display:flex;align-items:center;gap:8px;
+  background:none;border:1.5px dashed var(--orange);color:var(--or-t);
+  border-radius:0 0 10px 10px;padding:10px 14px;cursor:pointer;font-size:14px;font-weight:600;width:100%;
+}
+#add-line-btn:active{background:var(--orange-lt);}
+
+/* Total hours card */
+.hours-total{
+  background:var(--navy);border-radius:var(--r);padding:16px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.hours-total .ht-label{color:#8A93BE;font-size:14px;font-weight:600;}
+.hours-total .ht-value{font-size:28px;font-weight:800;color:var(--orange);}
+
+/* Signature */
+.sigwrap canvas{
+  width:100%;height:150px;border:1.5px dashed #B0B3C0;
+  border-radius:var(--r);background:#fff;touch-action:none;display:block;
+}
+.sigwrap.signed canvas{border:1.5px solid var(--green);}
+.sigbar{display:flex;align-items:center;gap:10px;margin-top:7px;}
+.sigbar .hint{flex:1;color:var(--mut);font-size:13px;}
+
+/* Client search picker */
+.client-picker-wrap{position:relative;}
+.client-search-input{width:100%;}
+.client-dropdown{
+  position:absolute;top:100%;left:0;right:0;z-index:60;
+  background:var(--card);border:1.5px solid var(--orange);border-top:none;
+  border-radius:0 0 12px 12px;box-shadow:var(--shadow-md);
+  max-height:220px;overflow-y:auto;display:none;
+}
+.client-dropdown.open{display:block;}
+.client-opt{
+  padding:11px 14px;cursor:pointer;font-size:15px;border-bottom:1px solid var(--line);
+  transition:background .1s;
+}
+.client-opt:last-child{border-bottom:none;}
+.client-opt:active,.client-opt.highlighted{background:var(--orange-lt);}
+.client-opt mark{background:transparent;color:var(--orange);font-weight:700;}
+.client-none{padding:12px 14px;color:var(--mut);font-size:14px;}
+
+/* History */
+.hist-search{display:flex;gap:8px;margin-bottom:12px;}
+.hist-search input{flex:1;min-height:44px;}
+.hist-row{
+  display:flex;align-items:center;gap:12px;padding:13px 16px;
+  background:var(--card);border-radius:var(--r);margin-bottom:8px;
+  box-shadow:var(--shadow);cursor:pointer;border:1px solid var(--line);
+}
+.hist-row:active{box-shadow:none;}
+.hr-left{flex:1;min-width:0;}
+.hr-job{font-weight:800;font-size:14px;color:var(--navy);}
+.hr-meta{color:var(--mut);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hr-right{text-align:right;flex:none;}
+.hr-hours{font-weight:800;font-size:18px;color:var(--navy);}
+.hr-hrs-label{font-size:11px;color:var(--mut);font-weight:600;}
+.badge{border-radius:999px;padding:3px 10px;font-weight:700;font-size:11px;letter-spacing:.3px;white-space:nowrap;display:inline-block;}
+.badge.draft{background:#EAEBF0;color:#4A5165;}
+.badge.submitted{background:var(--green-bg);color:var(--green-dk);}
+.badge.synced{background:var(--blue-bg);color:var(--blue);}
+.no-results{text-align:center;color:var(--mut);padding:40px 20px;font-size:15px;}
+
+/* Sync */
+.sync-stat{background:var(--navy);color:#fff;border-radius:var(--r-lg);padding:20px;text-align:center;margin-bottom:14px;}
+.sync-count{font-size:48px;font-weight:800;color:var(--orange);}
+.sq-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+.sq-item:last-child{border-bottom:none;}
+.sq-info{flex:1;}
+.sq-job{font-weight:700;font-size:14px;color:var(--navy);}
+.sq-meta{color:var(--mut);font-size:12px;}
+.log-item{font-size:12px;color:var(--mut);padding:4px 0;border-bottom:1px solid var(--line);}
+.log-item:last-child{border-bottom:none;}
+
+/* Modal */
+#modal-bg{
+  position:fixed;inset:0;background:rgba(8,10,28,.65);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  z-index:100;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto;
+}
+#modal-bg.show{display:flex;}
+.modal-box{
+  background:var(--card);border-radius:var(--r-lg);
+  max-width:580px;width:100%;max-height:88vh;overflow-y:auto;padding:22px;
+  box-shadow:var(--shadow-lg);border:1px solid var(--line);position:relative;
+}
+.modal-box h3{margin:0 0 16px;font-size:18px;font-weight:800;color:var(--navy);}
+.modal-close{
+  position:absolute;top:16px;right:16px;background:var(--line);border:none;
+  border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--mut);
+  display:flex;align-items:center;justify-content:center;
+}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;}
+.pinpad button{min-height:60px;font-size:22px;font-weight:700;border-radius:14px;border:1.5px solid var(--line);background:var(--card);cursor:pointer;color:var(--navy);}
+.pinpad button:active{background:var(--navy);color:#fff;}
+#pin-dots{text-align:center;font-size:28px;letter-spacing:10px;min-height:42px;color:var(--navy);}
+.pin-err{color:var(--red);text-align:center;font-size:14px;font-weight:600;min-height:20px;}
+
+/* Detail view */
+.detail-hdr{background:var(--navy);color:#fff;border-radius:var(--r-lg);padding:18px;margin-bottom:14px;}
+.detail-hdr .dh-jobno{font-size:22px;font-weight:800;}
+.detail-hdr .dh-sub{color:#8A93BE;font-size:13px;margin-top:2px;}
+.detail-hdr .dh-client{font-size:16px;font-weight:700;margin-top:8px;}
+.kv-row{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.kv-row:last-child{border-bottom:none;}
+.kv-row .k{width:120px;color:var(--mut);font-weight:600;flex:none;font-size:13px;}
+.kv-row .v{font-weight:600;color:var(--ink);}
+.back-btn{
+  background:var(--card);border:1px solid var(--line);color:var(--navy);
+  border-radius:10px;padding:8px 14px;font-size:14px;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow);margin-bottom:14px;
+}
+.note{background:#FFF8F0;border:1px solid #EDD9B8;border-radius:var(--r);padding:10px 13px;font-size:13.5px;color:#7A5018;margin:8px 0;}
+
+/* Toast */
+.toast{
+  position:fixed;left:50%;bottom:90px;transform:translateX(-50%);
+  background:var(--navy-deep);color:#fff;padding:12px 22px;
+  border-radius:var(--r);font-weight:600;z-index:300;
+  box-shadow:0 4px 18px rgba(0,0,0,.32);opacity:0;transition:opacity .2s;
+  pointer-events:none;font-size:14px;max-width:92vw;text-align:center;
+}
+.toast.show{opacity:1;}
+
+/* Source indicator */
+.source-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--green-bg);color:var(--green-dk);border:1px solid #A0CFB0;
+  border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;
+}
+.source-err{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--or-bg);color:var(--or-t);border:1px solid #EED4A0;
+  border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;
+}
+
+/* Print */
+@media print{
+  body{background:#fff;font-family:Arial,sans-serif;font-size:11pt;color:#000;}
+  #topbar,#tabbar,.btn,.back-btn,.hist-search,.no-print,
+  #modal-bg,.toast,.client-dropdown{display:none !important;}
+  .screen{display:none !important;padding:0;margin:0;}
+  #screen-print{display:block !important;padding:0;}
+  @page{margin:1cm;}
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div>
+    <div class="b1">Outback Helicopter Airwork NT</div>
+    <div class="b2">Job Advice Sheet</div>
+  </div>
+  <div class="spacer"></div>
+  <div id="sync-badge" onclick="showTab('sync')">
+    <span class="dot"></span>
+    <span id="sync-count-top">0 pending</span>
+  </div>
+  <button id="btn-settings" onclick="openSettings()">⚙️</button>
+</div>
+
+<div id="tabbar">
+  <button class="tab active" id="tab-new" onclick="showTab('new')">
+    <span class="ti">📋</span><span class="tl">New Job</span>
+  </button>
+  <button class="tab" id="tab-history" onclick="showTab('history')">
+    <span class="ti">📂</span><span class="tl">History</span>
+  </button>
+  <button class="tab" id="tab-sync" onclick="showTab('sync')">
+    <span class="ti">☁️</span><span class="tl">Sync</span>
+    <span class="tab-pip" id="sync-pip">0</span>
+  </button>
+</div>
+
+<!-- ═══ NEW JOB ═══ -->
+<div id="screen-new" class="screen active">
+
+  <!-- Letterhead -->
+  <div class="card" style="background:var(--navy);color:#fff;">
+    <div style="font-weight:800;font-size:15px;letter-spacing:.4px;text-transform:uppercase;">Outback Helicopter Airwork NT Pty Ltd</div>
+    <div style="color:#8A93BE;font-size:12px;margin-top:5px;line-height:2;">
+      ABN: 80 137 947 687 &nbsp;|&nbsp; ACN: 137 947 687<br>
+      PO Box 37819 Winnellie NT 0821<br>
+      Ph: 8941 6811 &nbsp;|&nbsp; Fax: 8941 6822 &nbsp;|&nbsp; Mob: 0427 222 670<br>
+      office@outbackhelicopters.com.au
+    </div>
+  </div>
+
+  <!-- Job Details -->
+  <div class="card">
+    <div class="card-title">📄 Job Details</div>
+
+    <div class="grid2">
+      <div>
+        <label class="fl">Date <span class="req">*</span></label>
+        <input type="date" id="f-date">
+        <div class="err" id="err-date">Required</div>
+      </div>
+      <div>
+        <label class="fl">Job No. <span class="req">*</span></label>
+        <input type="number" id="f-jobno" min="1" placeholder="—">
+        <div class="err" id="err-jobno">Required</div>
+      </div>
+    </div>
+
+    <!-- Client search -->
+    <label class="fl">Client / Place <span class="req">*</span></label>
+    <div class="client-picker-wrap">
+      <input type="text" id="f-client" class="client-search-input" placeholder="Search client…" autocomplete="off" oninput="onClientInput()" onfocus="onClientInput()">
+      <div class="client-dropdown" id="client-dropdown"></div>
+    </div>
+    <div class="err" id="err-client">Required</div>
+
+    <div class="grid2">
+      <div>
+        <label class="fl">Pilot <span class="req">*</span></label>
+        <select id="f-pilot"><option value="">Select pilot…</option></select>
+        <div class="err" id="err-pilot">Select a pilot</div>
+      </div>
+      <div>
+        <label class="fl">Aircraft <span class="req">*</span></label>
+        <select id="f-aircraft"><option value="">Select aircraft…</option></select>
+        <div class="err" id="err-aircraft">Select an aircraft</div>
+      </div>
+    </div>
+
+    <div id="src-status" style="margin-top:10px;"></div>
+  </div>
+
+  <!-- Hire Type -->
+  <div class="card">
+    <div class="card-title">🚁 Hire Type</div>
+    <div class="seg" id="hire-seg">
+      <button class="seg-btn active" data-hire="wet" onclick="setHire('wet')">Wet Hire<br><small style="font-weight:500;font-size:11px;">Aircraft + Pilot</small></button>
+      <button class="seg-btn" data-hire="dry" onclick="setHire('dry')">Dry Hire<br><small style="font-weight:500;font-size:11px;">Aircraft Only</small></button>
+      <button class="seg-btn" data-hire="dual" onclick="setHire('dual')">Dual<br><small style="font-weight:500;font-size:11px;">Training</small></button>
+    </div>
+    <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — client is responsible for fuel and fuel costs. Record fuel uplift below.</div>
+    <div id="banner-dual" class="hire-banner dual hidden">👨‍✈️&nbsp; Dual flight — both pilots' hours logged.</div>
+    <div id="dual-wrap" class="hidden">
+      <label class="fl">Instructor / Safety Pilot <span class="req">*</span></label>
+      <select id="f-pilot2"><option value="">Select second pilot…</option></select>
+      <div class="err" id="err-pilot2">Required for dual</div>
+    </div>
+  </div>
+
+  <!-- Job Lines -->
+  <div class="card">
+    <div class="card-title">📝 Flight Hours</div>
+    <div class="lines-hdr">
+      <div>Description</div>
+      <div style="text-align:center;" id="col-hrs-head">Hours</div>
+      <div></div>
+    </div>
+    <div id="job-lines"></div>
+    <button id="add-line-btn" onclick="addLine()">＋ Add line</button>
+    <div class="err" id="err-lines" style="margin-top:6px;">At least one line with hours &gt; 0 required</div>
+  </div>
+
+  <!-- Total hours -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="hours-total">
+      <span class="ht-label">Total Flight Hours</span>
+      <span class="ht-value" id="tot-hours">0.0</span>
+    </div>
+  </div>
+
+  <!-- Additional -->
+  <div class="card">
+    <div class="card-title">➕ Additional</div>
+    <label class="fl" id="fuel-label">Fuel Uplift (L)</label>
+    <input type="number" id="f-fuel" min="0" step="1" placeholder="0">
+    <label class="fl">Notes / Special Instructions</label>
+    <textarea id="f-notes" rows="3" placeholder="Optional…" style="resize:vertical;"></textarea>
+  </div>
+
+  <!-- Signature -->
+  <div class="card">
+    <div class="card-title">✍️ Pilot Signature <span style="color:var(--orange);font-size:14px;">*</span></div>
+    <div class="sigwrap" id="sig-wrap"><canvas id="sig-canvas"></canvas></div>
+    <div class="sigbar">
+      <span class="hint" id="sig-hint">Sign above with your finger</span>
+      <button class="btn ghost small" onclick="clearSig()">Clear</button>
+    </div>
+    <div class="err" id="err-sig">Signature required</div>
+  </div>
+
+  <div class="no-print">
+    <button class="btn amber" style="margin-bottom:12px;" onclick="submitJob('draft')">💾 Save as Draft</button>
+    <button class="btn green" onclick="submitJob('submitted')">📤 Submit Job Sheet</button>
+  </div>
+</div>
+
+<!-- ═══ HISTORY ═══ -->
+<div id="screen-history" class="screen">
+  <h1 class="page">History</h1>
+  <div class="hist-search">
+    <input type="text" id="hist-search" placeholder="Search client, pilot, job no…" oninput="renderHistory()">
+    <button class="btn ghost small" onclick="exportCSV()" style="white-space:nowrap;">📊 CSV</button>
+  </div>
+  <div id="hist-list"></div>
+</div>
+
+<!-- ═══ SYNC ═══ -->
+<div id="screen-sync" class="screen">
+  <h1 class="page">Sync</h1>
+  <div class="sync-stat">
+    <div class="sync-count" id="sync-pending-count">0</div>
+    <div style="font-size:14px;color:#8A93BE;margin-top:4px;">sheets pending sync</div>
+  </div>
+  <div class="card">
+    <div class="card-title">📤 Pending Queue</div>
+    <div id="sync-queue"></div>
+    <button class="btn primary" style="margin-top:14px;" onclick="syncNow()">☁️ Sync Now</button>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Sync Log</div>
+    <div id="sync-log"></div>
+  </div>
+</div>
+
+<!-- ═══ DETAIL (sub-view) ═══ -->
+<div id="screen-detail" class="screen">
+  <button class="back-btn no-print" onclick="backFromDetail()">← Back</button>
+  <div id="detail-content"></div>
+  <div class="btnrow no-print">
+    <button class="btn primary" onclick="printJob()">🖨️ Print / PDF</button>
+    <button class="btn ghost" id="det-edit-btn" onclick="editJob()">✏️ Edit</button>
+    <button class="btn amber" id="det-send-btn" onclick="sendToOffice()">📤 Send</button>
+  </div>
+</div>
+
+<!-- ═══ PRINT ═══ -->
+<div id="screen-print" class="screen" style="display:none;"></div>
+
+<!-- Modal -->
+<div id="modal-bg">
+  <div class="modal-box" id="modal-inner"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================================================================
+   MYOB CLIENT LIST
+   Paste your MYOB contact list here — one name per array entry.
+   The search field filters this list live.
+================================================================ */
+const MYOB_CLIENTS = [
+  // ── Paste MYOB contacts below ──
+  'Acacia Hills Pastoral Co',
+  'Adelaide River Station',
+  'Batchelor Resort',
+  'Berry Springs Nursery',
+  'Darwin Helicopters Pty Ltd',
+  'Douglas Daly Research Farm',
+  'Edith Farm',
+  'Fog Dam Conservation Reserve',
+  'Humpty Doo Barramundi',
+  'Katherine Agriculture',
+  'Mango Farms NT',
+  'Mary River Wilderness Retreat',
+  'NT Government — DPIR',
+  'NT Government — Parks',
+  'Palmerston City Council',
+  'Pine Creek Gold Mine',
+  'Robin Falls Pastoral',
+  'Rum Jungle Resources',
+  'Southport Pastoral',
+  'Springfield Station',
+  'Territory Natural Resource Management',
+  'Top End Buffalo Co',
+  'Yindjibarndi Aboriginal Corporation',
+  // ── Add more contacts above ──
+].sort();
+
+/* ================================================================
+   DATABASE
+   - 'heliops' v1 (read-only): existing app's fleet & crew
+   - 'job-advice-db' v1: our jobs & counter
+================================================================ */
+let jobDb;
+
+function openJobDb() {
+  return new Promise((res, rej) => {
+    const rq = indexedDB.open('job-advice-db', 1);
+    rq.onupgradeneeded = () => {
+      const d = rq.result;
+      if (!d.objectStoreNames.contains('jobs'))
+        d.createObjectStore('jobs', { keyPath: 'id', autoIncrement: true });
+      if (!d.objectStoreNames.contains('kv'))
+        d.createObjectStore('kv');
+    };
+    rq.onsuccess = () => { jobDb = rq.result; res(jobDb); };
+    rq.onerror = () => rej(rq.error);
+  });
+}
+
+function jTx(store, mode, fn) {
+  return new Promise((res, rej) => {
+    const t = jobDb.transaction(store, mode);
+    const rq = fn(t.objectStore(store));
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  });
+}
+const jGet    = (s,k)   => jTx(s,'readonly',  o => o.get(k));
+const jPut    = (s,v,k) => jTx(s,'readwrite', o => k!==undefined ? o.put(v,k) : o.put(v));
+const jAdd    = (s,v)   => jTx(s,'readwrite', o => o.add(v));
+const jDel    = (s,k)   => jTx(s,'readwrite', o => o.delete(k));
+const jAll    = (s)     => jTx(s,'readonly',  o => o.getAll());
+
+async function jKvGet(k, fallback=null){ const r=await jGet('kv',k); return r!==undefined?r:fallback; }
+async function jKvSet(k,v){ await jPut('kv',v,k); }
+
+/* Read fleet & crew from existing heliops DB */
+async function readHeliopsSetting(key) {
+  return new Promise((res) => {
+    const rq = indexedDB.open('heliops', 1);
+    rq.onsuccess = () => {
+      const d = rq.result;
+      if (!d.objectStoreNames.contains('kv')) { d.close(); return res(null); }
+      const t = d.transaction('kv','readonly');
+      const r = t.objectStore('kv').get('settings');
+      r.onsuccess = () => { d.close(); res(r.result?.[key] ?? null); };
+      r.onerror   = () => { d.close(); res(null); };
+    };
+    rq.onerror = () => res(null);
+  });
+}
+
+/* ================================================================
+   STATE
+================================================================ */
+let currentHire = 'wet';
+let sigCanvas, sigCtx, sigDrawing=false, sigHasMark=false;
+let currentDetailId = null;
+let prevTab = 'new';
+let currentTab = 'new';
+let lineIdx = 0;
+let APP_PIN = '';
+
+/* ================================================================
+   TOAST
+================================================================ */
+let _tt;
+function toast(msg, ms=2600){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(_tt); _tt=setTimeout(()=>t.classList.remove('show'), ms);
+}
+
+/* ================================================================
+   TABS
+================================================================ */
+function showTab(tab) {
+  if (currentTab===tab) return;
+  prevTab=currentTab; currentTab=tab;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const s=document.getElementById('screen-'+tab);
+  const tb=document.getElementById('tab-'+tab);
+  if(s) s.classList.add('active');
+  if(tb) tb.classList.add('active');
+  if(tab==='history') renderHistory();
+  if(tab==='sync')    renderSync();
+  document.getElementById('client-dropdown').classList.remove('open');
+}
+
+function showDetail(id) {
+  prevTab=currentTab; currentTab='detail';
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+  currentDetailId=id;
+  renderDetail(id);
+}
+
+function backFromDetail() {
+  currentDetailId=null;
+  showTab(prevTab==='detail'?'history':prevTab);
+}
+
+/* ================================================================
+   FORM INIT
+================================================================ */
+async function initForm(keepJobNo=false) {
+  document.getElementById('f-date').value = todayISO();
+
+  if (!keepJobNo) {
+    const n = await peekNextJobNo();
+    document.getElementById('f-jobno').value = n;
+  }
+
+  document.getElementById('f-client').value = '';
+  document.getElementById('f-fuel').value = '';
+  document.getElementById('f-notes').value = '';
+
+  await loadPilotsAndFleet();
+
+  lineIdx=0;
+  document.getElementById('job-lines').innerHTML='';
+  addLine();
+  recalcTotals();
+
+  setHire('wet');
+  clearSig();
+  clearErrors();
+}
+
+async function peekNextJobNo() {
+  const last = await jKvGet('jobCounter', 0);
+  return last + 1;
+}
+
+async function consumeJobNo() {
+  const manual = parseInt(document.getElementById('f-jobno').value);
+  if (manual && manual > 0) {
+    // If manual override is higher than counter, bump counter
+    const current = await jKvGet('jobCounter', 0);
+    if (manual > current) await jKvSet('jobCounter', manual);
+    return manual;
+  }
+  const next = await peekNextJobNo();
+  await jKvSet('jobCounter', next);
+  return next;
+}
+
+async function loadPilotsAndFleet() {
+  const fleet = await readHeliopsSetting('fleet');  // [{callsign, type, ...}]
+  const crew  = await readHeliopsSetting('crew');   // [{name, arn}]
+
+  const srcEl = document.getElementById('src-status');
+
+  if (crew && crew.length) {
+    const pSel  = document.getElementById('f-pilot');
+    const p2Sel = document.getElementById('f-pilot2');
+    [pSel, p2Sel].forEach((sel, i) => {
+      sel.innerHTML = `<option value="">${i===0?'Select pilot…':'Select second pilot…'}</option>`;
+      crew.forEach((c,idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = c.name + (c.arn ? ` (ARN: ${c.arn})` : '');
+        sel.appendChild(opt);
+      });
+    });
+  } else {
+    ['f-pilot','f-pilot2'].forEach(id => {
+      document.getElementById(id).innerHTML = '<option value="">No pilots — open Flight Ops app first</option>';
+    });
+  }
+
+  if (fleet && fleet.length) {
+    const aSel = document.getElementById('f-aircraft');
+    aSel.innerHTML = '<option value="">Select aircraft…</option>';
+    fleet.forEach((a, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      opt.textContent = a.callsign + (a.type ? ' — ' + a.type : '');
+      aSel.appendChild(opt);
+    });
+  } else {
+    document.getElementById('f-aircraft').innerHTML = '<option value="">No aircraft — open Flight Ops app first</option>';
+  }
+
+  const hasData = (crew&&crew.length) && (fleet&&fleet.length);
+  srcEl.innerHTML = hasData
+    ? `<span class="source-chip">✓ ${crew.length} pilots · ${fleet.length} aircraft from Flight Ops app</span>`
+    : `<span class="source-err">⚠ Open the Flight Ops app first to load pilots & aircraft</span>`;
+}
+
+/* ================================================================
+   HIRE TYPE
+================================================================ */
+function setHire(type) {
+  currentHire = type;
+  document.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.hire===type));
+  document.getElementById('banner-dry').classList.toggle('hidden', type!=='dry');
+  document.getElementById('banner-dual').classList.toggle('hidden', type!=='dual');
+  document.getElementById('dual-wrap').classList.toggle('hidden', type!=='dual');
+  document.getElementById('col-hrs-head').textContent = type==='dual' ? 'Dual Hrs' : 'Hours';
+  document.getElementById('fuel-label').textContent = type==='dry' ? 'Fuel Uplift (L) *' : 'Fuel Uplift (L)';
+}
+
+/* ================================================================
+   JOB LINES
+================================================================ */
+function addLine() {
+  if (lineIdx >= 10) { toast('Maximum 10 lines'); return; }
+  lineIdx++;
+  const id = lineIdx;
+  const div = document.createElement('div');
+  div.className = 'job-line';
+  div.id = 'line-' + id;
+  div.innerHTML = `
+    <input type="text" class="line-desc" placeholder="Description…">
+    <input type="number" class="line-hrs" min="0" step="0.1" placeholder="0.0" oninput="recalcTotals()">
+    <button class="line-del" onclick="removeLine(${id})" title="Remove">×</button>
+  `;
+  document.getElementById('job-lines').appendChild(div);
+  updateDelBtns();
+}
+
+function removeLine(id) {
+  const el = document.getElementById('line-'+id);
+  if (el) el.remove();
+  if (!document.querySelectorAll('#job-lines .job-line').length) { lineIdx=0; addLine(); return; }
+  updateDelBtns();
+  recalcTotals();
+}
+
+function updateDelBtns() {
+  const lines = document.querySelectorAll('#job-lines .job-line');
+  lines.forEach(l => {
+    const b = l.querySelector('.line-del');
+    if (b) b.style.visibility = lines.length<=1 ? 'hidden' : 'visible';
+  });
+}
+
+function recalcTotals() {
+  let total = 0;
+  document.querySelectorAll('#job-lines .job-line').forEach(l => {
+    total += parseFloat(l.querySelector('.line-hrs')?.value) || 0;
+  });
+  document.getElementById('tot-hours').textContent = total.toFixed(1);
+}
+
+/* ================================================================
+   CLIENT SEARCH
+================================================================ */
+function onClientInput() {
+  const q = document.getElementById('f-client').value.trim().toLowerCase();
+  const dd = document.getElementById('client-dropdown');
+
+  if (!q) {
+    // Show first 10 when empty/focused
+    const shown = MYOB_CLIENTS.slice(0, 12);
+    dd.innerHTML = shown.map(c => `<div class="client-opt" onclick="pickClient('${esc(c)}')">${esc(c)}</div>`).join('');
+    dd.classList.add('open');
+    return;
+  }
+
+  const matches = MYOB_CLIENTS.filter(c => c.toLowerCase().includes(q));
+  if (!matches.length) {
+    dd.innerHTML = `<div class="client-none">No match — <b>${esc(q)}</b> will be used as entered</div>`;
+  } else {
+    dd.innerHTML = matches.slice(0,12).map(c => {
+      const hi = c.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'), '<mark>$1</mark>');
+      return `<div class="client-opt" onclick="pickClient('${esc(c)}')">${hi}</div>`;
+    }).join('');
+  }
+  dd.classList.add('open');
+}
+
+function pickClient(name) {
+  document.getElementById('f-client').value = name;
+  document.getElementById('client-dropdown').classList.remove('open');
+  document.getElementById('err-client').classList.remove('show');
+  document.getElementById('f-client').classList.remove('bad');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.client-picker-wrap'))
+    document.getElementById('client-dropdown').classList.remove('open');
+});
+
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ================================================================
+   SIGNATURE
+================================================================ */
+function initSig() {
+  sigCanvas = document.getElementById('sig-canvas');
+  sigCtx = sigCanvas.getContext('2d');
+  resizeSig();
+
+  const pos = e => {
+    const r = sigCanvas.getBoundingClientRect();
+    const s = e.touches ? e.touches[0] : e;
+    return { x:(s.clientX-r.left)*(sigCanvas.width/r.width), y:(s.clientY-r.top)*(sigCanvas.height/r.height) };
+  };
+  const start = e => { e.preventDefault(); sigDrawing=true; const p=pos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y); };
+  const move  = e => {
+    if(!sigDrawing) return; e.preventDefault();
+    const p=pos(e);
+    sigCtx.lineWidth=2.5; sigCtx.lineCap='round'; sigCtx.strokeStyle='#1A1D28';
+    sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+    sigHasMark=true;
+    document.getElementById('sig-wrap').classList.add('signed');
+    document.getElementById('sig-hint').textContent='Signature captured ✓';
+    document.getElementById('err-sig').classList.remove('show');
+  };
+  const end = () => { sigDrawing=false; };
+
+  sigCanvas.addEventListener('mousedown', start);
+  sigCanvas.addEventListener('mousemove', move);
+  sigCanvas.addEventListener('mouseup', end);
+  sigCanvas.addEventListener('touchstart', start, {passive:false});
+  sigCanvas.addEventListener('touchmove', move, {passive:false});
+  sigCanvas.addEventListener('touchend', end);
+}
+
+function resizeSig() {
+  if (!sigCanvas) return;
+  const r = sigCanvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio||1;
+  sigCanvas.width  = r.width  * dpr;
+  sigCanvas.height = r.height * dpr;
+  sigCtx.scale(dpr, dpr);
+}
+
+function clearSig() {
+  if (!sigCtx) return;
+  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+  sigHasMark=false;
+  document.getElementById('sig-wrap').classList.remove('signed');
+  document.getElementById('sig-hint').textContent='Sign above with your finger';
+}
+
+/* ================================================================
+   VALIDATION
+================================================================ */
+function clearErrors() {
+  document.querySelectorAll('.err').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('.bad').forEach(e=>e.classList.remove('bad'));
+}
+
+function fieldErr(fid, eid, msg) {
+  const f=document.getElementById(fid), e=document.getElementById(eid);
+  if(f) f.classList.add('bad');
+  if(e){ if(msg) e.textContent=msg; e.classList.add('show'); }
+}
+
+function validateForm() {
+  clearErrors(); let ok=true;
+  if (!document.getElementById('f-date').value) { fieldErr('f-date','err-date'); ok=false; }
+  if (!document.getElementById('f-jobno').value) { fieldErr('f-jobno','err-jobno'); ok=false; }
+  if (!document.getElementById('f-client').value.trim()) { fieldErr('f-client','err-client'); ok=false; }
+  if (!document.getElementById('f-pilot').value) { fieldErr('f-pilot','err-pilot'); ok=false; }
+  if (!document.getElementById('f-aircraft').value) { fieldErr('f-aircraft','err-aircraft'); ok=false; }
+  if (currentHire==='dual' && !document.getElementById('f-pilot2').value) { fieldErr('f-pilot2','err-pilot2'); ok=false; }
+
+  let linesOk=false;
+  document.querySelectorAll('#job-lines .job-line').forEach(l => {
+    const h=parseFloat(l.querySelector('.line-hrs')?.value)||0;
+    const d=(l.querySelector('.line-desc')?.value||'').trim();
+    if(d&&h>0) linesOk=true;
+  });
+  if (!linesOk) { document.getElementById('err-lines').classList.add('show'); ok=false; }
+  if (!sigHasMark) { document.getElementById('err-sig').classList.add('show'); ok=false; }
+
+  if (!ok) {
+    const first = document.querySelector('.bad,.err.show');
+    if (first) first.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  return ok;
+}
+
+/* ================================================================
+   SUBMIT
+================================================================ */
+async function submitJob(status) {
+  if (status==='submitted' && !validateForm()) return;
+  clearErrors();
+
+  const jobNo = await consumeJobNo();
+
+  const fleet = await readHeliopsSetting('fleet') || [];
+  const crew  = await readHeliopsSetting('crew')  || [];
+
+  const pilotIdx    = parseInt(document.getElementById('f-pilot').value);
+  const aircraftIdx = parseInt(document.getElementById('f-aircraft').value);
+  const pilot2Idx   = parseInt(document.getElementById('f-pilot2').value);
+
+  const pilotObj    = crew[pilotIdx]   || {};
+  const aircraftObj = fleet[aircraftIdx] || {};
+  const pilot2Obj   = crew[pilot2Idx]  || {};
+
+  const lines = [];
+  document.querySelectorAll('#job-lines .job-line').forEach(l => {
+    const desc  = (l.querySelector('.line-desc')?.value||'').trim();
+    const hours = parseFloat(l.querySelector('.line-hrs')?.value)||0;
+    if (desc||hours) lines.push({ desc, hours });
+  });
+
+  const totalHours = lines.reduce((s,l)=>s+l.hours, 0);
+
+  const rec = {
+    jobNo,
+    date:      document.getElementById('f-date').value,
+    client:    document.getElementById('f-client').value.trim(),
+    pilotName: pilotObj.name || '',
+    pilotArn:  pilotObj.arn  || '',
+    aircraftReg:  aircraftObj.callsign || '',
+    aircraftType: aircraftObj.type    || '',
+    hireType:  currentHire,
+    pilot2Name: currentHire==='dual' ? (pilot2Obj.name||'') : '',
+    lines,
+    totalHours,
+    fuelUplift: parseFloat(document.getElementById('f-fuel').value)||0,
+    notes:      document.getElementById('f-notes').value.trim(),
+    signatureDataURL: sigHasMark ? sigCanvas.toDataURL() : null,
+    status,
+    createdAt:   Date.now(),
+    submittedAt: status==='submitted' ? Date.now() : null,
+    syncedAt:    null,
+  };
+
+  await jAdd('jobs', rec);
+  toast(status==='draft' ? '📋 Saved as draft' : '✅ Job sheet submitted!');
+  await updateSyncBadge();
+  await initForm();
+  window.scrollTo(0,0);
+}
+
+/* ================================================================
+   HISTORY
+================================================================ */
+async function renderHistory() {
+  const jobs = await jAll('jobs');
+  const q = document.getElementById('hist-search').value.trim().toLowerCase();
+  let list = jobs.sort((a,b)=>b.createdAt-a.createdAt);
+  if (q) list = list.filter(j =>
+    (j.client||'').toLowerCase().includes(q) ||
+    (j.pilotName||'').toLowerCase().includes(q) ||
+    String(j.jobNo).includes(q)
+  );
+  const el = document.getElementById('hist-list');
+  if (!list.length) { el.innerHTML='<div class="no-results">No records found</div>'; return; }
+  el.innerHTML = list.map(j=>`
+    <div class="hist-row" onclick="showDetail(${j.id})">
+      <div class="hr-left">
+        <div class="hr-job">Job #${j.jobNo} — ${esc(j.client)}</div>
+        <div class="hr-meta">${fmtDate(j.date)} · ${esc(j.pilotName)} · ${esc(j.aircraftReg)}</div>
+        <div class="hr-meta" style="margin-top:3px;"><span class="badge ${j.status}">${statusLabel(j.status)}</span></div>
+      </div>
+      <div class="hr-right">
+        <div class="hr-hours">${(j.totalHours||0).toFixed(1)}</div>
+        <div class="hr-hrs-label">hrs</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function statusLabel(s){ return s==='draft'?'Draft':s==='submitted'?'Submitted':'Synced'; }
+function fmtDate(d){
+  if(!d) return '—';
+  try{ return new Date(d+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+  catch{ return d; }
+}
+function todayISO(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* ================================================================
+   DETAIL VIEW
+================================================================ */
+async function renderDetail(id) {
+  const job = await jGet('jobs', id);
+  if (!job) return;
+  const hireMap = {wet:'Wet Hire',dry:'Dry Hire',dual:'Dual'};
+  const linesHTML = (job.lines||[]).map(l=>`
+    <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;">
+      <div style="flex:1;">${esc(l.desc)}</div>
+      <div style="font-weight:700;color:var(--navy);white-space:nowrap;padding-left:12px;">${(l.hours||0).toFixed(1)} hrs</div>
+    </div>
+  `).join('');
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-hdr">
+      <div class="dh-jobno">Job #${job.jobNo}</div>
+      <div class="dh-sub">${fmtDate(job.date)} · <span class="badge ${job.status}">${statusLabel(job.status)}</span></div>
+      <div class="dh-client">${esc(job.client)}</div>
+    </div>
+    <div class="card">
+      <div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}${job.pilotArn?' (ARN: '+esc(job.pilotArn)+')':''}</div></div>
+      <div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div>
+      <div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}</div></div>
+      ${job.pilot2Name?`<div class="kv-row"><div class="k">2nd Pilot</div><div class="v">${esc(job.pilot2Name)}</div></div>`:''}
+      ${job.fuelUplift?`<div class="kv-row"><div class="k">Fuel Uplift</div><div class="v">${job.fuelUplift} L</div></div>`:''}
+      ${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}
+    </div>
+    <div class="card">
+      <div class="card-title">Flight Hours</div>
+      ${linesHTML}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 0;border-top:2px solid var(--navy);margin-top:4px;">
+        <div style="font-weight:700;color:var(--navy);font-size:15px;">Total Flight Hours</div>
+        <div style="font-size:24px;font-weight:800;color:var(--orange);">${(job.totalHours||0).toFixed(1)} hrs</div>
+      </div>
+    </div>
+    ${job.signatureDataURL?`<div class="card"><div class="card-title">Pilot Signature</div><img src="${job.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>`:''}
+  `;
+
+  document.getElementById('det-edit-btn').style.display = job.status==='draft' ? '' : 'none';
+  document.getElementById('det-send-btn').style.display = job.status!=='synced' ? '' : 'none';
+}
+
+async function editJob() {
+  if (!currentDetailId) return;
+  const job = await jGet('jobs', currentDetailId);
+  if (!job) return;
+  await jDel('jobs', currentDetailId);
+  currentDetailId=null;
+  await initForm(true);
+
+  document.getElementById('f-date').value   = job.date||'';
+  document.getElementById('f-jobno').value  = job.jobNo||'';
+  document.getElementById('f-client').value = job.client||'';
+  document.getElementById('f-fuel').value   = job.fuelUplift||'';
+  document.getElementById('f-notes').value  = job.notes||'';
+
+  // Re-load dropdowns then set values by name (since indices may shift)
+  await loadPilotsAndFleet();
+  const crew  = await readHeliopsSetting('crew') ||[];
+  const fleet = await readHeliopsSetting('fleet')||[];
+  const pi = crew.findIndex(c=>c.name===job.pilotName);
+  const ai = fleet.findIndex(a=>a.callsign===job.aircraftReg);
+  if (pi>=0) document.getElementById('f-pilot').value=pi;
+  if (ai>=0) document.getElementById('f-aircraft').value=ai;
+
+  setHire(job.hireType||'wet');
+  if (job.hireType==='dual') {
+    const p2i = crew.findIndex(c=>c.name===job.pilot2Name);
+    if (p2i>=0) document.getElementById('f-pilot2').value=p2i;
+  }
+
+  document.getElementById('job-lines').innerHTML=''; lineIdx=0;
+  (job.lines||[]).forEach(l => {
+    addLine();
+    const all = document.querySelectorAll('#job-lines .job-line');
+    const last = all[all.length-1];
+    if (last) {
+      last.querySelector('.line-desc').value = l.desc||'';
+      last.querySelector('.line-hrs').value  = l.hours||'';
+    }
+  });
+  recalcTotals();
+  showTab('new');
+  toast('Job loaded for editing');
+}
+
+async function sendToOffice() {
+  if (!currentDetailId) return;
+  const job = await jGet('jobs', currentDetailId);
+  if (!job) return;
+  await jPut('jobs', {...job, status:'submitted', submittedAt:Date.now()});
+  await updateSyncBadge();
+  renderDetail(currentDetailId);
+  toast('📤 Queued for sync');
+}
+
+async function printJob() {
+  const job = await jGet('jobs', currentDetailId);
+  if (!job) return;
+  buildPrint(job);
+  window.print();
+}
+
+function buildPrint(job) {
+  const hireMap={wet:'Wet Hire',dry:'Dry Hire',dual:'Dual'};
+  const rows=(job.lines||[]).map(l=>`
+    <tr>
+      <td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td>
+      <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td>
+    </tr>
+  `).join('');
+  const pad=Math.max(0,5-(job.lines?.length||0));
+  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
+
+  document.getElementById('screen-print').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:11pt;">
+      <tr>
+        <td colspan="2" style="border:1px solid #000;padding:10px 12px;">
+          <div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">Outback Helicopter Airwork NT Pty Ltd</div>
+          <div style="font-size:9pt;margin-top:3px;">ABN: 80 137 947 687 | ACN: 137 947 687</div>
+          <div style="font-size:9pt;">PO Box 37819 Winnellie NT 0821 | Ph: 8941 6811 | Mob: 0427 222 670</div>
+          <div style="font-size:9pt;">office@outbackhelicopters.com.au</div>
+        </td>
+        <td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;">
+          <div style="font-weight:bold;font-size:13pt;">Job No: ${job.jobNo}</div>
+          <div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${fmtDate(job.date)}</div>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td>
+        <td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}</td>
+      </tr>
+      <tr>
+        <td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}${job.pilot2Name?' / '+esc(job.pilot2Name):''}</td>
+        <td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)} — ${esc(job.aircraftType)}</td>
+      </tr>
+      <tr style="background:#eee;">
+        <th style="border:1px solid #000;padding:6px 8px;text-align:left;width:70%;">DESCRIPTION</th>
+        <th colspan="2" style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th>
+      </tr>
+      ${rows}${padRows}
+      <tr>
+        <td colspan="2" style="border:1px solid #000;padding:10px 12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span>
+            <span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span>
+          </div>
+          ${job.fuelUplift?`<div style="margin-top:6px;font-size:10pt;"><b>FUEL UPLIFT:</b> ${job.fuelUplift} L</div>`:''}
+        </td>
+        <td style="border:1px solid #000;padding:10px 12px;text-align:center;vertical-align:middle;">
+          <span class="badge ${job.status}">${statusLabel(job.status)}</span>
+        </td>
+      </tr>
+      ${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}
+      <tr>
+        <td colspan="2" style="border:1px solid #000;padding:12px;">
+          <b>PILOT SIGNATURE:</b><br>
+          ${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:'<div style="height:50px;border-bottom:1px solid #000;width:220px;margin-top:8px;"></div>'}
+        </td>
+        <td style="border:1px solid #000;padding:12px;vertical-align:top;">
+          <b>DATE:</b> ${fmtDate(job.date)}<br>
+          <div style="margin-top:6px;font-size:9pt;color:#555;">Submitted: ${job.submittedAt?new Date(job.submittedAt).toLocaleString('en-AU'):'—'}</div>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
+/* ================================================================
+   SYNC
+================================================================ */
+async function renderSync() {
+  const jobs = await jAll('jobs');
+  const pending = jobs.filter(j=>j.status==='submitted');
+  const synced  = jobs.filter(j=>j.status==='synced').sort((a,b)=>(b.syncedAt||0)-(a.syncedAt||0));
+
+  document.getElementById('sync-pending-count').textContent = pending.length;
+
+  const qEl = document.getElementById('sync-queue');
+  qEl.innerHTML = pending.length
+    ? pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">Job #${j.jobNo} — ${esc(j.client)}</div><div class="sq-meta">${fmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
+    : '<div class="no-results">All synced ✓</div>';
+
+  const lEl = document.getElementById('sync-log');
+  lEl.innerHTML = synced.length
+    ? synced.slice(0,10).map(j=>`<div class="log-item">✅ Job #${j.jobNo} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
+    : '<div class="no-results">No sync activity yet</div>';
+}
+
+async function syncNow() {
+  const jobs = await jAll('jobs');
+  const pending = jobs.filter(j=>j.status==='submitted');
+  if (!pending.length) { toast('Nothing to sync — all up to date ✓'); return; }
+  for (const j of pending) await jPut('jobs', {...j, status:'synced', syncedAt:Date.now()});
+  await updateSyncBadge();
+  renderSync();
+  toast(`✅ Synced ${pending.length} sheet${pending.length>1?'s':''}!`);
+}
+
+async function updateSyncBadge() {
+  const jobs = await jAll('jobs');
+  const n = jobs.filter(j=>j.status==='submitted').length;
+  document.getElementById('sync-pip').textContent=n;
+  document.getElementById('sync-pip').classList.toggle('show',n>0);
+  document.getElementById('sync-badge').classList.toggle('pending',n>0);
+  document.getElementById('sync-count-top').textContent=n+' pending';
+}
+
+/* ================================================================
+   CSV EXPORT (hours only)
+================================================================ */
+async function exportCSV() {
+  const jobs = await jAll('jobs');
+  const filtered = jobs.filter(j=>j.status!=='draft');
+  if (!filtered.length) { toast('No submitted records to export'); return; }
+  const header = 'Date,Job No,Client,Pilot,Aircraft,Hire Type,Total Flight Hours';
+  const rows = filtered.sort((a,b)=>a.jobNo-b.jobNo).map(j=>[
+    j.date, j.jobNo,
+    `"${(j.client||'').replace(/"/g,'""')}"`,
+    `"${(j.pilotName||'').replace(/"/g,'""')}"`,
+    `"${(j.aircraftReg||'').replace(/"/g,'""')}"`,
+    j.hireType,
+    (j.totalHours||0).toFixed(1)
+  ].join(','));
+  const csv = [header,...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`job-hours-${todayISO()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${filtered.length} records`);
+}
+
+/* ================================================================
+   SETTINGS (PIN + sync email only — fleet/pilots come from main app)
+================================================================ */
+function openSettings() {
+  if (APP_PIN) { showPinModal(showSettingsMain); }
+  else { showSettingsMain(); }
+}
+
+function openModal(html) {
+  document.getElementById('modal-inner').innerHTML=html;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('show');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modal-bg').addEventListener('click', e => {
+    if (e.target===document.getElementById('modal-bg')) closeModal();
+  });
+});
+
+function showPinModal(onSuccess) {
+  let entered='';
+  const dots=()=>{ document.getElementById('pin-dots').textContent='●'.repeat(entered.length)+'○'.repeat(4-entered.length); };
+  window.pinDigit=(d)=>{
+    if(entered.length>=4) return;
+    entered+=d; dots();
+    if(entered.length===4){
+      if(entered===APP_PIN){ closeModal(); setTimeout(onSuccess,100); }
+      else{ document.getElementById('pin-err-msg').textContent='Incorrect PIN'; setTimeout(()=>{entered='';dots();document.getElementById('pin-err-msg').textContent='';},700); }
+    }
+  };
+  window.pinBack=()=>{ if(entered.length){ entered=entered.slice(0,-1); dots(); } };
+  const nums=[1,2,3,4,5,6,7,8,9,null,0,'⌫'];
+  const pad=nums.map(d=>d===null?'<button disabled style="opacity:0;pointer-events:none;"></button>':d==='⌫'?'<button onclick="pinBack()">⌫</button>':`<button onclick="pinDigit(${d})">${d}</button>`).join('');
+  openModal(`<button class="modal-close" onclick="closeModal()">×</button><h3>🔒 Enter PIN</h3><div id="pin-dots">○○○○</div><div class="pin-err" id="pin-err-msg"></div><div class="pinpad">${pad}</div>`);
+}
+
+async function showSettingsMain() {
+  const email = await jKvGet('syncEmail','');
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3>⚙️ Settings</h3>
+    <div class="note">✈️ Pilots and aircraft are managed in the <b>Flight Ops app</b>. Open that app to add or change them.</div>
+    <label class="fl">Office Email (for sync reference)</label>
+    <input type="text" id="set-email" value="${esc(email)}" placeholder="office@outbackhelicopters.com.au">
+    <label class="fl">Change PIN (4 digits, blank to disable)</label>
+    <input type="password" id="set-pin1" maxlength="4" placeholder="••••" inputmode="numeric">
+    <label class="fl">Confirm PIN</label>
+    <input type="password" id="set-pin2" maxlength="4" placeholder="••••" inputmode="numeric">
+    <button class="btn primary" style="margin-top:16px;" onclick="saveSettings()">Save</button>
+  `);
+}
+
+async function saveSettings() {
+  const p1=document.getElementById('set-pin1').value;
+  const p2=document.getElementById('set-pin2').value;
+  if(p1&&(!/^\d{4}$/.test(p1)||p1!==p2)){ toast('PIN must be 4 digits and must match'); return; }
+  if(p1){ APP_PIN=p1; await jKvSet('pin',p1); }
+  else if(p1===''){ APP_PIN=''; await jKvSet('pin',''); }
+  const em=document.getElementById('set-email').value.trim();
+  await jKvSet('syncEmail',em);
+  toast('Settings saved ✓');
+  closeModal();
+}
+
+/* ================================================================
+   BOOT
+================================================================ */
+async function boot() {
+  await openJobDb();
+  APP_PIN = await jKvGet('pin','');
+  await initForm();
+  initSig();
+  await updateSyncBadge();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./job-sw.js').catch(()=>{});
+}
+
+window.addEventListener('resize', ()=>{ if(sigCanvas) resizeSig(); });
+boot().catch(console.error);
+</script>
+</body>
+</html>

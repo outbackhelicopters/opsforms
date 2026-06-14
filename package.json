@@ -1,0 +1,19 @@
+{
+  "name": "heli-app-api",
+  "version": "1.0.0",
+  "description": "Outback Helicopter Airwork NT — flight paperwork backend",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "pdfkit": "^0.15.0",
+    "@azure/identity": "^4.4.1"
+  }
+}

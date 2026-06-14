@@ -1,0 +1,53 @@
+# Digital Ocean App Platform — Outback Helicopter Airwork NT
+# Two components in one app: static PWA + Node.js API
+
+name: outbackheli-app
+
+services:
+  - name: api
+    source_dir: /api
+    github:
+      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this
+      branch: main
+      deploy_on_push: true
+    run_command: node server.js
+    environment_slug: node-js
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_count: 1
+    http_port: 3000
+    routes:
+      - path: /api
+    envs:
+      - key: SENDER_EMAIL
+        scope: RUN_TIME
+        type: SECRET
+        # Your Office 365 address, e.g. ops@outbackhelicopters.com.au
+        # This is both the FROM address and the OneDrive account used for filing
+      - key: OPS_EMAIL
+        scope: RUN_TIME
+        type: SECRET
+        # Where completed paperwork emails should be delivered
+      - key: MS_TENANT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: MS_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: MS_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+      - key: ONEDRIVE_FOLDER
+        scope: RUN_TIME
+        value: Helicopter Paperwork
+
+static_sites:
+  - name: pwa
+    source_dir: /
+    github:
+      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this
+      branch: main
+      deploy_on_push: true
+    index_document: index.html
+    error_document: index.html
+    routes:
+      - path: /

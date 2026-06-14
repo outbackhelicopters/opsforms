@@ -558,6 +558,10 @@ J. Blore, 0111222</textarea>
 
 <!-- ============ FLIGHT FLOW ============ -->
 <div class="screen" id="scr-flight">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+    <div id="flight-title" style="font-size:13px;font-weight:600;color:var(--mut);"></div>
+    <button class="btn ghost small" onclick="App.discardDraft()" style="color:var(--red);border-color:var(--red);min-height:34px;font-size:13px;padding:5px 14px;">✕ Start over</button>
+  </div>
   <div id="stepper">
     <button class="st cur" data-step="0" onclick="App.gotoStep(0)">1. SMS form</button>
     <button class="st" data-step="1" onclick="App.gotoStep(1)">2. Weight &amp; balance</button>
@@ -1469,9 +1473,32 @@ const App = {
   },
   startFlightUI() {
     this.setChip(this.flight.callsign);
+    const ft = $('flight-title');
+    if (ft) ft.textContent = this.flight.callsign + ' · ' + (this.flight.formName || 'Flight paperwork');
     this.renderSms(); this.renderWb(); this.renderPax();
     this.gotoStep(0);
     this.show('scr-flight');
+  },
+  discardDraft() {
+    Modal.show(
+      '<h3>Start over?</h3>' +
+      '<p>This will delete the current draft for <b>' + esc(this.flight ? this.flight.callsign : '') + '</b> and return to the home screen. Any unsaved progress will be lost.</p>' +
+      '<div class="btnrow">' +
+      '<button class="btn ghost" onclick="Modal.hide()">Keep working</button>' +
+      '<button class="btn danger" onclick="App._doDiscard()">Delete &amp; start over</button>' +
+      '</div>'
+    );
+  },
+  async _doDiscard() {
+    Modal.hide();
+    if (this.flight) {
+      await DB.del('flights', this.flight.id).catch(() => {});
+      this.flights = this.flights.filter(f => f.id !== this.flight.id);
+      this.flight = null;
+    }
+    this.setChip('—');
+    this.goHome();
+    toast('Draft deleted — ready to start fresh');
   },
   async exitFlight() { await this.saveDraftNow(); this.goHome(); toast('Draft saved on this iPad'); },
   saveDraft() { clearTimeout(this._saveT); this._saveT = setTimeout(() => this.saveDraftNow(), 400); },
@@ -2291,7 +2318,8 @@ const App = {
 
       '<div class="card"><h2>Security &amp; data</h2><div class="grid2">' +
       inp('set-pin', 'Change PIN (4 digits)', S.pin, 'text') + '</div>' +
-      '<div class="btnrow"><button class="btn ghost small" onclick="App.clearSent()">Delete sent bundles</button>' +
+      '<div class="btnrow"><button class="btn ghost small" onclick="App.restartApp()">↺ Restart app</button>' +
+      '<button class="btn ghost small" onclick="App.clearSent()">Delete sent bundles</button>' +
       '<button class="btn danger small" onclick="App.factoryReset()">Factory reset iPad app</button></div></div>' +
 
       '<button class="btn primary bigaction" onclick="App.saveSettingsForm()">Save settings ✓</button><div style="height:14px;"></div>';
@@ -2428,6 +2456,12 @@ const App = {
     this.flights = this.flights.filter(f => f.status !== 'sent');
     toast(sent.length + ' sent bundle(s) deleted');
     this.renderSettings();
+  },
+  restartApp() {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+    }
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).finally(() => location.reload(true));
   },
   factoryReset() {
     Modal.show('<h3>Factory reset?</h3><p>Deletes ALL settings, drafts and bundles on this iPad. This cannot be undone.</p>' +

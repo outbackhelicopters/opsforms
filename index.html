@@ -46,9 +46,9 @@ button{font-family:inherit;}
   display:flex;align-items:center;gap:11px;
 }
 #topbar .logo{width:34px;height:34px;flex:none;opacity:.95;}
-#topbar .brandtxt{line-height:1.15;}
-#topbar .brandtxt .b1{font-weight:800;font-size:13.5px;letter-spacing:2.8px;color:#fff;}
-#topbar .brandtxt .b2{font-weight:500;font-size:8.5px;letter-spacing:2.4px;color:#7A83B0;text-transform:uppercase;}
+#topbar .brandtxt{line-height:1.2;}
+#topbar .brandtxt .b1{font-weight:800;font-size:13px;letter-spacing:2.5px;color:#fff;}
+#topbar .brandtxt .b2{font-weight:600;font-size:10px;letter-spacing:2px;color:#9AA3C7;text-transform:uppercase;}
 #topbar .callsign{
   background:var(--orange);color:#fff;font-weight:700;
   border-radius:6px;padding:4px 11px;font-size:13.5px;
@@ -395,6 +395,43 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237C8099' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");}
 }
 
+/* ── Splash screen ───────────────────────────────────────── */
+#splash{
+  position:fixed;inset:0;z-index:999;
+  background:var(--navy-deep);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  transition:opacity .5s ease;
+}
+#splash.fade{opacity:0;pointer-events:none;}
+#splash.gone{display:none;}
+#splash .sp-logo{
+  width:160px;height:160px;border-radius:50%;
+  object-fit:contain;
+  animation:splashPop .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+#splash .sp-name{
+  margin-top:28px;
+  font-size:11px;font-weight:600;letter-spacing:3.5px;
+  color:#6A74A0;text-transform:uppercase;text-align:center;
+}
+#splash .sp-sub{
+  margin-top:8px;
+  font-size:20px;font-weight:800;letter-spacing:-.3px;
+  color:#fff;text-align:center;
+}
+#splash .sp-tap{
+  position:absolute;bottom:48px;
+  font-size:12px;font-weight:500;letter-spacing:.5px;
+  color:#3A4070;animation:splashBlink 1.6s ease infinite;
+}
+@keyframes splashPop{
+  from{opacity:0;transform:scale(.7);}
+  to{opacity:1;transform:scale(1);}
+}
+@keyframes splashBlink{
+  0%,100%{opacity:.4;} 50%{opacity:1;}
+}
+
 /* ── Mobile ──────────────────────────────────────────────── */
 @media(max-width:580px){
   .screen{padding:14px 12px 70px;}
@@ -413,20 +450,16 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 </head>
 <body>
 
+<!-- ============ SPLASH ============ -->
+<div id="splash" onclick="App.dismissSplash()">
+  <img class="sp-logo" src="logo.png" alt="Outback Helicopter">
+  <div class="sp-name">Airwork NT</div>
+  <div class="sp-sub">Flight Paperwork</div>
+  <div class="sp-tap">Tap to continue</div>
+</div>
+
 <div id="topbar">
-  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <circle cx="50" cy="50" r="48" fill="#F58220"/>
-    <circle cx="50" cy="50" r="41" fill="#fff"/>
-    <circle cx="50" cy="50" r="37" fill="none" stroke="#BF5A16" stroke-width="2"/>
-    <line x1="22" y1="32" x2="74" y2="32" stroke="#BF5A16" stroke-width="4" stroke-linecap="round"/>
-    <line x1="47" y1="32" x2="47" y2="42" stroke="#BF5A16" stroke-width="4"/>
-    <ellipse cx="42" cy="53" rx="16" ry="11.5" fill="#BF5A16"/>
-    <polygon points="54,49 81,52 81,57 54,58" fill="#BF5A16"/>
-    <line x1="79" y1="44" x2="79" y2="64" stroke="#BF5A16" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="28" y1="70" x2="60" y2="70" stroke="#BF5A16" stroke-width="3.5" stroke-linecap="round"/>
-    <line x1="34" y1="64" x2="34" y2="70" stroke="#BF5A16" stroke-width="3"/>
-    <line x1="51" y1="64" x2="51" y2="70" stroke="#BF5A16" stroke-width="3"/>
-  </svg>
+  <img class="logo" src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
   <div class="brandtxt"><div class="b1">OUTBACK</div><div class="b2">HELICOPTER &middot; AIRWORK NT</div></div>
   <span class="callsign" id="tb-callsign">—</span>
   <span class="spacer"></span>
@@ -1216,6 +1249,17 @@ const App = {
     if (!this.S.configured) this.show('scr-setup');
     else { this.goHome(); this.trySync(); }
     this.updatePill();
+    // Auto-dismiss splash after 2.2s
+    this._splashTimer = setTimeout(() => this.dismissSplash(), 2200);
+  },
+  dismissSplash() {
+    if (this._splashDismissed) return;
+    this._splashDismissed = true;
+    clearTimeout(this._splashTimer);
+    const el = document.getElementById('splash');
+    if (!el) return;
+    el.classList.add('fade');
+    setTimeout(() => el.classList.add('gone'), 520);
   },
   show(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

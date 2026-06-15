@@ -63,6 +63,9 @@ button{font-family:inherit;}
 }
 #topbar .spacer{flex:1;}
 @media(max-width:520px){#topbar .brandtxt{display:none;}}
+#home-btn{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.18);color:#C0C6E0;border-radius:8px;padding:5px 10px;
+  font-size:11px;font-weight:700;text-decoration:none;letter-spacing:.3px;white-space:nowrap;flex:none;}
 #syncpill{
   display:flex;align-items:center;gap:7px;border-radius:999px;
   padding:6px 14px;font-weight:700;font-size:12px;border:0;cursor:pointer;letter-spacing:.2px;
@@ -520,6 +523,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 </div>
 
 <div id="topbar">
+  <a href="./index.html" id="home-btn">‹ Home</a>
   <img class="logo" src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
   <div class="brandtxt"><div class="b1">OUTBACK</div><div class="b2">HELICOPTER</div><div class="b3">AIRWORK NT</div></div>
   <span class="callsign" id="tb-callsign">—</span>

@@ -2,6 +2,8 @@
 /* ============================================================
    Outback Helicopter Airwork NT — Flight Paperwork API
    POST /api/send  →  generate PDF, send via Office 365, file to OneDrive
+   GET  /reports   →  password-protected reporting dashboard
+   GET  /api/jobs  →  job records from OneDrive (auth required)
    All via Microsoft Graph API — one set of credentials for everything
    ============================================================ */
 
@@ -10,7 +12,48 @@ const cors        = require('cors');
 const PDFDocument = require('pdfkit');
 const fs          = require('fs');
 const path        = require('path');
+const crypto      = require('crypto');
 const { ClientSecretCredential } = require('@azure/identity');
+
+/* ── Reports auth ─────────────────────────────────────────── */
+const REPORTS_PWD    = process.env.REPORTS_PASSWORD || '';
+const REPORTS_SECRET = process.env.REPORTS_SECRET   || ('ohant-' + (process.env.MS_CLIENT_ID || 'key').slice(0,12));
+
+function parseCookies(req) {
+  const out = {};
+  (req.headers.cookie || '').split(';').forEach(c => {
+    const i = c.indexOf('=');
+    if (i < 0) return;
+    out[c.slice(0,i).trim()] = decodeURIComponent(c.slice(i+1).trim());
+  });
+  return out;
+}
+function makeToken(pwd) {
+  return crypto.createHmac('sha256', REPORTS_SECRET).update(pwd).digest('hex').slice(0,32);
+}
+function requireReportsAuth(req, res, next) {
+  if (!REPORTS_PWD) return res.status(503).send('Set REPORTS_PASSWORD environment variable in DigitalOcean.');
+  const cookies = parseCookies(req);
+  if (cookies.rpt_auth === makeToken(REPORTS_PWD)) return next();
+  if (req.path.startsWith('/api/')) return res.status(401).json({ ok:false, error:'Unauthorised' });
+  res.redirect('/reports/login');
+}
+
+/* ── Graph token helper ───────────────────────────────────── */
+async function getGraphToken() {
+  const cred = new ClientSecretCredential(
+    process.env.MS_TENANT_ID,
+    process.env.MS_CLIENT_ID,
+    process.env.MS_CLIENT_SECRET
+  );
+  const { token } = await cred.getToken('https://graph.microsoft.com/.default');
+  return token;
+}
+
+/* ── In-memory jobs cache (5 min) ────────────────────────── */
+let _jobsCache = null;
+let _jobsCacheAt = 0;
+const CACHE_TTL = 5 * 60 * 1000;
 
 /* ── ACST helpers (Australia/Darwin = UTC+9:30, no DST) ─────── */
 const ACST_TZ = 'Australia/Darwin';
@@ -31,6 +74,73 @@ app.get(['/config', '/api/config'], (_req, res) => {
 /* ── Health check ─────────────────────────────────────────── */
 app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 
+/* ── Reports: login page ──────────────────────────────────── */
+app.get('/reports/login', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'reports.html'));
+});
+app.post('/reports/login', express.json(), (req, res) => {
+  const { password } = req.body || {};
+  if (!REPORTS_PWD) return res.json({ ok:false, error:'Not configured' });
+  if (password !== REPORTS_PWD) return res.json({ ok:false, error:'Wrong password' });
+  const token = makeToken(REPORTS_PWD);
+  res.setHeader('Set-Cookie', `rpt_auth=${token}; Path=/; HttpOnly; Max-Age=2592000; SameSite=Strict`);
+  res.json({ ok: true });
+});
+
+/* ── Reports: dashboard ───────────────────────────────────── */
+app.get('/reports', requireReportsAuth, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'reports.html'));
+});
+
+/* ── Jobs API (for reporting dashboard) ───────────────────── */
+app.get('/api/jobs', requireReportsAuth, async (req, res) => {
+  try {
+    const forceRefresh = req.query.refresh === '1';
+    const now = Date.now();
+    if (!forceRefresh && _jobsCache && now - _jobsCacheAt < CACHE_TTL) {
+      return res.json({ jobs: _jobsCache, cached: true });
+    }
+
+    const token      = await getGraphToken();
+    const driveUser  = process.env.SENDER_EMAIL;
+    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+    const recPath    = encodeURIComponent(`${folderName}/_records`);
+
+    let files = [];
+    let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
+            + `?$select=name,@microsoft.graph.downloadUrl&$top=1000`;
+
+    while (url) {
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.status === 404) break;
+      if (!r.ok) throw new Error(`List records: ${r.status}`);
+      const d = await r.json();
+      files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
+      url = d['@odata.nextLink'] || null;
+    }
+
+    // Download all records in parallel batches of 20
+    const jobs = [];
+    for (let i = 0; i < files.length; i += 20) {
+      const batch = files.slice(i, i + 20);
+      const results = await Promise.all(batch.map(async f => {
+        try {
+          const r = await fetch(f['@microsoft.graph.downloadUrl']);
+          return r.ok ? await r.json() : null;
+        } catch { return null; }
+      }));
+      jobs.push(...results.filter(Boolean));
+    }
+
+    _jobsCache   = jobs;
+    _jobsCacheAt = now;
+    res.json({ jobs, total: jobs.length });
+  } catch (err) {
+    console.error('Jobs fetch error:', err.message);
+    res.status(500).json({ ok:false, error: err.message });
+  }
+});
+
 /* ── Send bundle ──────────────────────────────────────────── */
 app.post('/send', async (req, res) => {
   const bundle = req.body;
@@ -45,12 +155,7 @@ app.post('/send', async (req, res) => {
     const filename = `${bundle.callsign}_${safeForm}_${dateStr}.pdf`;
 
     /* Get Microsoft Graph access token (shared for email + OneDrive) */
-    const credential = new ClientSecretCredential(
-      process.env.MS_TENANT_ID,
-      process.env.MS_CLIENT_ID,
-      process.env.MS_CLIENT_SECRET
-    );
-    const { token } = await credential.getToken('https://graph.microsoft.com/.default');
+    const token = await getGraphToken();
 
     /* 2 — File to OneDrive */
     let oneDriveUrl = null;
@@ -91,6 +196,9 @@ app.post('/send', async (req, res) => {
     await graphSendMail(token, sender, opsTo, subject, html, pdfBuffer, filename);
     console.log('Email sent:', subject);
 
+    /* 4 — Save structured job record to OneDrive for reporting */
+    try { await saveJobRecord(token, bundle, oneDriveUrl); } catch (e) { console.error('Record save failed (non-fatal):', e.message); }
+
     res.json({ ok: true, filename, oneDriveUrl });
 
   } catch (err) {
@@ -98,6 +206,49 @@ app.post('/send', async (req, res) => {
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
+/* ── Save job record to OneDrive _records/ ────────────────── */
+async function saveJobRecord(token, bundle, oneDriveUrl) {
+  _jobsCache = null; // invalidate cache so next report load is fresh
+  const record = {
+    submittedAt:  new Date().toISOString(),
+    flightDate:   bundle.flightDate || new Date().toISOString().slice(0,10),
+    flightTime:   bundle.flightTime || '',
+    jobNo:        bundle.jobNo      || null,
+    aircraftReg:  bundle.callsign   || '',
+    aircraftType: bundle.aircraftType || '',
+    pilotName:    bundle.sms?.values?.pilotName  || bundle.pilotName  || '',
+    pilotArn:     bundle.sms?.values?.pilotArn   || bundle.pilotArn   || '',
+    pilot2Name:   bundle.sms?.values?.trainerName || bundle.pilot2Name || '',
+    client:       bundle.client     || '',
+    hireType:     bundle.hireType   || 'wet',
+    totalHours:   bundle.totalHours || 0,
+    lines:        bundle.lines      || [],
+    fuelUplift:   bundle.fuelUplift || 0,
+    notes:        bundle.notes      || '',
+    paxCount:     (bundle.pax || []).length,
+    wbPass:       bundle.wb?.result?.pass ?? null,
+    oneDriveUrl:  oneDriveUrl || '',
+  };
+
+  const driveUser  = process.env.SENDER_EMAIL;
+  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+  const ts  = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  const reg = (record.aircraftReg).replace(/[^A-Z0-9]/gi,'');
+  const filename = `${ts}_${reg || 'UNK'}.json`;
+  const uploadPath = `${folderName}/_records/${filename}`;
+
+  const r = await fetch(
+    `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${encodeURIComponent(uploadPath)}:/content`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+    }
+  );
+  if (!r.ok) throw new Error(`Record upload ${r.status}: ${await r.text()}`);
+  console.log('Job record saved:', filename);
+}
 
 /* ── Send email via Microsoft Graph ──────────────────────── */
 async function graphSendMail(token, from, to, subject, html, pdfBuffer, filename) {
@@ -222,6 +373,44 @@ async function buildPDF(bundle) {
     kv('Date', flightDateStr);
     kv('Time', flightTimeStr);
     if (bundle.sms?.values?.trainerName) kv('Trainer', bundle.sms.values.trainerName);
+
+    /* ── Job Advice: Client & hire type ── */
+    if (bundle.client) {
+      secHead('JOB DETAILS');
+      kv('Client',    bundle.client);
+      kv('Job No',    bundle.jobNo   || '—');
+      kv('Hire Type', bundle.hireType === 'dry' ? 'Dry Hire' : bundle.hireType === 'dual' ? 'Dual Flight' : 'Wet Hire');
+      if (bundle.pilot2Name) kv('2nd Pilot', bundle.pilot2Name);
+    }
+
+    /* ── Job Advice: Flight hour lines ── */
+    if (Array.isArray(bundle.lines) && bundle.lines.length) {
+      secHead('FLIGHT HOURS');
+      const hY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(MUT);
+      doc.text('DESCRIPTION', 50, hY, { width: 340, lineBreak: false });
+      doc.text('HOURS',       395, hY, { width: 100, lineBreak: false });
+      doc.y = hY + 14;
+      doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB'); doc.y += 6;
+      bundle.lines.forEach((l, i) => {
+        const y = doc.y;
+        if (i % 2 === 0) { doc.rect(50, y-2, W, 17).fill('#F9FAFB'); }
+        doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28')
+           .text(l.desc || '—', 50, y, { width: 340, lineBreak: false });
+        doc.text((l.hours||0).toFixed(1) + ' hrs', 395, y, { width: 100, lineBreak: false });
+        doc.y = y + 17;
+      });
+      doc.moveDown(0.3);
+      doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB'); doc.y += 8;
+      const totY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(NAVY)
+         .text('TOTAL FLIGHT HOURS', 50, totY, { width: 340, lineBreak: false });
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(ORANGE)
+         .text((bundle.totalHours||0).toFixed(1) + ' hrs', 395, totY, { width: 100, lineBreak: false });
+      doc.y = totY + 20;
+      if (bundle.fuelUplift) kv('Fuel Uplift', bundle.fuelUplift + ' L');
+      if (bundle.notes)      kv('Notes',       bundle.notes);
+    }
 
     /* ── W&B ── */
     if (bundle.wb?.result) {

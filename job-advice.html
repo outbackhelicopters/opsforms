@@ -295,6 +295,21 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;
 }
 
+/* Settings modal */
+.set-section{margin-bottom:20px;}
+.set-head{font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin-bottom:8px;}
+.set-row{display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--bg);border-radius:10px;margin-bottom:5px;}
+.set-label{flex:1;font-size:15px;font-weight:600;color:var(--ink);}
+.set-sub{font-size:12px;color:var(--mut);margin-left:4px;}
+.set-del{background:none;border:none;color:var(--red);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;}
+.set-add-row{display:none;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.set-input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;background:var(--card);flex:1;min-width:0;}
+.set-save-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap;}
+.set-cancel-btn{background:var(--line);color:var(--ink2);border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:14px;cursor:pointer;}
+.set-add-btn{background:none;border:1.5px dashed var(--line);color:var(--mut);border-radius:8px;padding:8px 14px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:2px;}
+.set-add-btn:active{background:var(--bg);}
+.set-empty{color:var(--mut);font-size:13px;font-style:italic;padding:6px 2px;}
+
 /* Print */
 @media print{
   body{background:#fff;font-family:Arial,sans-serif;font-size:11pt;color:#000;}
@@ -473,7 +488,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   <div class="card">
     <div class="card-title">📤 Pending Queue</div>
     <div id="sync-queue"></div>
-    <button class="btn primary" style="margin-top:14px;" onclick="syncNow()">☁️ Sync Now</button>
+    <button id="sync-now-btn" class="btn primary" style="margin-top:14px;" onclick="syncNow()">☁️ Sync Now</button>
   </div>
   <div class="card">
     <div class="card-title">📋 Sync Log</div>
@@ -508,33 +523,8 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
    Paste your MYOB contact list here — one name per array entry.
    The search field filters this list live.
 ================================================================ */
-const MYOB_CLIENTS = [
-  // ── Paste MYOB contacts below ──
-  'Acacia Hills Pastoral Co',
-  'Adelaide River Station',
-  'Batchelor Resort',
-  'Berry Springs Nursery',
-  'Darwin Helicopters Pty Ltd',
-  'Douglas Daly Research Farm',
-  'Edith Farm',
-  'Fog Dam Conservation Reserve',
-  'Humpty Doo Barramundi',
-  'Katherine Agriculture',
-  'Mango Farms NT',
-  'Mary River Wilderness Retreat',
-  'NT Government — DPIR',
-  'NT Government — Parks',
-  'Palmerston City Council',
-  'Pine Creek Gold Mine',
-  'Robin Falls Pastoral',
-  'Rum Jungle Resources',
-  'Southport Pastoral',
-  'Springfield Station',
-  'Territory Natural Resource Management',
-  'Top End Buffalo Co',
-  'Yindjibarndi Aboriginal Corporation',
-  // ── Add more contacts above ──
-].sort();
+/* Client list — populated from /api/config on startup, cached in IndexedDB for offline */
+let LIVE_CLIENTS = [];
 
 /* ================================================================
    DATABASE
@@ -575,21 +565,9 @@ const jAll    = (s)     => jTx(s,'readonly',  o => o.getAll());
 async function jKvGet(k, fallback=null){ const r=await jGet('kv',k); return r!==undefined?r:fallback; }
 async function jKvSet(k,v){ await jPut('kv',v,k); }
 
-/* Read fleet & crew from existing heliops DB */
-async function readHeliopsSetting(key) {
-  return new Promise((res) => {
-    const rq = indexedDB.open('heliops', 1);
-    rq.onsuccess = () => {
-      const d = rq.result;
-      if (!d.objectStoreNames.contains('kv')) { d.close(); return res(null); }
-      const t = d.transaction('kv','readonly');
-      const r = t.objectStore('kv').get('settings');
-      r.onsuccess = () => { d.close(); res(r.result?.[key] ?? null); };
-      r.onerror   = () => { d.close(); res(null); };
-    };
-    rq.onerror = () => res(null);
-  });
-}
+/* Pilots & aircraft — stored in this app's own DB */
+async function getPilots()   { return await jKvGet('pilots',   []); }
+async function getAircraft() { return await jKvGet('aircraft', []); }
 
 /* ================================================================
    STATE
@@ -689,46 +667,49 @@ async function consumeJobNo() {
 }
 
 async function loadPilotsAndFleet() {
-  const fleet = await readHeliopsSetting('fleet');  // [{callsign, type, ...}]
-  const crew  = await readHeliopsSetting('crew');   // [{name, arn}]
+  const pilots   = await getPilots();
+  const aircraft = await getAircraft();
 
+  const pSel  = document.getElementById('f-pilot');
+  const p2Sel = document.getElementById('f-pilot2');
+  const aSel  = document.getElementById('f-aircraft');
   const srcEl = document.getElementById('src-status');
 
-  if (crew && crew.length) {
-    const pSel  = document.getElementById('f-pilot');
-    const p2Sel = document.getElementById('f-pilot2');
+  if (pilots.length) {
     [pSel, p2Sel].forEach((sel, i) => {
       sel.innerHTML = `<option value="">${i===0?'Select pilot…':'Select second pilot…'}</option>`;
-      crew.forEach((c,idx) => {
+      pilots.forEach((name, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
-        opt.textContent = c.name + (c.arn ? ` (ARN: ${c.arn})` : '');
+        opt.textContent = name;
         sel.appendChild(opt);
       });
     });
   } else {
     ['f-pilot','f-pilot2'].forEach(id => {
-      document.getElementById(id).innerHTML = '<option value="">No pilots — open Flight Ops app first</option>';
+      document.getElementById(id).innerHTML = '<option value="">No pilots — tap ⚙️ Settings to add</option>';
     });
   }
 
-  if (fleet && fleet.length) {
-    const aSel = document.getElementById('f-aircraft');
+  if (aircraft.length) {
     aSel.innerHTML = '<option value="">Select aircraft…</option>';
-    fleet.forEach((a, idx) => {
+    aircraft.forEach((a, idx) => {
       const opt = document.createElement('option');
       opt.value = idx;
-      opt.textContent = a.callsign + (a.type ? ' — ' + a.type : '');
+      opt.textContent = a.reg + (a.type ? ' — ' + a.type : '');
       aSel.appendChild(opt);
     });
   } else {
-    document.getElementById('f-aircraft').innerHTML = '<option value="">No aircraft — open Flight Ops app first</option>';
+    aSel.innerHTML = '<option value="">No aircraft — tap ⚙️ Settings to add</option>';
   }
 
-  const hasData = (crew&&crew.length) && (fleet&&fleet.length);
+  const hasData = pilots.length && aircraft.length;
+  const syncedAt = await jKvGet('configSyncedAt', 0);
+  const syncAge = syncedAt ? Math.round((Date.now()-syncedAt)/60000) : null;
+  const syncLabel = syncAge !== null ? ` · synced ${syncAge<1?'just now':syncAge+'m ago'}` : '';
   srcEl.innerHTML = hasData
-    ? `<span class="source-chip">✓ ${crew.length} pilots · ${fleet.length} aircraft from Flight Ops app</span>`
-    : `<span class="source-err">⚠ Open the Flight Ops app first to load pilots & aircraft</span>`;
+    ? `<span class="source-chip">✓ ${pilots.length} pilot${pilots.length!==1?'s':''} · ${aircraft.length} aircraft${syncLabel}</span>`
+    : `<span class="source-err">⚠ No data yet — check internet & reopen app</span>`;
 }
 
 /* ================================================================
@@ -795,14 +776,14 @@ function onClientInput() {
   const dd = document.getElementById('client-dropdown');
 
   if (!q) {
-    // Show first 10 when empty/focused
-    const shown = MYOB_CLIENTS.slice(0, 12);
+    const shown = LIVE_CLIENTS.slice(0, 12);
+    if (!shown.length) { dd.classList.remove('open'); return; }
     dd.innerHTML = shown.map(c => `<div class="client-opt" onclick="pickClient('${esc(c)}')">${esc(c)}</div>`).join('');
     dd.classList.add('open');
     return;
   }
 
-  const matches = MYOB_CLIENTS.filter(c => c.toLowerCase().includes(q));
+  const matches = LIVE_CLIENTS.filter(c => c.toLowerCase().includes(q));
   if (!matches.length) {
     dd.innerHTML = `<div class="client-none">No match — <b>${esc(q)}</b> will be used as entered</div>`;
   } else {
@@ -927,16 +908,16 @@ async function submitJob(status) {
 
   const jobNo = await consumeJobNo();
 
-  const fleet = await readHeliopsSetting('fleet') || [];
-  const crew  = await readHeliopsSetting('crew')  || [];
+  const pilots   = await getPilots();
+  const aircraft = await getAircraft();
 
   const pilotIdx    = parseInt(document.getElementById('f-pilot').value);
   const aircraftIdx = parseInt(document.getElementById('f-aircraft').value);
   const pilot2Idx   = parseInt(document.getElementById('f-pilot2').value);
 
-  const pilotObj    = crew[pilotIdx]   || {};
-  const aircraftObj = fleet[aircraftIdx] || {};
-  const pilot2Obj   = crew[pilot2Idx]  || {};
+  const pilotName   = pilots[pilotIdx]     || '';
+  const aircraftObj = aircraft[aircraftIdx] || {};
+  const pilot2Name  = pilots[pilot2Idx]    || '';
 
   const lines = [];
   document.querySelectorAll('#job-lines .job-line').forEach(l => {
@@ -951,12 +932,12 @@ async function submitJob(status) {
     jobNo,
     date:      document.getElementById('f-date').value,
     client:    document.getElementById('f-client').value.trim(),
-    pilotName: pilotObj.name || '',
-    pilotArn:  pilotObj.arn  || '',
-    aircraftReg:  aircraftObj.callsign || '',
-    aircraftType: aircraftObj.type    || '',
+    pilotName: pilotName,
+    pilotArn:  '',
+    aircraftReg:  aircraftObj.reg  || '',
+    aircraftType: aircraftObj.type || '',
     hireType:  currentHire,
-    pilot2Name: currentHire==='dual' ? (pilot2Obj.name||'') : '',
+    pilot2Name: currentHire==='dual' ? pilot2Name : '',
     lines,
     totalHours,
     fuelUplift: parseFloat(document.getElementById('f-fuel').value)||0,
@@ -968,8 +949,24 @@ async function submitJob(status) {
     syncedAt:    null,
   };
 
-  await jAdd('jobs', rec);
-  toast(status==='draft' ? '📋 Saved as draft' : '✅ Job sheet submitted!');
+  const newId = await jAdd('jobs', rec);
+
+  if (status === 'submitted') {
+    toast('✅ Submitted — sending to office…');
+    const saved = { ...rec, id: newId };
+    syncJobToServer(saved).then(async ok => {
+      if (ok) {
+        toast('☁️ Sent to office!');
+        await updateSyncBadge();
+        if (document.getElementById('tab-sync')?.classList.contains('active')) renderSync();
+      } else {
+        toast('⚠ Offline — will sync when connected');
+      }
+    }).catch(() => {});
+  } else {
+    toast('📋 Saved as draft');
+  }
+
   await updateSyncBadge();
   await initForm();
   window.scrollTo(0,0);
@@ -1074,16 +1071,16 @@ async function editJob() {
 
   // Re-load dropdowns then set values by name (since indices may shift)
   await loadPilotsAndFleet();
-  const crew  = await readHeliopsSetting('crew') ||[];
-  const fleet = await readHeliopsSetting('fleet')||[];
-  const pi = crew.findIndex(c=>c.name===job.pilotName);
-  const ai = fleet.findIndex(a=>a.callsign===job.aircraftReg);
+  const pilots   = await getPilots();
+  const aircraft = await getAircraft();
+  const pi = pilots.findIndex(n => n === job.pilotName);
+  const ai = aircraft.findIndex(a => a.reg === job.aircraftReg);
   if (pi>=0) document.getElementById('f-pilot').value=pi;
   if (ai>=0) document.getElementById('f-aircraft').value=ai;
 
   setHire(job.hireType||'wet');
   if (job.hireType==='dual') {
-    const p2i = crew.findIndex(c=>c.name===job.pilot2Name);
+    const p2i = pilots.findIndex(n => n === job.pilot2Name);
     if (p2i>=0) document.getElementById('f-pilot2').value=p2i;
   }
 
@@ -1205,14 +1202,79 @@ async function renderSync() {
     : '<div class="no-results">No sync activity yet</div>';
 }
 
+/* ================================================================
+   SERVER SYNC
+================================================================ */
+function buildServerBundle(job) {
+  return {
+    callsign:     job.aircraftReg  || '',
+    formName:     'Job Advice Sheet',
+    queuedAt:     job.submittedAt  || job.createdAt || Date.now(),
+    flightDate:   job.date         || '',
+    flightTime:   '',
+    aircraftType: job.aircraftType || '',
+    sms: {
+      values: {
+        pilotName:   job.pilotName  || '',
+        pilotArn:    job.pilotArn   || '',
+        trainerName: job.hireType === 'dual' ? (job.pilot2Name || '') : '',
+      },
+      sigs: { pilotSig: job.signatureDataURL || null },
+      acks: {},
+    },
+    pax:        [],
+    wb:         null,
+    client:     job.client     || '',
+    hireType:   job.hireType   || 'wet',
+    pilot2Name: job.pilot2Name || '',
+    lines:      job.lines      || [],
+    totalHours: job.totalHours || 0,
+    fuelUplift: job.fuelUplift || 0,
+    notes:      job.notes      || '',
+    jobNo:      job.jobNo      || 0,
+  };
+}
+
+async function syncJobToServer(job) {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 45000);
+    const res = await fetch('/api/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildServerBundle(job)),
+      signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.ok) {
+      await jPut('jobs', { ...job, status: 'synced', syncedAt: Date.now(), oneDriveUrl: data.oneDriveUrl || null });
+      return true;
+    }
+    return false;
+  } catch { return false; }
+}
+
 async function syncNow() {
   const jobs = await jAll('jobs');
-  const pending = jobs.filter(j=>j.status==='submitted');
+  const pending = jobs.filter(j => j.status === 'submitted');
   if (!pending.length) { toast('Nothing to sync — all up to date ✓'); return; }
-  for (const j of pending) await jPut('jobs', {...j, status:'synced', syncedAt:Date.now()});
-  await updateSyncBadge();
-  renderSync();
-  toast(`✅ Synced ${pending.length} sheet${pending.length>1?'s':''}!`);
+
+  const btn = document.getElementById('sync-now-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Syncing…'; }
+
+  let ok = 0, fail = 0;
+  for (const j of pending) {
+    const success = await syncJobToServer(j);
+    success ? ok++ : fail++;
+    await updateSyncBadge();
+    renderSync();
+  }
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '☁️ Sync Now'; }
+  if (ok)   toast(`✅ Synced ${ok} sheet${ok > 1 ? 's' : ''} to office!`);
+  if (fail) toast(`⚠ ${fail} sheet${fail > 1 ? 's' : ''} failed — check internet`);
 }
 
 async function updateSyncBadge() {
@@ -1289,31 +1351,143 @@ function showPinModal(onSuccess) {
 }
 
 async function showSettingsMain() {
-  const email = await jKvGet('syncEmail','');
+  const email    = await jKvGet('syncEmail','');
+  const pilots   = await getPilots();
+  const aircraft = await getAircraft();
+
+  const pilotRows = pilots.map((name, i) =>
+    `<div class="set-row"><span class="set-label">${esc(name)}</span><button class="set-del" onclick="delPilot(${i})">×</button></div>`
+  ).join('') || '<div class="set-empty">No pilots added yet</div>';
+
+  const aircraftRows = aircraft.map((a, i) =>
+    `<div class="set-row"><span class="set-label">${esc(a.reg)}<span class="set-sub">${a.type?'— '+esc(a.type):''}</span></span><button class="set-del" onclick="delAircraft(${i})">×</button></div>`
+  ).join('') || '<div class="set-empty">No aircraft added yet</div>';
+
   openModal(`
     <button class="modal-close" onclick="closeModal()">×</button>
     <h3>⚙️ Settings</h3>
-    <div class="note">✈️ Pilots and aircraft are managed in the <b>Flight Ops app</b>. Open that app to add or change them.</div>
-    <label class="fl">Office Email (for sync reference)</label>
-    <input type="text" id="set-email" value="${esc(email)}" placeholder="office@outbackhelicopters.com.au">
-    <label class="fl">Change PIN (4 digits, blank to disable)</label>
-    <input type="password" id="set-pin1" maxlength="4" placeholder="••••" inputmode="numeric">
-    <label class="fl">Confirm PIN</label>
-    <input type="password" id="set-pin2" maxlength="4" placeholder="••••" inputmode="numeric">
-    <button class="btn primary" style="margin-top:16px;" onclick="saveSettings()">Save</button>
+
+    <div class="set-section">
+      <div class="set-head">👤 Pilots</div>
+      <div id="pilot-list">${pilotRows}</div>
+      <div class="set-add-row" id="add-pilot-row">
+        <input id="new-pilot-name" class="set-input" placeholder="Full name" autocorrect="off">
+        <button class="set-save-btn" onclick="confirmAddPilot()">Add</button>
+        <button class="set-cancel-btn" onclick="document.getElementById('add-pilot-row').style.display='none'">Cancel</button>
+      </div>
+      <button class="set-add-btn" onclick="document.getElementById('add-pilot-row').style.display='flex';document.getElementById('new-pilot-name').focus()">+ Add Pilot</button>
+    </div>
+
+    <div class="set-section">
+      <div class="set-head">🚁 Aircraft</div>
+      <div id="aircraft-list">${aircraftRows}</div>
+      <div class="set-add-row" id="add-aircraft-row">
+        <input id="new-ac-reg" class="set-input" placeholder="VH-XXX" style="max-width:110px" autocorrect="off" autocapitalize="characters">
+        <input id="new-ac-type" class="set-input" placeholder="Type (e.g. R44)" autocorrect="off">
+        <button class="set-save-btn" onclick="confirmAddAircraft()">Add</button>
+        <button class="set-cancel-btn" onclick="document.getElementById('add-aircraft-row').style.display='none'">Cancel</button>
+      </div>
+      <button class="set-add-btn" onclick="document.getElementById('add-aircraft-row').style.display='flex';document.getElementById('new-ac-reg').focus()">+ Add Aircraft</button>
+    </div>
+
+    <div class="set-section">
+      <div class="set-head">📧 Email & PIN</div>
+      <label class="fl">Office Email</label>
+      <input type="email" id="set-email" value="${esc(email)}" placeholder="office@outbackhelicopters.com.au">
+      <label class="fl" style="margin-top:12px">Change PIN (4 digits, blank = no PIN)</label>
+      <input type="password" id="set-pin1" maxlength="4" placeholder="••••" inputmode="numeric">
+      <label class="fl">Confirm PIN</label>
+      <input type="password" id="set-pin2" maxlength="4" placeholder="••••" inputmode="numeric">
+      <button class="btn primary" style="margin-top:16px;" onclick="saveSettings()">Save Email & PIN</button>
+    </div>
   `);
 }
 
+window.delPilot = async (idx) => {
+  const pilots = await getPilots();
+  pilots.splice(idx, 1);
+  await jKvSet('pilots', pilots);
+  await showSettingsMain();
+  await loadPilotsAndFleet();
+};
+
+window.confirmAddPilot = async () => {
+  const name = document.getElementById('new-pilot-name').value.trim();
+  if (!name) { toast('Enter a name'); return; }
+  const pilots = await getPilots();
+  if (pilots.includes(name)) { toast('Already in list'); return; }
+  pilots.push(name);
+  await jKvSet('pilots', pilots);
+  await showSettingsMain();
+  await loadPilotsAndFleet();
+  toast(`${name} added ✓`);
+};
+
+window.delAircraft = async (idx) => {
+  const aircraft = await getAircraft();
+  aircraft.splice(idx, 1);
+  await jKvSet('aircraft', aircraft);
+  await showSettingsMain();
+  await loadPilotsAndFleet();
+};
+
+window.confirmAddAircraft = async () => {
+  const reg  = document.getElementById('new-ac-reg').value.trim().toUpperCase();
+  const type = document.getElementById('new-ac-type').value.trim();
+  if (!reg) { toast('Enter registration'); return; }
+  const aircraft = await getAircraft();
+  if (aircraft.find(a => a.reg === reg)) { toast('Already in list'); return; }
+  aircraft.push({ reg, type });
+  await jKvSet('aircraft', aircraft);
+  await showSettingsMain();
+  await loadPilotsAndFleet();
+  toast(`${reg} added ✓`);
+};
+
 async function saveSettings() {
-  const p1=document.getElementById('set-pin1').value;
-  const p2=document.getElementById('set-pin2').value;
-  if(p1&&(!/^\d{4}$/.test(p1)||p1!==p2)){ toast('PIN must be 4 digits and must match'); return; }
-  if(p1){ APP_PIN=p1; await jKvSet('pin',p1); }
-  else if(p1===''){ APP_PIN=''; await jKvSet('pin',''); }
-  const em=document.getElementById('set-email').value.trim();
-  await jKvSet('syncEmail',em);
-  toast('Settings saved ✓');
+  const p1 = document.getElementById('set-pin1').value;
+  const p2 = document.getElementById('set-pin2').value;
+  if (p1 && (!/^\d{4}$/.test(p1) || p1!==p2)) { toast('PIN must be 4 digits and must match'); return; }
+  if (p1) { APP_PIN=p1; await jKvSet('pin',p1); }
+  else     { APP_PIN=''; await jKvSet('pin',''); }
+  const em = document.getElementById('set-email').value.trim();
+  await jKvSet('syncEmail', em);
+  toast('Saved ✓');
   closeModal();
+}
+
+/* ================================================================
+   SERVER CONFIG SYNC
+   Fetches pilots, aircraft, clients from /api/config.
+   Caches in IndexedDB — works offline using last-known data.
+================================================================ */
+async function syncFromServer() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch('/api/config', { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) return false;
+    const cfg = await res.json();
+
+    if (Array.isArray(cfg.pilots) && cfg.pilots.length) {
+      /* Support both [{name,arn}] objects and plain strings */
+      const names = cfg.pilots
+        .map(p => typeof p === 'string' ? p : (p.name || ''))
+        .filter(Boolean);
+      await jKvSet('pilots', names);
+    }
+    if (Array.isArray(cfg.aircraft) && cfg.aircraft.length) {
+      await jKvSet('aircraft', cfg.aircraft);
+    }
+    if (Array.isArray(cfg.clients) && cfg.clients.length) {
+      await jKvSet('clients', [...cfg.clients].sort());
+    }
+    await jKvSet('configSyncedAt', Date.now());
+    return true;
+  } catch (_) {
+    return false; /* offline or timeout — use cached data */
+  }
 }
 
 /* ================================================================
@@ -1322,6 +1496,18 @@ async function saveSettings() {
 async function boot() {
   await openJobDb();
   APP_PIN = await jKvGet('pin','');
+
+  /* Load cached client list immediately so search works offline */
+  LIVE_CLIENTS = await jKvGet('clients', []);
+
+  /* Sync from server (non-blocking — updates dropdowns when done) */
+  syncFromServer().then(async (ok) => {
+    if (ok) {
+      LIVE_CLIENTS = await jKvGet('clients', []);
+      await loadPilotsAndFleet();
+    }
+  }).catch(() => {});
+
   await initForm();
   initSig();
   await updateSyncBadge();

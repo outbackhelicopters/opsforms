@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OHANT — Reports</title>
+<style>
+:root{--navy:#18224A;--orange:#E8750E;--bg:#F4F6FB;--card:#fff;--line:#E8EBF5;--text:#1C1F28;--mut:#6B7280;--r:12px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Login */
+#login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.login-card{background:var(--card);border-radius:var(--r);padding:40px;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(0,0,0,.12);}
+.login-logo{background:var(--navy);border-radius:8px;padding:16px;text-align:center;color:#fff;font-weight:800;font-size:12px;letter-spacing:.5px;margin-bottom:28px;}
+.login-logo .lo{font-size:22px;font-weight:900;display:block;margin-bottom:3px;}
+.login-card h2{font-size:18px;color:var(--navy);margin-bottom:20px;}
+.lbl{display:block;font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.login-card input{width:100%;padding:12px 14px;border:2px solid var(--line);border-radius:8px;font-size:16px;outline:none;transition:border-color .2s;}
+.login-card input:focus{border-color:var(--navy);}
+.login-err{color:#dc2626;font-size:13px;margin-top:8px;min-height:18px;}
+.btn-login{background:var(--navy);color:#fff;border:none;border-radius:8px;width:100%;padding:14px;font-size:16px;font-weight:700;cursor:pointer;margin-top:16px;}
+.btn-login:hover{background:#232e6a;}
+
+/* App */
+#app-wrap{display:none;}
+.top-bar{background:var(--navy);color:#fff;padding:0 20px;height:56px;display:flex;align-items:center;gap:12px;}
+.tb-title{font-size:15px;font-weight:800;flex:1;}
+.tb-sub{font-size:11px;color:rgba(255,255,255,.45);}
+.tb-logout{background:rgba(255,255,255,.12);border:none;color:#fff;padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;}
+.tb-logout:hover{background:rgba(255,255,255,.2);}
+.top-accent{height:3px;background:var(--orange);}
+
+.main{max-width:1120px;margin:0 auto;padding:20px 16px 60px;}
+
+/* Filter bar */
+.filter-bar{background:var(--card);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;}
+.fg input,.fg select{padding:8px 10px;border:2px solid var(--line);border-radius:7px;font-size:14px;min-width:130px;outline:none;background:#fff;}
+.fg input:focus,.fg select:focus{border-color:var(--navy);}
+.btn-apply{background:var(--navy);color:#fff;border:none;padding:9px 18px;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;align-self:flex-end;}
+.btn-reset{background:var(--line);color:var(--navy);border:none;padding:9px 14px;border-radius:7px;font-size:14px;cursor:pointer;align-self:flex-end;}
+.btn-csv{background:#166534;color:#fff;border:none;padding:9px 14px;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;align-self:flex-end;margin-left:auto;}
+.btn-refresh{background:transparent;color:var(--navy);border:2px solid var(--line);padding:7px 12px;border-radius:7px;font-size:13px;cursor:pointer;align-self:flex-end;}
+.btn-refresh:hover{border-color:var(--navy);}
+
+/* Stats */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+.stat-card{background:var(--card);border-radius:var(--r);padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.sc-label{font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.sc-value{font-size:30px;font-weight:800;color:var(--navy);}
+.sc-sub{font-size:12px;color:var(--mut);margin-top:2px;}
+
+/* Tabs */
+.tab-bar{display:flex;gap:4px;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.tab-btn{background:var(--card);border:2px solid var(--line);border-radius:8px;padding:9px 16px;font-size:14px;font-weight:600;color:var(--mut);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* Card & tables */
+.card{background:var(--card);border-radius:var(--r);box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden;}
+.card-title{padding:14px 18px;font-size:14px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+.ct-count{font-weight:400;color:var(--mut);font-size:13px;margin-left:4px;}
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:14px;}
+th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;background:var(--bg);border-bottom:1px solid var(--line);white-space:nowrap;}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#F8F9FD;}
+.hrs{font-weight:700;color:var(--navy);}
+.small{font-size:12px;color:var(--mut);}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:700;}
+.bw{background:#DBEAFE;color:#1D4ED8;}
+.bd{background:#FEF3C7;color:#92400E;}
+.bdu{background:#EDE9FE;color:#6D28D9;}
+a.pdf-link{color:var(--orange);text-decoration:none;font-size:12px;font-weight:600;}
+a.pdf-link:hover{text-decoration:underline;}
+.no-data{padding:48px;text-align:center;color:var(--mut);font-size:14px;}
+.loading{padding:48px;text-align:center;color:var(--mut);}
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#tab-content{min-height:200px;}
+
+@media(max-width:640px){
+  .filter-bar{flex-direction:column;}
+  .fg input,.fg select{min-width:100%;}
+  .btn-csv{margin-left:0;}
+  th,td{padding:8px 10px;font-size:13px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Login ── -->
+<div id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="lo">OHANT</span>
+      OUTBACK HELICOPTER AIRWORK NT
+    </div>
+    <h2>Reports</h2>
+    <label class="lbl" for="pw-input">Password</label>
+    <input type="password" id="pw-input" placeholder="Enter password" autocomplete="current-password"
+           onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-err" id="login-err"></div>
+    <button class="btn-login" onclick="doLogin()">Sign In →</button>
+  </div>
+</div>
+
+<!-- ── App ── -->
+<div id="app-wrap">
+  <div class="top-bar">
+    <div>
+      <div class="tb-title">🚁 OHANT Reports</div>
+      <div class="tb-sub">Outback Helicopter Airwork NT Pty Ltd</div>
+    </div>
+    <button class="tb-logout" onclick="logout()">Sign out</button>
+  </div>
+  <div class="top-accent"></div>
+
+  <div class="main">
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="fg"><label>From</label><input type="date" id="f-from"></div>
+      <div class="fg"><label>To</label><input type="date" id="f-to"></div>
+      <div class="fg"><label>Pilot</label>
+        <select id="f-pilot"><option value="">All pilots</option></select>
+      </div>
+      <div class="fg"><label>Aircraft</label>
+        <select id="f-aircraft"><option value="">All aircraft</option></select>
+      </div>
+      <div class="fg"><label>Client</label>
+        <input type="text" id="f-client" placeholder="Search…" style="min-width:160px;">
+      </div>
+      <button class="btn-apply" onclick="applyFilters()">Apply</button>
+      <button class="btn-reset"  onclick="resetFilters()">Reset</button>
+      <button class="btn-refresh" onclick="loadJobs(true)" title="Refresh from server">↺</button>
+      <button class="btn-csv" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card"><div class="sc-label">Total Jobs</div><div class="sc-value" id="stat-jobs">—</div><div class="sc-sub" id="stat-period">Loading…</div></div>
+      <div class="stat-card"><div class="sc-label">Total Hours</div><div class="sc-value" id="stat-hours">—</div><div class="sc-sub">Flight hours</div></div>
+      <div class="stat-card"><div class="sc-label">Pilots Active</div><div class="sc-value" id="stat-pilots">—</div><div class="sc-sub">Unique pilots</div></div>
+      <div class="stat-card"><div class="sc-label">Unique Clients</div><div class="sc-value" id="stat-clients">—</div><div class="sc-sub">Billed clients</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="pilot"    onclick="showTab('pilot')">👤 By Pilot</button>
+      <button class="tab-btn"        data-tab="aircraft" onclick="showTab('aircraft')">🚁 By Aircraft</button>
+      <button class="tab-btn"        data-tab="client"   onclick="showTab('client')">🏢 By Client</button>
+      <button class="tab-btn"        data-tab="jobs"     onclick="showTab('jobs')">📋 All Jobs</button>
+    </div>
+    <div id="tab-content" class="card">
+      <div class="loading"><span class="spin"></span>Loading records…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+let ALL_JOBS  = [];
+let FILTERED  = [];
+let CURR_TAB  = 'pilot';
+
+/* ── Auth ─────────────────────────────────────────────── */
+async function doLogin() {
+  const pw  = document.getElementById('pw-input').value;
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  try {
+    const r = await fetch('/reports/login', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password:pw})
+    });
+    const d = await r.json();
+    if (d.ok) { showApp(); }
+    else { err.textContent = 'Incorrect password'; document.getElementById('pw-input').select(); }
+  } catch { err.textContent = 'Connection error — try again'; }
+}
+
+function logout() {
+  document.cookie = 'rpt_auth=; Max-Age=0; Path=/';
+  document.getElementById('app-wrap').style.display = 'none';
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+  ALL_JOBS = []; FILTERED = [];
+}
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/jobs?limit=1', {credentials:'include'});
+    return r.ok;
+  } catch { return false; }
+}
+
+/* ── Bootstrap ────────────────────────────────────────── */
+async function init() {
+  if (await checkAuth()) showApp();
+}
+
+async function showApp() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app-wrap').style.display   = 'block';
+  const now = new Date();
+  const y   = now.getFullYear();
+  document.getElementById('f-from').value = y + '-01-01';
+  document.getElementById('f-to').value   = now.toISOString().slice(0,10);
+  await loadJobs();
+}
+
+/* ── Load data ────────────────────────────────────────── */
+async function loadJobs(force=false) {
+  document.getElementById('tab-content').innerHTML =
+    '<div class="loading"><span class="spin"></span>Fetching records from server…</div>';
+  try {
+    const url = '/api/jobs' + (force ? '?refresh=1' : '');
+    const r = await fetch(url, {credentials:'include'});
+    if (r.status === 401) { logout(); return; }
+    const d = await r.json();
+    ALL_JOBS = d.jobs || [];
+    populateFilters();
+    applyFilters();
+  } catch {
+    document.getElementById('tab-content').innerHTML =
+      '<div class="no-data">⚠ Could not load records — check your connection.</div>';
+  }
+}
+
+function populateFilters() {
+  const pilots = [...new Set(ALL_JOBS.map(j=>j.pilotName).filter(Boolean))].sort();
+  const regs   = [...new Set(ALL_JOBS.map(j=>j.aircraftReg).filter(Boolean))].sort();
+  const ps = document.getElementById('f-pilot');
+  const as = document.getElementById('f-aircraft');
+  ps.innerHTML = '<option value="">All pilots</option>'   + pilots.map(p=>`<option>${esc(p)}</option>`).join('');
+  as.innerHTML = '<option value="">All aircraft</option>' + regs.map(r=>`<option>${esc(r)}</option>`).join('');
+}
+
+/* ── Filters ──────────────────────────────────────────── */
+function applyFilters() {
+  const from   = document.getElementById('f-from').value;
+  const to     = document.getElementById('f-to').value;
+  const pilot  = document.getElementById('f-pilot').value;
+  const ac     = document.getElementById('f-aircraft').value;
+  const client = document.getElementById('f-client').value.toLowerCase().trim();
+
+  FILTERED = ALL_JOBS.filter(j => {
+    if (from   && j.flightDate < from)                              return false;
+    if (to     && j.flightDate > to)                               return false;
+    if (pilot  && j.pilotName !== pilot)                            return false;
+    if (ac     && j.aircraftReg !== ac)                             return false;
+    if (client && !(j.client||'').toLowerCase().includes(client))   return false;
+    return true;
+  });
+
+  updateStats();
+  renderTab(CURR_TAB);
+}
+
+function resetFilters() {
+  const now = new Date();
+  document.getElementById('f-from').value    = now.getFullYear() + '-01-01';
+  document.getElementById('f-to').value      = now.toISOString().slice(0,10);
+  document.getElementById('f-pilot').value   = '';
+  document.getElementById('f-aircraft').value= '';
+  document.getElementById('f-client').value  = '';
+  applyFilters();
+}
+
+/* ── Stats ────────────────────────────────────────────── */
+function updateStats() {
+  const hrs     = FILTERED.reduce((s,j)=>s+(j.totalHours||0),0);
+  const pilots  = new Set(FILTERED.map(j=>j.pilotName).filter(Boolean));
+  const clients = new Set(FILTERED.map(j=>j.client).filter(Boolean));
+  document.getElementById('stat-jobs').textContent    = FILTERED.length;
+  document.getElementById('stat-hours').textContent   = hrs.toFixed(1);
+  document.getElementById('stat-pilots').textContent  = pilots.size;
+  document.getElementById('stat-clients').textContent = clients.size;
+  const from = document.getElementById('f-from').value;
+  const to   = document.getElementById('f-to').value;
+  document.getElementById('stat-period').textContent  =
+    from && to ? fmtDate(from) + ' – ' + fmtDate(to) : 'All dates';
+}
+
+/* ── Tabs ─────────────────────────────────────────────── */
+function showTab(tab) {
+  CURR_TAB = tab;
+  document.querySelectorAll('.tab-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === tab));
+  renderTab(tab);
+}
+
+function renderTab(tab) {
+  if (tab==='pilot')    renderByPilot();
+  else if (tab==='aircraft') renderByAircraft();
+  else if (tab==='client')   renderByClient();
+  else                       renderAllJobs();
+}
+
+/* ── By Pilot ─────────────────────────────────────────── */
+function renderByPilot() {
+  const m = {};
+  FILTERED.forEach(j => {
+    const k = j.pilotName||'Unknown';
+    if (!m[k]) m[k]={jobs:0,hrs:0,last:''};
+    m[k].jobs++; m[k].hrs+=j.totalHours||0;
+    if(j.flightDate>m[k].last) m[k].last=j.flightDate;
+  });
+  const rows = Object.entries(m).sort((a,b)=>b[1].hrs-a[1].hrs);
+  if (!rows.length) { noData(); return; }
+  set(`<div class="card-title">👤 By Pilot <span class="ct-count">${rows.length} pilots</span></div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th>Pilot</th><th>Jobs</th><th>Total Hrs</th><th>Avg Hrs/Job</th><th>Last Job</th></tr></thead>
+    <tbody>${rows.map(([n,d])=>`<tr>
+      <td><b>${esc(n)}</b></td>
+      <td>${d.jobs}</td>
+      <td class="hrs">${d.hrs.toFixed(1)}</td>
+      <td>${(d.hrs/d.jobs).toFixed(1)}</td>
+      <td>${fmtDate(d.last)}</td>
+    </tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ── By Aircraft ──────────────────────────────────────── */
+function renderByAircraft() {
+  const m = {};
+  FILTERED.forEach(j => {
+    const k = j.aircraftReg||'Unknown';
+    if (!m[k]) m[k]={type:j.aircraftType||'',jobs:0,hrs:0,last:''};
+    m[k].jobs++; m[k].hrs+=j.totalHours||0;
+    if(j.flightDate>m[k].last) m[k].last=j.flightDate;
+  });
+  const rows = Object.entries(m).sort((a,b)=>b[1].hrs-a[1].hrs);
+  if (!rows.length) { noData(); return; }
+  set(`<div class="card-title">🚁 By Aircraft <span class="ct-count">${rows.length} aircraft</span></div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th>Reg</th><th>Type</th><th>Jobs</th><th>Total Hrs</th><th>Last Job</th></tr></thead>
+    <tbody>${rows.map(([reg,d])=>`<tr>
+      <td><b>${esc(reg)}</b></td>
+      <td class="small">${esc(d.type)}</td>
+      <td>${d.jobs}</td>
+      <td class="hrs">${d.hrs.toFixed(1)}</td>
+      <td>${fmtDate(d.last)}</td>
+    </tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ── By Client ────────────────────────────────────────── */
+function renderByClient() {
+  const m = {};
+  FILTERED.forEach(j => {
+    const k = j.client||'Unknown';
+    if (!m[k]) m[k]={jobs:0,hrs:0,last:''};
+    m[k].jobs++; m[k].hrs+=j.totalHours||0;
+    if(j.flightDate>m[k].last) m[k].last=j.flightDate;
+  });
+  const rows = Object.entries(m).sort((a,b)=>b[1].jobs-a[1].jobs);
+  if (!rows.length) { noData(); return; }
+  set(`<div class="card-title">🏢 By Client <span class="ct-count">${rows.length} clients</span></div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th>Client</th><th>Jobs</th><th>Total Hrs</th><th>Avg Hrs/Job</th><th>Last Job</th></tr></thead>
+    <tbody>${rows.map(([c,d])=>`<tr>
+      <td><b>${esc(c)}</b></td>
+      <td>${d.jobs}</td>
+      <td class="hrs">${d.hrs.toFixed(1)}</td>
+      <td>${(d.hrs/d.jobs).toFixed(1)}</td>
+      <td>${fmtDate(d.last)}</td>
+    </tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ── All Jobs ─────────────────────────────────────────── */
+function renderAllJobs() {
+  const jobs = [...FILTERED].sort((a,b)=>(b.flightDate||'').localeCompare(a.flightDate||''));
+  if (!jobs.length) { noData(); return; }
+  set(`<div class="card-title">📋 All Jobs <span class="ct-count">${jobs.length} records</span></div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th>#</th><th>Date</th><th>Client</th><th>Pilot</th><th>Aircraft</th><th>Type</th><th>Hrs</th><th>PDF</th></tr></thead>
+    <tbody>${jobs.map(j=>`<tr>
+      <td class="small">${j.jobNo||'—'}</td>
+      <td style="white-space:nowrap;">${fmtDate(j.flightDate)}</td>
+      <td>${esc(j.client||'—')}</td>
+      <td>${esc(j.pilotName||'—')}</td>
+      <td style="white-space:nowrap;"><b>${esc(j.aircraftReg||'—')}</b>${j.aircraftType?`<br><span class="small">${esc(j.aircraftType)}</span>`:''}</td>
+      <td><span class="badge ${j.hireType==='dry'?'bd':j.hireType==='dual'?'bdu':'bw'}">${cap(j.hireType||'wet')}</span></td>
+      <td class="hrs">${(j.totalHours||0).toFixed(1)}</td>
+      <td>${j.oneDriveUrl?`<a class="pdf-link" href="${j.oneDriveUrl}" target="_blank">PDF ↗</a>`:'—'}</td>
+    </tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ── CSV Export ───────────────────────────────────────── */
+function exportCSV() {
+  if (!FILTERED.length) { alert('No records to export'); return; }
+  const hdr = 'Job No,Date,Client,Pilot,Aircraft,Type,Hire Type,Total Hours,2nd Pilot,Fuel Uplift L,Notes,Submitted';
+  const rows = [...FILTERED]
+    .sort((a,b)=>a.flightDate?.localeCompare(b.flightDate))
+    .map(j=>[
+      j.jobNo||'', j.flightDate||'',
+      q(j.client), q(j.pilotName), q(j.aircraftReg), q(j.aircraftType||''),
+      q(j.hireType||'wet'), (j.totalHours||0).toFixed(1),
+      q(j.pilot2Name||''), j.fuelUplift||0, q(j.notes||''),
+      j.submittedAt ? new Date(j.submittedAt).toLocaleString('en-AU') : ''
+    ].join(','));
+  const csv  = [hdr,...rows].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const from = document.getElementById('f-from').value||'all';
+  const to   = document.getElementById('f-to').value||'all';
+  a.href=url; a.download=`OHANT-Jobs-${from}-to-${to}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ── Helpers ──────────────────────────────────────────── */
+function set(html) { document.getElementById('tab-content').innerHTML = html; }
+function noData()  { set('<div class="no-data">No records match the selected filters</div>'); }
+function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function q(s)      { return '"'+String(s||'').replace(/"/g,'""')+'"'; }
+function cap(s)    { return s?s.charAt(0).toUpperCase()+s.slice(1):''; }
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+  catch { return d; }
+}
+
+init();
+</script>
+</body>
+</html>

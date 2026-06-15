@@ -22,6 +22,12 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
+/* ── Shared config (pilots, aircraft, clients) ────────────── */
+/* Edit /api/config.json in GitHub to update all devices */
+app.get(['/config', '/api/config'], (_req, res) => {
+  res.sendFile(path.join(__dirname, 'config.json'));
+});
+
 /* ── Health check ─────────────────────────────────────────── */
 app.get('/health', (_req, res) => res.json({ ok: true, ts: new Date().toISOString() }));
 

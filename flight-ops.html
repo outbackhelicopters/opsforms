@@ -551,7 +551,7 @@ VH-IBS, Robinson R44 Raven II (Spray equipped)</textarea>
   </div>
   <div class="card">
     <h2>Pilot List</h2>
-    <p class="sub">One per line: <b>Name, ARN</b>. Pilots pick their name from the dropdown on every form.</p>
+    <p class="sub">One name per line. Pilots pick their name from the dropdown on every form.</p>
     <textarea id="su-crew" rows="4">M. Dundee, 0123456
 S. Irwin, 0654321
 J. Blore, 0111222</textarea>
@@ -698,9 +698,7 @@ const FORM_DEFS = [{
   title: "SWMS – General Operations - Helicopter",
   header: [
     { id: "pilotName",  label: "Pilot Name",  type: "crew",  required: true },
-    { id: "pilotArn",   label: "ARN",         type: "text",  auto: "arn:pilotName", required: true },
     { id: "trainerName",label: "Trainer Name",type: "crewOpt" },
-    { id: "trainerArn", label: "ARN (Trainer)",type: "text", auto: "arn:trainerName" },
     { id: "reviewDate", label: "Review Date", type: "date",  autofill: "today", required: true }
   ],
   signatures: [
@@ -953,9 +951,7 @@ const FORM_DEFS = [{
   title:"SWMS – Stock & Feral Animal Control",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
-    {id:"pilotArn",label:"ARN",type:"text",auto:"arn:pilotName",required:true},
     {id:"trainerName",label:"Trainer Name",type:"crewOpt"},
-    {id:"trainerArn",label:"ARN (Trainer)",type:"text",auto:"arn:trainerName"},
     {id:"reviewDate",label:"Review Date",type:"date",autofill:"today",required:true}
   ],
   signatures:[
@@ -981,9 +977,7 @@ const FORM_DEFS = [{
   title:"SWMS – Powerline Patrol",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
-    {id:"pilotArn",label:"ARN",type:"text",auto:"arn:pilotName",required:true},
     {id:"trainerName",label:"Trainer Name",type:"crewOpt"},
-    {id:"trainerArn",label:"ARN (Trainer)",type:"text",auto:"arn:trainerName"},
     {id:"reviewDate",label:"Review Date",type:"date",autofill:"today",required:true}
   ],
   signatures:[
@@ -1008,9 +1002,7 @@ const FORM_DEFS = [{
   title:"SWMS – Incendiary Operations",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
-    {id:"pilotArn",label:"ARN",type:"text",auto:"arn:pilotName",required:true},
     {id:"trainerName",label:"Trainer Name",type:"crewOpt"},
-    {id:"trainerArn",label:"ARN (Trainer)",type:"text",auto:"arn:trainerName"},
     {id:"reviewDate",label:"Review Date",type:"date",autofill:"today",required:true}
   ],
   signatures:[
@@ -1034,9 +1026,7 @@ const FORM_DEFS = [{
   title:"SWMS – Underslung Load",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
-    {id:"pilotArn",label:"ARN",type:"text",auto:"arn:pilotName",required:true},
     {id:"trainerName",label:"Trainer Name",type:"crewOpt"},
-    {id:"trainerArn",label:"ARN (Trainer)",type:"text",auto:"arn:trainerName"},
     {id:"reviewDate",label:"Review Date",type:"date",autofill:"today",required:true}
   ],
   signatures:[
@@ -1064,9 +1054,7 @@ const FORM_DEFS = [{
   title:"SWMS – Fire Fighting",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
-    {id:"pilotArn",label:"ARN",type:"text",auto:"arn:pilotName",required:true},
     {id:"trainerName",label:"Trainer Name",type:"crewOpt"},
-    {id:"trainerArn",label:"ARN (Trainer)",type:"text",auto:"arn:trainerName"},
     {id:"reviewDate",label:"Review Date",type:"date",autofill:"today",required:true}
   ],
   signatures:[
@@ -1784,13 +1772,11 @@ const App = {
     const showTrainer = !!v.showTrainer;
     h += '<div class="card"><h2>Sign-on</h2><div class="grid2">' +
       '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn || '') + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Review Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '</div>' +
       (showTrainer
         ? '<div class="grid2" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--line);">' +
           '<div><label class="fl">Trainer / Examiner Name</label><select id="sms-trainerName" autocomplete="off" onchange="App.smsCrewPick(\'trainer\')">' + crewOpts(v.trainerName) + '</select></div>' +
-          '<div><label class="fl">ARN (Trainer)</label><input type="text" id="sms-trainerArn" inputmode="numeric" autocomplete="off" value="' + esc(v.trainerArn || '') + '" oninput="App.smsField()"></div>' +
           '</div><button type="button" class="btn ghost small" style="margin-top:8px;" onclick="App.toggleTrainer(false)">✕ Remove trainer</button>'
         : '<button type="button" class="btn ghost small" style="margin-top:10px;" onclick="App.toggleTrainer(true)">＋ Add trainer / examiner</button>') +
       '</div>';
@@ -1857,9 +1843,7 @@ const App = {
   smsField() {
     const v = this.flight.sms.values;
     if ($('sms-pilotName')) v.pilotName = $('sms-pilotName').value;
-    if ($('sms-pilotArn'))  v.pilotArn  = $('sms-pilotArn').value.trim();
     if ($('sms-trainerName')) v.trainerName = $('sms-trainerName').value;
-    if ($('sms-trainerArn'))  v.trainerArn  = $('sms-trainerArn').value.trim();
     if ($('sms-reviewDate'))  v.reviewDate  = $('sms-reviewDate').value;
     this.saveDraft();
   },

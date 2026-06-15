@@ -35,7 +35,7 @@ button{font-family:inherit;}
 /* Top bar */
 #topbar{
   position:sticky;top:0;z-index:50;
-  background:rgba(13,18,40,.95);
+  background:rgba(13,18,40,.97);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1.5px solid rgba(232,114,12,.7);
   padding:calc(10px + env(safe-area-inset-top)) 18px 10px;
@@ -43,6 +43,12 @@ button{font-family:inherit;}
 }
 #topbar .b1{font-weight:800;font-size:12px;letter-spacing:2.5px;color:#fff;text-transform:uppercase;}
 #topbar .b2{font-weight:500;font-size:9px;letter-spacing:2px;color:#6A75A8;text-transform:uppercase;margin-top:2px;}
+#home-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+  color:#C0C6E0;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;
+  text-decoration:none;letter-spacing:.3px;white-space:nowrap;
+}
 .spacer{flex:1;}
 #sync-badge{
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);
@@ -90,14 +96,14 @@ h1.page{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 16px;co
 /* Buttons */
 .btn{
   display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
-  min-height:52px;border-radius:999px;border:2px solid transparent;font-size:16px;font-weight:700;
+  min-height:52px;border-radius:14px;border:2px solid transparent;font-size:16px;font-weight:700;
   letter-spacing:.2px;cursor:pointer;padding:10px 22px;
   transition:filter .12s,transform .1s;-webkit-tap-highlight-color:transparent;
 }
 .btn:active{transform:scale(.97);filter:brightness(.88);}
-.btn.primary{background:linear-gradient(135deg,var(--navy-mid),var(--navy));color:#fff;box-shadow:0 2px 10px rgba(10,14,60,.25);}
-.btn.amber{background:linear-gradient(135deg,#F07C14,var(--orange-dk));color:#fff;box-shadow:0 4px 16px rgba(200,90,10,.45);font-size:17px;}
-.btn.green{background:linear-gradient(135deg,#1D8A46,var(--green));color:#fff;box-shadow:0 4px 16px rgba(22,117,58,.4);}
+.btn.primary{background:var(--navy);color:#fff;box-shadow:0 2px 8px rgba(10,14,60,.2);}
+.btn.amber{background:var(--orange-dk);color:#fff;box-shadow:0 2px 8px rgba(180,80,8,.25);font-size:17px;}
+.btn.green{background:var(--green);color:#fff;box-shadow:0 2px 8px rgba(18,92,46,.25);}
 .btn.ghost{background:transparent;color:var(--navy);border:2px solid var(--line);font-weight:700;}
 .btn.ghost:active{background:rgba(24,34,74,.06);}
 .btn.small{min-height:40px;font-size:14px;width:auto;padding:7px 20px;}
@@ -106,18 +112,19 @@ h1.page{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 16px;co
 .btnrow .btn{flex:1;}
 
 /* Inputs */
-label.fl{display:block;font-weight:600;font-size:12px;margin:14px 0 5px;color:var(--ink2);letter-spacing:.5px;text-transform:uppercase;}
+label.fl{display:block;font-weight:700;font-size:12px;margin:14px 0 5px;color:var(--ink);letter-spacing:.5px;text-transform:uppercase;}
 label.fl .req{color:var(--orange);}
 input[type=text],input[type=number],input[type=date],input[type=password],select,textarea{
   width:100%;font-size:16px;padding:11px 14px;
-  border:1.5px solid var(--line);border-radius:12px;
+  border:1.5px solid var(--line);border-radius:10px;
   background:#FAFAF8;color:var(--ink);min-height:48px;
   font-family:inherit;appearance:none;-webkit-appearance:none;
   transition:border-color .15s,box-shadow .15s;
 }
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.15);}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.12);}
 input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
+input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:default;border-style:dashed;}
 .err{color:var(--red);font-size:12px;margin:3px 0 0 2px;display:none;}
 .err.show{display:block;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
@@ -324,9 +331,10 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 <body>
 
 <div id="topbar">
+  <a href="./index.html" id="home-btn">‹ Home</a>
   <div>
-    <div class="b1">Outback Helicopter Airwork NT</div>
-    <div class="b2">Job Advice Sheet</div>
+    <div class="b1">Job Advice Sheet</div>
+    <div class="b2">Outback Helicopter Airwork NT</div>
   </div>
   <div class="spacer"></div>
   <div id="sync-badge" onclick="showTab('sync')">
@@ -374,9 +382,8 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
         <div class="err" id="err-date">Required</div>
       </div>
       <div>
-        <label class="fl">Job No. <span class="req">*</span></label>
-        <input type="number" id="f-jobno" min="1" placeholder="—">
-        <div class="err" id="err-jobno">Required</div>
+        <label class="fl">Job No.</label>
+        <input type="text" id="f-jobno" readonly placeholder="Auto">
       </div>
     </div>
 
@@ -412,7 +419,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
       <button class="seg-btn" data-hire="dry" onclick="setHire('dry')">Dry Hire<br><small style="font-weight:500;font-size:11px;">Aircraft Only</small></button>
       <button class="seg-btn" data-hire="dual" onclick="setHire('dual')">Dual<br><small style="font-weight:500;font-size:11px;">Training</small></button>
     </div>
-    <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — client is responsible for fuel and fuel costs. Record fuel uplift below.</div>
+    <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — client is responsible for fuel and fuel costs.</div>
     <div id="banner-dual" class="hire-banner dual hidden">👨‍✈️&nbsp; Dual flight — both pilots' hours logged.</div>
     <div id="dual-wrap" class="hidden">
       <label class="fl">Instructor / Safety Pilot <span class="req">*</span></label>
@@ -442,11 +449,9 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
     </div>
   </div>
 
-  <!-- Additional -->
+  <!-- Notes -->
   <div class="card">
-    <div class="card-title">➕ Additional</div>
-    <label class="fl" id="fuel-label">Fuel Uplift (L)</label>
-    <input type="number" id="f-fuel" min="0" step="1" placeholder="0">
+    <div class="card-title">📋 Notes</div>
     <label class="fl">Notes / Special Instructions</label>
     <textarea id="f-notes" rows="3" placeholder="Optional…" style="resize:vertical;"></textarea>
   </div>
@@ -633,7 +638,6 @@ async function initForm(keepJobNo=false) {
   }
 
   document.getElementById('f-client').value = '';
-  document.getElementById('f-fuel').value = '';
   document.getElementById('f-notes').value = '';
 
   await loadPilotsAndFleet();
@@ -654,13 +658,6 @@ async function peekNextJobNo() {
 }
 
 async function consumeJobNo() {
-  const manual = parseInt(document.getElementById('f-jobno').value);
-  if (manual && manual > 0) {
-    // If manual override is higher than counter, bump counter
-    const current = await jKvGet('jobCounter', 0);
-    if (manual > current) await jKvSet('jobCounter', manual);
-    return manual;
-  }
   const next = await peekNextJobNo();
   await jKvSet('jobCounter', next);
   return next;
@@ -722,7 +719,6 @@ function setHire(type) {
   document.getElementById('banner-dual').classList.toggle('hidden', type!=='dual');
   document.getElementById('dual-wrap').classList.toggle('hidden', type!=='dual');
   document.getElementById('col-hrs-head').textContent = type==='dual' ? 'Dual Hrs' : 'Hours';
-  document.getElementById('fuel-label').textContent = type==='dry' ? 'Fuel Uplift (L) *' : 'Fuel Uplift (L)';
 }
 
 /* ================================================================
@@ -815,7 +811,9 @@ function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function initSig() {
   sigCanvas = document.getElementById('sig-canvas');
   sigCtx = sigCanvas.getContext('2d');
-  resizeSig();
+  // Defer resize so the canvas has its final layout dimensions
+  requestAnimationFrame(() => { requestAnimationFrame(() => resizeSig()); });
+  window.addEventListener('resize', resizeSig);
 
   const pos = e => {
     const r = sigCanvas.getBoundingClientRect();
@@ -846,10 +844,16 @@ function initSig() {
 function resizeSig() {
   if (!sigCanvas) return;
   const r = sigCanvas.getBoundingClientRect();
+  if (!r.width) return; // not visible yet
   const dpr = window.devicePixelRatio||1;
+  const hadMark = sigHasMark;
+  // Capture current drawing before resize wipes it
+  let imgData = null;
+  if (hadMark) { try { imgData = sigCtx.getImageData(0,0,sigCanvas.width,sigCanvas.height); } catch(e){} }
   sigCanvas.width  = r.width  * dpr;
   sigCanvas.height = r.height * dpr;
   sigCtx.scale(dpr, dpr);
+  if (imgData && hadMark) { try { sigCtx.putImageData(imgData,0,0); } catch(e){} }
 }
 
 function clearSig() {
@@ -877,7 +881,6 @@ function fieldErr(fid, eid, msg) {
 function validateForm() {
   clearErrors(); let ok=true;
   if (!document.getElementById('f-date').value) { fieldErr('f-date','err-date'); ok=false; }
-  if (!document.getElementById('f-jobno').value) { fieldErr('f-jobno','err-jobno'); ok=false; }
   if (!document.getElementById('f-client').value.trim()) { fieldErr('f-client','err-client'); ok=false; }
   if (!document.getElementById('f-pilot').value) { fieldErr('f-pilot','err-pilot'); ok=false; }
   if (!document.getElementById('f-aircraft').value) { fieldErr('f-aircraft','err-aircraft'); ok=false; }
@@ -940,7 +943,6 @@ async function submitJob(status) {
     pilot2Name: currentHire==='dual' ? pilot2Name : '',
     lines,
     totalHours,
-    fuelUplift: parseFloat(document.getElementById('f-fuel').value)||0,
     notes:      document.getElementById('f-notes').value.trim(),
     signatureDataURL: sigHasMark ? sigCanvas.toDataURL() : null,
     status,
@@ -1037,7 +1039,6 @@ async function renderDetail(id) {
       <div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div>
       <div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}</div></div>
       ${job.pilot2Name?`<div class="kv-row"><div class="k">2nd Pilot</div><div class="v">${esc(job.pilot2Name)}</div></div>`:''}
-      ${job.fuelUplift?`<div class="kv-row"><div class="k">Fuel Uplift</div><div class="v">${job.fuelUplift} L</div></div>`:''}
       ${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}
     </div>
     <div class="card">
@@ -1066,7 +1067,6 @@ async function editJob() {
   document.getElementById('f-date').value   = job.date||'';
   document.getElementById('f-jobno').value  = job.jobNo||'';
   document.getElementById('f-client').value = job.client||'';
-  document.getElementById('f-fuel').value   = job.fuelUplift||'';
   document.getElementById('f-notes').value  = job.notes||'';
 
   // Re-load dropdowns then set values by name (since indices may shift)
@@ -1160,7 +1160,6 @@ function buildPrint(job) {
             <span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span>
             <span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span>
           </div>
-          ${job.fuelUplift?`<div style="margin-top:6px;font-size:10pt;"><b>FUEL UPLIFT:</b> ${job.fuelUplift} L</div>`:''}
         </td>
         <td style="border:1px solid #000;padding:10px 12px;text-align:center;vertical-align:middle;">
           <span class="badge ${job.status}">${statusLabel(job.status)}</span>
@@ -1229,7 +1228,6 @@ function buildServerBundle(job) {
     pilot2Name: job.pilot2Name || '',
     lines:      job.lines      || [],
     totalHours: job.totalHours || 0,
-    fuelUplift: job.fuelUplift || 0,
     notes:      job.notes      || '',
     jobNo:      job.jobNo      || 0,
   };

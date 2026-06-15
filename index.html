@@ -25,11 +25,27 @@ html,body{
 }
 .brand{text-align:center;margin-bottom:44px;}
 .brand-logo{
-  width:72px;height:72px;border-radius:20px;margin:0 auto 18px;
-  background:linear-gradient(135deg,#E8720C,#C5600A);
-  display:flex;align-items:center;justify-content:center;font-size:36px;
-  box-shadow:0 8px 32px rgba(232,114,12,.45);
+  width:80px;height:80px;border-radius:22px;margin:0 auto 18px;
+  background:var(--navy-deep);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 32px rgba(0,0,0,.45);overflow:hidden;
 }
+.brand-logo img{width:80px;height:80px;object-fit:contain;border-radius:22px;}
+/* Splash */
+#splash{
+  position:fixed;inset:0;z-index:999;
+  background:#0D1228;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .5s ease;
+}
+#splash.fade{opacity:0;pointer-events:none;}
+#splash.gone{display:none;}
+#splash img{width:120px;height:120px;border-radius:30px;object-fit:contain;animation:spPop .5s cubic-bezier(.34,1.56,.64,1) both;}
+#splash .sp-name{margin-top:22px;font-size:10px;font-weight:600;letter-spacing:3.5px;color:#6A74A0;text-transform:uppercase;}
+#splash .sp-sub{margin-top:6px;font-size:20px;font-weight:800;color:#fff;}
+#splash .sp-tap{position:absolute;bottom:48px;font-size:12px;font-weight:500;letter-spacing:.5px;color:#3A4070;animation:spBlink 1.6s ease infinite;}
+@keyframes spPop{from{opacity:0;transform:scale(.7);}to{opacity:1;transform:scale(1);}}
+@keyframes spBlink{0%,100%{opacity:.4;}50%{opacity:1;}}
 .brand-name{font-size:11px;font-weight:700;letter-spacing:3.5px;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:6px;}
 .brand-title{font-size:24px;font-weight:800;letter-spacing:-.3px;line-height:1.2;}
 .brand-sub{font-size:12px;color:rgba(255,255,255,.35);margin-top:6px;letter-spacing:.3px;}
@@ -61,11 +77,17 @@ html,body{
 </style>
 </head>
 <body>
+<div id="splash" onclick="dismissSplash()">
+  <img src="logo.png" alt="Outback Helicopter Airwork NT">
+  <div class="sp-name">Airwork NT</div>
+  <div class="sp-sub">Flight Operations</div>
+  <div class="sp-tap">Tap to continue</div>
+</div>
 <div class="bg-glow"></div>
 <div class="safe-wrap">
 
   <div class="brand">
-    <div class="brand-logo">🚁</div>
+    <div class="brand-logo"><img src="logo.png" alt=""></div>
     <div class="brand-name">Outback Helicopter Airwork NT</div>
     <div class="brand-title">Flight Operations</div>
     <div class="brand-sub">ABN: 80 137 947 687 &nbsp;·&nbsp; Batchelor NT</div>
@@ -104,6 +126,17 @@ html,body{
 <script>
 if ('serviceWorker' in navigator && location.protocol.startsWith('http'))
   navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+var _splashDone = false;
+function dismissSplash() {
+  if (_splashDone) return;
+  _splashDone = true;
+  var s = document.getElementById('splash');
+  s.classList.add('fade');
+  setTimeout(function(){ s.classList.add('gone'); }, 550);
+}
+// Auto-dismiss after 2 seconds
+setTimeout(dismissSplash, 2000);
 </script>
 </body>
 </html>

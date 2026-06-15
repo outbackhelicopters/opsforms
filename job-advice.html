@@ -409,8 +409,8 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
 
       <label class="fl">Client / Place <span class="req">*</span></label>
       <div class="client-picker-wrap">
-        <input type="text" id="f-client" placeholder="Search client…" autocomplete="off"
-          oninput="onClientInput()" onfocus="onClientInput()">
+        <input type="text" id="f-client" placeholder="Type client name or place…" autocomplete="off"
+          oninput="onClientInput()">
         <div class="client-dropdown" id="client-dropdown"></div>
       </div>
       <div class="err" id="err-client">Required</div>
@@ -962,39 +962,45 @@ function recalcTotals() {
 
 /* ── Client search with recents ──────────────────── */
 async function onClientInput() {
-  const q   = document.getElementById('f-client').value.trim().toLowerCase();
+  const raw = document.getElementById('f-client').value;
+  const q   = raw.trim().toLowerCase();
   const dd  = document.getElementById('client-dropdown');
-  // Clear error state as soon as user types anything
-  if (document.getElementById('f-client').value.trim()) {
+
+  // Clear error as soon as user types anything
+  if (raw.trim()) {
     document.getElementById('f-client').classList.remove('bad');
     document.getElementById('err-client').classList.remove('show');
   }
-  const recents = await jKvGet('recentClients', []);
 
-  if (!q) {
-    let html = '';
-    if (recents.length) {
-      html += '<div class="client-section-hdr">Recent</div>';
-      html += recents.map(c => `<div class="client-opt" onclick="pickClient('${esc(c)}')">${esc(c)}</div>`).join('');
-    }
-    const rest = LIVE_CLIENTS.filter(c => !recents.includes(c)).slice(0, 10);
-    if (rest.length) {
-      if (recents.length) html += '<div class="client-section-hdr">All clients</div>';
-      html += rest.map(c => `<div class="client-opt" onclick="pickClient('${esc(c)}')">${esc(c)}</div>`).join('');
-    }
-    if (!html) { dd.classList.remove('open'); return; }
-    dd.innerHTML = html; dd.classList.add('open'); return;
+  // Empty field — close dropdown, let them type freely
+  if (!q) { dd.classList.remove('open'); return; }
+
+  const recents = await jKvGet('recentClients', []);
+  const matches = LIVE_CLIENTS.filter(c => c.toLowerCase().includes(q));
+
+  if (!matches.length && !recents.filter(c => c.toLowerCase().includes(q)).length) {
+    // No matches at all — just close dropdown, free text is fine
+    dd.classList.remove('open'); return;
   }
 
-  const matches = LIVE_CLIENTS.filter(c => c.toLowerCase().includes(q));
+  let html = '';
+  // Show matching recents first
+  const recentMatches = recents.filter(c => c.toLowerCase().includes(q));
+  if (recentMatches.length) {
+    html += '<div class="client-section-hdr">Recent</div>';
+    html += recentMatches.map(c => `<div class="client-opt" onclick="pickClient('${esc(c)}')">${esc(c)}</div>`).join('');
+  }
   if (!matches.length) {
-    dd.innerHTML = `<div class="client-none">No match — <b>${esc(q)}</b> will be used as entered</div>`;
+    dd.innerHTML = html || `<div class="client-none">No match — keeping <b>${esc(raw.trim())}</b></div>`;
   } else {
     const re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
-    dd.innerHTML = matches.slice(0,12).map(c => {
+    const matchHtml = matches.slice(0,12).map(c => {
       const hi = c.replace(re, '<mark>$1</mark>');
       return `<div class="client-opt" onclick="pickClient('${esc(c)}')">${hi}</div>`;
     }).join('');
+    // Prepend recents section if any, then show contacts matches
+    const contactHeader = html ? '<div class="client-section-hdr">Contacts</div>' : '';
+    dd.innerHTML = html + contactHeader + matchHtml;
   }
   dd.classList.add('open');
 }

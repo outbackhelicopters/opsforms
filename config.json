@@ -20,10 +20,15 @@
     "Thomas B Harrower"
   ],
   "aircraft": [
-    {
-      "reg": "VH-XXX",
-      "type": "Robinson R44"
-    }
+    { "reg": "VH-RYT", "type": "Robinson R22" },
+    { "reg": "VH-HYG", "type": "Robinson R22" },
+    { "reg": "VH-RYO", "type": "Robinson R22" },
+    { "reg": "VH-8OH", "type": "Robinson R22" },
+    { "reg": "VH-8G2", "type": "Cabri G2" },
+    { "reg": "VH-OBA", "type": "Robinson R44" },
+    { "reg": "VH-BEG", "type": "Robinson R44" },
+    { "reg": "VH-IBS", "type": "Robinson R44" },
+    { "reg": "VH-FJB", "type": "Bell 206 Jetranger" }
   ],
   "clients": [
     "888LINKS GROUP PTY LTD",

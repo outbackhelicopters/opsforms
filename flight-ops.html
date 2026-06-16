@@ -1841,12 +1841,17 @@ const App = {
   smsCrewPick(which) {
     const name = $('sms-' + which + 'Name').value;
     const c = this.S.crew.find(x => x.name === name);
-    $('sms-' + which + 'Arn').value = c ? c.arn : '';
+    const arnEl = $('sms-' + which + 'Arn');
+    if (arnEl) arnEl.value = c ? c.arn : '';
+    // Also store directly so forms without a visible ARN field (e.g. SWMS) still capture it
+    if (which === 'pilot')   this.flight.sms.values.pilotArn   = c ? c.arn : '';
+    if (which === 'trainer') this.flight.sms.values.trainerArn = c ? c.arn : '';
     this.smsField();
   },
   smsField() {
     const v = this.flight.sms.values;
-    if ($('sms-pilotName')) v.pilotName = $('sms-pilotName').value;
+    if ($('sms-pilotName'))   v.pilotName   = $('sms-pilotName').value;
+    if ($('sms-pilotArn'))    v.pilotArn    = $('sms-pilotArn').value;
     if ($('sms-trainerName')) v.trainerName = $('sms-trainerName').value;
     if ($('sms-reviewDate'))  v.reviewDate  = $('sms-reviewDate').value;
     this.saveDraft();
@@ -2182,7 +2187,7 @@ const App = {
     this.smsField();
     const v = this.flight.sms.values, miss = [];
     $('sms-pilotName').classList.toggle('bad', !v.pilotName);
-    $('sms-pilotArn').classList.toggle('bad', !v.pilotArn);
+    if ($('sms-pilotArn')) $('sms-pilotArn').classList.toggle('bad', !v.pilotArn);
     $('sms-reviewDate').classList.toggle('bad', !v.reviewDate);
     if (!v.pilotName) miss.push('pilot name');
     if (!v.pilotArn) miss.push('pilot ARN');
@@ -2200,7 +2205,7 @@ const App = {
 
   /* ================== STEP 2 — WEIGHT & BALANCE ================== */
   renderWb() {
-    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+    const ac = (this.S.fleet || []).find(a => a.id === this.flight.aircraftId) ||
                (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     const f = this.flight.wb;
@@ -2218,7 +2223,7 @@ const App = {
         'Enter Basic Empty Weight and MaxTOW in <b>Settings → Fleet</b> before dispatch.</div>' +
         '<div class="btnrow" style="margin-top:16px;">' +
         '<button class="btn ghost" onclick="App.gotoStep(0)">‹ Back</button>' +
-        '<button class="btn" onclick="App.showPage(\'settings\')">Open Settings</button></div></div>';
+        '<button class="btn" onclick="App.openSettings()">Open Settings</button></div></div>';
       return;
     }
 
@@ -2291,7 +2296,7 @@ const App = {
 
   wbToggleFuelMode() {
     const f = this.flight.wb;
-    const W = ((this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+    const W = ((this.S.fleet || []).find(a => a.id === this.flight.aircraftId) ||
                (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {}).wb || {};
     const fuelDens = W.fuelDensity || 0.720;
     /* preserve current fuel value converted to new unit */
@@ -2310,7 +2315,7 @@ const App = {
   },
 
   wbCalc() {
-    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+    const ac = (this.S.fleet || []).find(a => a.id === this.flight.aircraftId) ||
                (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     const f = this.flight.wb;
@@ -2382,7 +2387,7 @@ const App = {
   },
 
   completeWb() {
-    const ac = (this.S.fleet || []).find(a => a.callsign === this.flight.callsign && a.type === this.flight.aircraftType) ||
+    const ac = (this.S.fleet || []).find(a => a.id === this.flight.aircraftId) ||
                (this.S.fleet || []).find(a => a.callsign === this.flight.callsign) || {};
     const W = ac.wb || {};
     if (!W.verified || !W.emptyWeight) return toast('Enter aircraft W&B data in Settings first');

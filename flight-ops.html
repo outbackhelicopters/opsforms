@@ -510,6 +510,308 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   .sigwrap canvas{height:140px;}
   .form-item .fname{font-size:13.5px;}
 }
+
+/* Step panels */
+.step-panel{display:none;}
+.step-panel.active{display:block;}
+.step-nav{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:4px;}
+.step-nav.single{grid-template-columns:1fr;}
+
+/* Buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  min-height:50px;border-radius:14px;border:2px solid transparent;font-size:15px;font-weight:700;
+  letter-spacing:.2px;cursor:pointer;padding:10px 18px;
+  transition:filter .12s,transform .1s;-webkit-tap-highlight-color:transparent;}
+.btn:active{transform:scale(.97);filter:brightness(.9);}
+.btn.primary{background:var(--navy);color:#fff;}
+.btn.amber{background:var(--orange-dk);color:#fff;font-size:15px;}
+.btn.green{background:var(--green);color:#fff;}
+.btn.ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);font-weight:700;}
+.btn.ghost:active{background:rgba(24,34,74,.05);}
+.btn.small{min-height:40px;font-size:13px;width:auto;padding:7px 16px;}
+.btn.danger{background:transparent;color:var(--red);border:1.5px solid rgba(188,32,24,.25);}
+.btn[disabled]{opacity:.35;pointer-events:none;}
+.btnrow{display:flex;gap:10px;margin-top:12px;}
+.btnrow .btn{flex:1;}
+
+/* Inputs */
+label.fl{display:block;font-weight:700;font-size:11px;margin:14px 0 5px;color:var(--ink);
+  letter-spacing:.6px;text-transform:uppercase;}
+label.fl .req{color:var(--orange);}
+input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],select,textarea{
+  width:100%;font-size:16px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;
+  background:#FAFAF8;color:var(--ink);min-height:46px;font-family:inherit;
+  appearance:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.12);}
+input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
+input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:default;border-style:dashed;}
+.err{color:var(--red);font-size:12px;margin:3px 0 0 2px;display:none;}
+.err.show{display:block;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+@media(max-width:480px){.grid2{grid-template-columns:1fr;}}
+
+/* Segmented hire type */
+.seg{display:flex;gap:0;background:var(--line);border-radius:10px;padding:3px;margin:6px 0;}
+.seg-btn{flex:1;text-align:center;padding:9px 6px;border-radius:8px;font-weight:600;font-size:13px;
+  background:transparent;color:var(--mut);border:0;cursor:pointer;transition:all .15s;line-height:1.3;}
+.seg-btn.active{background:var(--card);color:var(--navy);font-weight:700;box-shadow:0 1px 4px rgba(10,14,40,.12);}
+.seg-btn.active[data-hire=dry]{background:var(--or-bg);color:var(--or-t);}
+.seg-btn.active[data-hire=dual]{background:var(--blue-bg);color:var(--blue);}
+.hire-banner{border-radius:var(--r);padding:9px 13px;margin-bottom:10px;font-size:13px;
+  font-weight:600;display:flex;gap:8px;align-items:flex-start;}
+.hire-banner.dry{background:var(--or-bg);color:var(--or-t);border:1px solid #EED4A0;}
+.hire-banner.dual{background:var(--blue-bg);color:var(--blue);border:1px solid #BBDAF7;}
+
+/* Preset chips */
+.preset-wrap{margin-bottom:14px;}
+.preset-label{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.6px;
+  text-transform:uppercase;margin-bottom:8px;}
+.preset-chips{display:flex;flex-wrap:wrap;gap:7px;}
+.preset-chip{background:var(--card);border:1.5px solid var(--line);color:var(--navy);
+  border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .12s;white-space:nowrap;}
+.preset-chip:active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+/* Job lines */
+.lines-hdr{display:grid;grid-template-columns:1fr 96px 34px;gap:6px;
+  padding:7px 10px;background:var(--navy);color:#fff;
+  border-radius:10px 10px 0 0;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.job-line{display:grid;grid-template-columns:1fr 96px 34px;
+  gap:6px;padding:7px 8px;border-bottom:1px solid var(--line);align-items:center;}
+.job-line:last-child{border-bottom:none;}
+.job-line:nth-child(even){background:#FAFAF8;}
+.job-line input{min-height:42px;font-size:15px;}
+.line-del{background:none;border:1px solid var(--line);color:var(--mut);border-radius:7px;
+  width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.line-del:active{background:var(--red-bg);color:var(--red);}
+#add-line-btn{display:flex;align-items:center;gap:7px;background:none;border:1.5px dashed var(--orange);
+  color:var(--or-t);border-radius:0 0 10px 10px;padding:9px 13px;cursor:pointer;font-size:13px;font-weight:600;width:100%;}
+#add-line-btn:active{background:var(--orange-lt);}
+.hours-total{background:var(--navy);border-radius:var(--r);padding:14px 18px;
+  display:flex;justify-content:space-between;align-items:center;margin-top:0;}
+.ht-label{color:#8A93BE;font-size:13px;font-weight:600;}
+.ht-value{font-size:26px;font-weight:800;color:var(--orange);}
+
+/* Client picker */
+.client-picker-wrap{position:relative;}
+.client-dropdown{position:absolute;top:100%;left:0;right:0;z-index:60;
+  background:var(--card);border:1.5px solid var(--orange);border-top:none;
+  border-radius:0 0 12px 12px;box-shadow:var(--shadow-md);max-height:260px;overflow-y:auto;display:none;}
+.client-dropdown.open{display:block;}
+.client-opt{padding:10px 13px;cursor:pointer;font-size:15px;border-bottom:1px solid var(--line);transition:background .1s;}
+.client-opt:last-child{border-bottom:none;}
+.client-opt:active,.client-opt.highlighted{background:var(--orange-lt);}
+.client-opt mark{background:transparent;color:var(--orange);font-weight:700;}
+.client-none{padding:11px 13px;color:var(--mut);font-size:14px;}
+.client-section-hdr{padding:6px 13px 4px;font-size:10px;font-weight:800;letter-spacing:.6px;
+  text-transform:uppercase;color:var(--mut);background:var(--bg);border-bottom:1px solid var(--line);}
+
+/* Signature */
+.sigwrap canvas{width:100%;height:160px;border:1.5px dashed #B0B3C0;
+  border-radius:var(--r);background:#fff;touch-action:none;display:block;}
+.sigwrap.signed canvas{border:1.5px solid var(--green);}
+.sigbar{display:flex;align-items:center;gap:10px;margin-top:6px;}
+.sigbar .hint{flex:1;color:var(--mut);font-size:13px;}
+
+/* Confirmation screen */
+#screen-confirm{display:none;max-width:760px;margin:0 auto;padding:32px 16px 90px;}
+#screen-confirm.active{display:flex;flex-direction:column;align-items:center;}
+.confirm-icon-wrap{width:80px;height:80px;border-radius:50%;background:var(--green-bg);
+  display:flex;align-items:center;justify-content:center;margin-bottom:20px;}
+.confirm-check{font-size:36px;color:var(--green);}
+.confirm-title{font-size:26px;font-weight:800;color:var(--navy);text-align:center;letter-spacing:-.3px;}
+.confirm-date{font-size:14px;color:var(--mut);margin-top:4px;text-align:center;}
+.confirm-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:16px;margin:20px 0 24px;width:100%;box-shadow:var(--shadow);}
+.ckv{display:flex;justify-content:space-between;align-items:center;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:14px;}
+.ckv:last-child{border-bottom:none;}
+.ck{color:var(--mut);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+.cv{font-weight:700;color:var(--ink);}
+.cv.sent{color:var(--green-dk);}
+.cv.offline{color:var(--or-t);}
+.confirm-btns{width:100%;display:flex;flex-direction:column;gap:10px;}
+
+/* Source indicator */
+.source-chip{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);
+  color:var(--green-dk);border:1px solid #A0CFB0;border-radius:6px;padding:3px 9px;
+  font-size:11px;font-weight:700;}
+.source-err{display:inline-flex;align-items:center;gap:5px;background:var(--or-bg);
+  color:var(--or-t);border:1px solid #EED4A0;border-radius:6px;padding:3px 9px;
+  font-size:11px;font-weight:700;}
+
+/* History */
+.filter-bar{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap;}
+.filter-chip{padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--card);border:1.5px solid var(--line);color:var(--mut);transition:all .12s;}
+.filter-chip.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+.date-group-label{font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.6px;
+  text-transform:uppercase;margin:16px 0 7px 2px;}
+.date-group-label:first-child{margin-top:0;}
+.hist-search{display:flex;gap:8px;margin-bottom:10px;}
+.hist-search input{flex:1;min-height:44px;}
+.hist-row{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--card);
+  border-radius:var(--r);margin-bottom:7px;box-shadow:var(--shadow);cursor:pointer;border:1px solid var(--line);}
+.hist-row:active{box-shadow:none;}
+.hr-left{flex:1;min-width:0;}
+.hr-job{font-weight:800;font-size:14px;color:var(--navy);}
+.hr-meta{color:var(--mut);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hr-right{text-align:right;flex:none;}
+.hr-hours{font-weight:800;font-size:17px;color:var(--navy);}
+.hr-hrs-label{font-size:10px;color:var(--mut);font-weight:600;}
+.badge{border-radius:6px;padding:3px 9px;font-weight:700;font-size:11px;letter-spacing:.3px;
+  white-space:nowrap;display:inline-block;}
+.badge.draft{background:#EAEBF0;color:#4A5165;}
+.badge.submitted{background:var(--green-bg);color:var(--green-dk);}
+.badge.synced{background:var(--blue-bg);color:var(--blue);}
+.no-results{text-align:center;color:var(--mut);padding:40px 20px;font-size:15px;}
+
+/* Sync */
+.sync-stat{background:var(--navy);color:#fff;border-radius:var(--r-lg);padding:18px;
+  text-align:center;margin-bottom:12px;}
+.sync-count{font-size:44px;font-weight:800;color:var(--orange);}
+.sq-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);}
+.sq-item:last-child{border-bottom:none;}
+.sq-info{flex:1;}
+.sq-job{font-weight:700;font-size:14px;color:var(--navy);}
+.sq-meta{color:var(--mut);font-size:12px;}
+.log-item{font-size:12px;color:var(--mut);padding:4px 0;border-bottom:1px solid var(--line);}
+.log-item:last-child{border-bottom:none;}
+
+/* Modal */
+#modal-bg{position:fixed;inset:0;background:rgba(8,10,28,.65);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  z-index:100;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto;}
+#modal-bg.show{display:flex;}
+.modal-box{background:var(--card);border-radius:var(--r-lg);max-width:580px;width:100%;
+  max-height:88vh;overflow-y:auto;padding:20px;box-shadow:var(--shadow-md);
+  border:1px solid var(--line);position:relative;}
+.modal-box h3{margin:0 0 14px;font-size:17px;font-weight:800;color:var(--navy);}
+.modal-close{position:absolute;top:14px;right:14px;background:var(--line);border:none;
+  border-radius:8px;width:30px;height:30px;font-size:17px;cursor:pointer;color:var(--mut);
+  display:flex;align-items:center;justify-content:center;}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;}
+.pinpad button{min-height:56px;font-size:20px;font-weight:700;border-radius:12px;
+  border:1.5px solid var(--line);background:var(--card);cursor:pointer;color:var(--navy);}
+.pinpad button:active{background:var(--navy);color:#fff;}
+#pin-dots{text-align:center;font-size:26px;letter-spacing:8px;min-height:38px;color:var(--navy);}
+.pin-err{color:var(--red);text-align:center;font-size:13px;font-weight:600;min-height:18px;}
+
+/* Detail */
+.detail-hdr{background:var(--navy);color:#fff;border-radius:var(--r-lg);padding:16px;margin-bottom:12px;}
+.dh-jobno{font-size:20px;font-weight:800;}
+.dh-sub{color:#8A93BE;font-size:12px;margin-top:2px;}
+.dh-client{font-size:15px;font-weight:700;margin-top:6px;}
+.kv-row{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;}
+.kv-row:last-child{border-bottom:none;}
+.kv-row .k{width:110px;color:var(--mut);font-weight:600;flex:none;font-size:12px;}
+.kv-row .v{font-weight:600;color:var(--ink);}
+.back-btn{background:var(--card);border:1px solid var(--line);color:var(--navy);
+  border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow);margin-bottom:12px;}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);
+  background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:var(--r);
+  font-weight:600;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.28);
+  opacity:0;transition:opacity .2s;pointer-events:none;font-size:14px;max-width:92vw;text-align:center;}
+.toast.show{opacity:1;}
+
+/* Settings */
+.set-section{margin-bottom:18px;}
+.set-head{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+  color:var(--mut);margin-bottom:7px;}
+.set-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);
+  border-radius:9px;margin-bottom:4px;}
+.set-label{flex:1;font-size:15px;font-weight:600;color:var(--ink);}
+.set-sub{font-size:11px;color:var(--mut);margin-left:4px;}
+.set-del{background:none;border:none;color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;}
+.set-add-row{display:none;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+.set-input{border:1.5px solid var(--line);border-radius:8px;padding:8px 10px;font-size:14px;
+  font-family:inherit;background:var(--card);flex:1;min-width:0;}
+.set-save-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:8px 13px;
+  font-weight:700;font-size:14px;cursor:pointer;}
+.set-cancel-btn{background:var(--line);color:var(--ink2);border:none;border-radius:8px;
+  padding:8px 13px;font-weight:700;font-size:14px;cursor:pointer;}
+.set-add-btn{background:none;border:1.5px dashed var(--line);color:var(--mut);border-radius:8px;
+  padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:2px;}
+.set-empty{color:var(--mut);font-size:13px;font-style:italic;padding:5px 2px;}
+
+/* Print */
+@media print{
+  body{background:#fff;font-family:Arial,sans-serif;font-size:11pt;color:#000;}
+  #topbar,#tabbar,.btn,.back-btn,.hist-search,.no-print,#modal-bg,.toast,.client-dropdown{display:none !important;}
+  .screen{display:none !important;padding:0;margin:0;}
+  #screen-print{display:block !important;padding:0;}
+  @page{margin:1cm;}
+}
+</style>
+
+/* ============================================================
+   UNIFIED APP — main tab bar + job module overrides
+   ============================================================ */
+#maintabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
+  display: flex; background: #0D1228;
+  border-top: 1px solid rgba(255,255,255,.13);
+  padding-bottom: env(safe-area-inset-bottom);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+#maintabbar button {
+  flex: 1; background: none; border: none; color: rgba(255,255,255,.42);
+  font-size: 10px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
+  padding: 10px 4px 8px; cursor: pointer; display: flex;
+  flex-direction: column; align-items: center; gap: 4px; transition: color .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+#maintabbar button .mti { font-size: 22px; line-height: 1; }
+#maintabbar button.mtactive { color: var(--orange); }
+.maintab { display: none; }
+.maintab.mtactive { display: block; }
+
+/* Job sub-screens within jobs tab */
+.jsub { display: none; padding: 0 0 90px; }
+.jsub.active { display: block; }
+
+/* Job inner tab bar */
+#jobtabbar {
+  display: flex; background: var(--navy-deep, #0D1228);
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  padding-top: env(safe-area-inset-top);
+  position: sticky; top: 0; z-index: 100;
+}
+#jobtabbar .jtab {
+  flex: 1; background: none; border: none;
+  color: rgba(255,255,255,.45); font-size: 12px; font-weight: 600;
+  letter-spacing: .3px; padding: 13px 4px 11px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  -webkit-tap-highlight-color: transparent; position: relative;
+  transition: color .15s, border-color .15s;
+}
+#jobtabbar .jtab.active { color: var(--orange); border-bottom-color: var(--orange); }
+#jobtabbar .jtab .jti { font-size: 18px; }
+.jtab-pip {
+  position: absolute; top: 8px; right: calc(50% - 18px);
+  background: var(--orange); color: #fff; border-radius: 9px;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  display: none; min-width: 14px; text-align: center;
+}
+.jtab-pip.show { display: block; }
+
+/* Job confirm screen */
+#screen-confirm {
+  position: fixed; inset: 0; z-index: 800;
+  background: var(--bg, #0D1228);
+  display: none; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center; padding: 32px 24px 80px;
+}
+#screen-confirm.active { display: flex; }
+
+/* Job modal uses flight-ops modal structure */
 </style>
 </head>
 <body>
@@ -523,7 +825,6 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 </div>
 
 <div id="topbar">
-  <a href="./index.html" id="home-btn">‹ Home</a>
   <img class="logo" src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
   <div class="brandtxt"><div class="b1">OUTBACK</div><div class="b2">HELICOPTER</div><div class="b3">AIRWORK NT</div></div>
   <span class="callsign" id="tb-callsign">—</span>
@@ -531,6 +832,233 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   <button id="syncpill" class="ok" onclick="App.showQueue()"><span class="dot"></span><span id="syncpill-txt">All sent</span></button>
   <button id="btn-settings" title="Settings" onclick="App.openSettings()">⚙︎</button>
 </div>
+
+
+<!-- ============ MAIN TAB: JOBS ============ -->
+<div id="maintab-jobs" class="maintab">
+
+  <!-- Inner job tab bar -->
+  <div id="jobtabbar">
+    <button class="jtab active" id="jtab-new" onclick="jShowTab('new')">
+      <span class="jti">📋</span>New Job
+    </button>
+    <button class="jtab" id="jtab-history" onclick="jShowTab('history')">
+      <span class="jti">📂</span>History
+    </button>
+    <button class="jtab" id="jtab-sync" onclick="jShowTab('sync')">
+      <span class="jti">☁️</span>Sync
+      <span class="jtab-pip" id="jsync-pip">0</span>
+    </button>
+  </div>
+
+  <!-- NEW JOB (wizard) -->
+  <div id="screen-new" class="jsub active">
+    <div class="step-bar">
+      <div class="step-dots">
+        <div class="sdot active" id="sdot-1">1</div>
+        <div class="sline" id="sline-1"></div>
+        <div class="sdot" id="sdot-2">2</div>
+        <div class="sline" id="sline-2"></div>
+        <div class="sdot" id="sdot-3">3</div>
+      </div>
+      <div class="step-info">
+        <div class="step-name" id="step-label">Job Details</div>
+        <div class="step-num" id="step-num">Step 1 of 3</div>
+        <div class="autosave-pill" id="autosave-pill">Saved</div>
+      </div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div id="step-1" class="step-panel active">
+      <div class="letterhead">
+        <div class="lh-company">Outback Helicopter Airwork NT Pty Ltd</div>
+        <div class="lh-details">ABN: 80 137 947 687 &nbsp;|&nbsp; Ph: 8941 6811 &nbsp;|&nbsp; Mob: 0427 222 670</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Job Details</div>
+        <div class="grid2">
+          <div>
+            <label class="fl">Date <span class="req">*</span></label>
+            <input type="date" id="f-date" oninput="jDebouncedSave()">
+            <div class="err" id="err-date">Required</div>
+          </div>
+          <div>
+            <label class="fl">Job No.</label>
+            <input type="text" id="f-jobno" readonly placeholder="Auto">
+          </div>
+        </div>
+        <label class="fl">Client / Place <span class="req">*</span></label>
+        <div class="client-picker-wrap">
+          <input type="text" id="f-client" placeholder="Type client name or place…" autocomplete="off" oninput="jOnClientInput()">
+          <div class="client-dropdown" id="client-dropdown"></div>
+        </div>
+        <div class="err" id="err-client">Required</div>
+        <div class="grid2">
+          <div>
+            <label class="fl">Pilot <span class="req">*</span></label>
+            <select id="f-pilot" onchange="jDebouncedSave()"><option value="">Select pilot…</option></select>
+            <div class="err" id="err-pilot">Select a pilot</div>
+          </div>
+          <div>
+            <label class="fl">Aircraft <span class="req">*</span></label>
+            <select id="f-aircraft" onchange="jDebouncedSave()"><option value="">Select aircraft…</option></select>
+            <div class="err" id="err-aircraft">Select an aircraft</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Hire Type</div>
+        <div class="seg" id="hire-seg">
+          <button class="seg-btn active" data-hire="wet" onclick="jSetHire('wet')">Wet Hire<br><small style="font-weight:500;font-size:11px;">Aircraft + Pilot</small></button>
+          <button class="seg-btn" data-hire="dry" onclick="jSetHire('dry')">Dry Hire<br><small style="font-weight:500;font-size:11px;">Aircraft Only</small></button>
+        </div>
+        <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — client is responsible for fuel and fuel costs.</div>
+      </div>
+      <div class="card">
+        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="f-dual" onchange="jToggleDual()" style="width:22px;height:22px;accent-color:var(--navy);flex:none;">
+          <div>
+            <div style="font-weight:700;font-size:15px;color:var(--navy);">Dual Operation</div>
+            <div style="font-size:12px;color:var(--mut);margin-top:2px;">Two helicopters on one job</div>
+          </div>
+        </label>
+        <div id="dual-fields" class="hidden" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px;">
+          <div class="hire-banner dual" style="margin-bottom:12px;">🚁🚁&nbsp; Both aircraft will appear on this job sheet.</div>
+          <div class="grid2">
+            <div>
+              <label class="fl">2nd Pilot</label>
+              <select id="f-pilot2" onchange="jDebouncedSave()"><option value="">Select pilot…</option></select>
+            </div>
+            <div>
+              <label class="fl">2nd Aircraft</label>
+              <select id="f-aircraft2" onchange="jDebouncedSave()"><option value="">Select aircraft…</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn amber" onclick="jGoStep(2)">Next: Flight Hours →</button>
+    </div><!-- end step-1 -->
+
+    <!-- STEP 2 -->
+    <div id="step-2" class="step-panel">
+      <div class="card">
+        <div class="card-title">Quick Select</div>
+        <div class="preset-chips" id="preset-chips">
+          <button class="preset-chip" onclick="jAddPreset('Charter')">Charter</button>
+          <button class="preset-chip" onclick="jAddPreset('Training')">Training</button>
+          <button class="preset-chip" onclick="jAddPreset('Ferry')">Ferry</button>
+          <button class="preset-chip" onclick="jAddPreset('Mustering')">Mustering</button>
+          <button class="preset-chip" onclick="jAddPreset('Survey')">Survey</button>
+          <button class="preset-chip" onclick="jAddPreset('Medical')">Medical</button>
+          <button class="preset-chip" onclick="jAddPreset('Firefighting')">Firefighting</button>
+          <button class="preset-chip" onclick="jAddPreset('Maintenance')">Maintenance</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div class="lines-hdr">
+          <div>Description</div>
+          <div style="text-align:center;" id="col-hrs-head">Hours</div>
+          <div></div>
+        </div>
+        <div id="job-lines"></div>
+        <button id="add-line-btn" onclick="jAddLine()">＋ Add line</button>
+      </div>
+      <div class="err" id="err-lines" style="margin:4px 0 10px 2px;">At least one line with hours &gt; 0 required</div>
+      <div class="hours-total" style="margin-bottom:14px;">
+        <span class="ht-label">Total Flight Hours</span>
+        <span class="ht-value" id="tot-hours">0.0</span>
+      </div>
+      <div class="step-nav">
+        <button class="btn ghost" onclick="jGoStep(1)">← Back</button>
+        <button class="btn amber" onclick="jGoStep(3)">Next: Sign & Submit →</button>
+      </div>
+    </div><!-- end step-2 -->
+
+    <!-- STEP 3 -->
+    <div id="step-3" class="step-panel">
+      <div class="card">
+        <div class="card-title">Notes</div>
+        <textarea id="f-notes" rows="3" placeholder="Optional notes or special instructions…" style="resize:vertical;" oninput="jDebouncedSave()"></textarea>
+      </div>
+      <div class="card">
+        <div class="card-title">Pilot Signature <span style="color:var(--orange);font-size:12px;">*</span></div>
+        <div class="sigwrap" id="jsig-wrap"><canvas id="jsig-canvas"></canvas></div>
+        <div class="sigbar">
+          <span class="hint" id="jsig-hint">Sign above with your finger</span>
+          <button class="btn ghost small" onclick="jClearSig()">Clear</button>
+        </div>
+        <div class="err" id="err-sig">Signature required</div>
+      </div>
+      <div class="step-nav">
+        <button class="btn ghost" onclick="jGoStep(2)">← Back</button>
+        <button class="btn green" onclick="jSubmitJob('submitted')">Submit Job Sheet ✓</button>
+      </div>
+      <button class="btn ghost no-print" style="margin-top:10px;" onclick="jSubmitJob('draft')">Save as Draft</button>
+    </div><!-- end step-3 -->
+  </div><!-- end screen-new -->
+
+  <!-- CONFIRM -->
+  <div id="screen-confirm">
+    <div class="confirm-icon-wrap"><div class="confirm-check">✓</div></div>
+    <div class="confirm-title" id="confirm-title">Job Submitted</div>
+    <div class="confirm-date" id="confirm-date"></div>
+    <div class="confirm-card" id="confirm-card"></div>
+    <div class="confirm-btns">
+      <button class="btn green" onclick="jStartNewJob()">+ New Job</button>
+      <button class="btn ghost" onclick="jShowTab('history')">View History</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="screen-history" class="jsub">
+    <div class="hist-search">
+      <input type="text" id="hist-search" placeholder="Search client, pilot, job no…" oninput="jRenderHistory()">
+      <button class="btn ghost small" onclick="jExportCSV()" style="white-space:nowrap;">CSV</button>
+    </div>
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-chip active" data-filter="all" onclick="jSetHistFilter('all')">All</button>
+      <button class="filter-chip" data-filter="submitted" onclick="jSetHistFilter('submitted')">Submitted</button>
+      <button class="filter-chip" data-filter="synced" onclick="jSetHistFilter('synced')">Synced</button>
+      <button class="filter-chip" data-filter="draft" onclick="jSetHistFilter('draft')">Draft</button>
+    </div>
+    <div id="hist-list"></div>
+  </div>
+
+  <!-- SYNC -->
+  <div id="screen-sync" class="jsub">
+    <div class="sync-stat">
+      <div class="sync-count" id="jsync-pending-count">0</div>
+      <div style="font-size:13px;color:#8A93BE;margin-top:3px;">sheets pending sync</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pending Queue</div>
+      <div id="jsync-queue"></div>
+      <button id="jsync-now-btn" class="btn primary" style="margin-top:12px;" onclick="jSyncNow()">☁️ Sync Now</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Sync Log</div>
+      <div id="jsync-log"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div id="screen-detail" class="jsub">
+    <button class="back-btn no-print" onclick="jBackFromDetail()">← Back</button>
+    <div id="detail-content"></div>
+    <div class="btnrow no-print">
+      <button class="btn primary" onclick="jPrintJob()">🖨️ Print / PDF</button>
+      <button class="btn ghost" id="det-edit-btn" onclick="jEditJob()">✏️ Edit</button>
+      <button class="btn amber" id="det-send-btn" onclick="jSendToOffice()">📤 Send</button>
+    </div>
+  </div>
+
+  <!-- PRINT (hidden, used by window.print()) -->
+  <div id="screen-print" class="jsub" style="display:none;"></div>
+
+</div><!-- end maintab-jobs -->
+
+
+<div id="maintab-safety" class="maintab mtactive">
 
 <!-- ============ SETUP WIZARD ============ -->
 <div class="screen" id="scr-setup">
@@ -683,6 +1211,8 @@ J. Blore, 0111222</textarea>
   <div id="settings-mount"></div>
   <button class="btn ghost" onclick="App.goHome()">‹ Back to home</button>
 </div>
+
+</div><!-- end maintab-safety -->
 
 <!-- modal + toast -->
 <div id="modal-bg"><div id="modal"></div></div>
@@ -1267,11 +1797,12 @@ const DB = {
   open() {
     return new Promise((res, rej) => {
       if (DB._db) return res(DB._db);
-      const rq = indexedDB.open('heliops', 1);
+      const rq = indexedDB.open('heliops', 2);
       rq.onupgradeneeded = () => {
         const d = rq.result;
         if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
         if (!d.objectStoreNames.contains('flights')) d.createObjectStore('flights', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('jobs')) d.createObjectStore('jobs', { keyPath: 'id', autoIncrement: true });
       };
       rq.onsuccess = () => { DB._db = rq.result; res(DB._db); };
       rq.onerror = () => rej(rq.error);
@@ -1430,6 +1961,7 @@ const App = {
     this.setChip(this.fleetChip());
     if (!this.S.configured) this.show('scr-setup');
     else { this.goHome(); this.trySync(); }
+    jLoadPilotsAndFleet(); // Populate job module dropdowns from shared settings
     this.updatePill();
     // Auto-dismiss splash after 2.2s
     this._splashTimer = setTimeout(() => this.dismissSplash(), 2200);
@@ -1444,6 +1976,11 @@ const App = {
     setTimeout(() => el.classList.add('gone'), 520);
   },
   show(id) {
+    // Ensure safety maintab is active when showing safety screens
+    document.querySelectorAll('.maintab').forEach(t => t.classList.remove('mtactive'));
+    $('maintab-safety').classList.add('mtactive');
+    document.querySelectorAll('#maintabbar button').forEach(b => b.classList.remove('mtactive'));
+    $('mtbtn-safety').classList.add('mtactive');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     window.scrollTo(0, 0);
@@ -2744,7 +3281,630 @@ const App = {
   }
 };
 
+
+/* =================================================================
+   JOB ADVICE MODULE — integrated into unified flight-ops PWA
+   Uses shared heliops DB (v2) and shared App.S settings.
+   ================================================================= */
+
+/* ── DB helpers scoped to jobs ───────────────────────────────── */
+const jKvGet = async (k, fb=null) => { const r = await DB.get('kv','job_'+k); return r !== undefined ? r : fb; };
+const jKvSet = async (k, v) => DB.put('kv', v, 'job_'+k);
+const jAll   = () => DB.all('jobs');
+const jGet   = (id) => DB.get('jobs', id);
+const jAdd   = (rec) => DB.put('jobs', rec);   // keyPath:id autoIncrement — omit id to insert
+const jSave  = (rec) => DB.put('jobs', rec);   // rec must have id for update
+const jDel   = (id) => DB.del('jobs', id);
+
+/* ── Pilots & fleet from shared App.S ───────────────────────── */
+function jGetPilots()  { return (App.S && App.S.crew)  ? App.S.crew.map(c=>c.name||c).filter(Boolean) : []; }
+function jGetFleet()   {
+  if (!App.S || !App.S.fleet) return [];
+  const seen = new Set();
+  return App.S.fleet.filter(a => { if(seen.has(a.callsign)) return false; seen.add(a.callsign); return true; })
+    .map(a => ({ reg: a.callsign, type: a.type||'' }));
+}
+
+/* ── State ───────────────────────────────────────────────────── */
+let jCurrentHire = 'wet';
+let jSigCanvas, jSigCtx, jSigDrawing=false, jSigHasMark=false;
+let jCurrentDetailId = null;
+let jPrevTab = 'new', jCurrentTab = 'new';
+let jLineIdx = 0;
+let jJobPIN = '';
+let jCurrentStep = 1;
+let jHistFilter = 'all';
+let jAutoSaveTimer = null;
+let jDraftId = null;
+let jLiveClients = [];
+
+/* ── Tab navigation (within jobs maintab) ─────────────────────── */
+function jShowTab(tab) {
+  document.getElementById('screen-confirm').classList.remove('active');
+  if (jCurrentTab === tab) return;
+  jPrevTab = jCurrentTab; jCurrentTab = tab;
+  document.querySelectorAll('.jsub').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.jtab').forEach(t => t.classList.remove('active'));
+  const s = document.getElementById('screen-' + tab);
+  const tb = document.getElementById('jtab-' + tab);
+  if (s) s.classList.add('active');
+  if (tb) tb.classList.add('active');
+  if (tab === 'history') jRenderHistory();
+  if (tab === 'sync')    jRenderSync();
+  const dd = document.getElementById('client-dropdown');
+  if (dd) dd.classList.remove('open');
+}
+
+function jShowDetail(id) {
+  jPrevTab = jCurrentTab; jCurrentTab = 'detail';
+  document.querySelectorAll('.jsub').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.jtab').forEach(t => t.classList.remove('active'));
+  document.getElementById('screen-detail').classList.add('active');
+  jCurrentDetailId = id;
+  jRenderDetail(id);
+}
+
+function jBackFromDetail() {
+  jCurrentDetailId = null;
+  jShowTab(jPrevTab === 'detail' ? 'history' : jPrevTab);
+}
+
+/* ── Step wizard ─────────────────────────────────────────────── */
+const J_STEP_LABELS = ['Job Details', 'Flight Hours', 'Sign & Submit'];
+
+function jGoStep(n) {
+  if (n > jCurrentStep && !jValidateStep(jCurrentStep)) return;
+  jCurrentStep = n;
+  jShowStep(n);
+}
+function jShowStep(n) {
+  document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i+1===n));
+  for (let i=1;i<=3;i++) {
+    const dot = document.getElementById('sdot-'+i);
+    if (!dot) continue;
+    dot.classList.toggle('done', i<n); dot.classList.toggle('active', i===n);
+    dot.textContent = i<n ? '✓' : i;
+  }
+  for (let i=1;i<=2;i++) {
+    document.getElementById('sline-'+i)?.classList.toggle('done', i<n);
+  }
+  const lbl = document.getElementById('step-label');
+  const num = document.getElementById('step-num');
+  if (lbl) lbl.textContent = J_STEP_LABELS[n-1];
+  if (num) num.textContent = 'Step '+n+' of 3';
+  window.scrollTo(0,0);
+  if (n===3) requestAnimationFrame(()=>requestAnimationFrame(()=>jResizeSig()));
+}
+function jValidateStep(n) {
+  jClearFieldErrors();
+  if (n===1) {
+    let ok=true;
+    if (!document.getElementById('f-date').value) { jFieldErr('f-date','err-date'); ok=false; }
+    if (!document.getElementById('f-client').value.trim()) { jFieldErr('f-client','err-client'); ok=false; }
+    if (!document.getElementById('f-pilot').value) { jFieldErr('f-pilot','err-pilot'); ok=false; }
+    if (!document.getElementById('f-aircraft').value) { jFieldErr('f-aircraft','err-aircraft'); ok=false; }
+    if (!ok) { const first=document.querySelector('.bad,.err.show'); if(first) first.scrollIntoView({behavior:'smooth',block:'center'}); }
+    return ok;
+  }
+  if (n===2) {
+    let linesOk=false;
+    document.querySelectorAll('#job-lines .job-line').forEach(l=>{
+      const h=parseFloat(l.querySelector('.line-hrs')?.value)||0;
+      const d=(l.querySelector('.line-desc')?.value||'').trim();
+      if(d&&h>0) linesOk=true;
+    });
+    if (!linesOk) { document.getElementById('err-lines').classList.add('show'); return false; }
+    return true;
+  }
+  return true;
+}
+
+/* ── Form ────────────────────────────────────────────────────── */
+async function jInitForm(keepJobNo=false) {
+  document.getElementById('f-date').value = todayISO();
+  if (!keepJobNo) document.getElementById('f-jobno').value = await jPeekNextJobNo();
+  document.getElementById('f-client').value = '';
+  document.getElementById('f-notes').value = '';
+  document.getElementById('f-dual').checked = false;
+  document.getElementById('dual-fields').classList.add('hidden');
+  jLoadPilotsAndFleet();
+  jLineIdx = 0;
+  document.getElementById('job-lines').innerHTML = '';
+  jAddLine();
+  jRecalcTotals();
+  jSetHire('wet');
+  jClearSig();
+  jClearFieldErrors();
+  jCurrentStep = 1;
+  jShowStep(1);
+  jDraftId = null;
+}
+async function jPeekNextJobNo() { const last=await jKvGet('jobCounter',0); return last+1; }
+async function jConsumeJobNo() { const next=await jPeekNextJobNo(); await jKvSet('jobCounter',next); return next; }
+
+function jStartNewJob() {
+  document.getElementById('screen-confirm').classList.remove('active');
+  document.querySelectorAll('.jsub').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.jtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-new').classList.add('active');
+  document.getElementById('jtab-new').classList.add('active');
+  jCurrentTab='new';
+  jInitForm();
+}
+
+/* ── Pilots & fleet dropdowns ─────────────────────────────────── */
+function jLoadPilotsAndFleet() {
+  const pilots  = jGetPilots();
+  const aircraft = jGetFleet();
+  ['f-pilot','f-pilot2'].forEach((id,i)=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    sel.innerHTML = pilots.length
+      ? `<option value="">Select pilot…</option>` + pilots.map((n,idx)=>`<option value="${idx}">${esc(n)}</option>`).join('')
+      : '<option value="">No pilots — go to Settings to add</option>';
+  });
+  ['f-aircraft','f-aircraft2'].forEach((id,i)=>{
+    const sel=document.getElementById(id); if(!sel) return;
+    sel.innerHTML = aircraft.length
+      ? `<option value="">Select aircraft…</option>` + aircraft.map((a,idx)=>`<option value="${idx}">${esc(a.reg)}${a.type?' — '+esc(a.type):''}</option>`).join('')
+      : '<option value="">No aircraft — go to Settings to add</option>';
+  });
+}
+
+/* ── Hire type ───────────────────────────────────────────────── */
+function jSetHire(type) {
+  jCurrentHire=type;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active',b.dataset.hire===type));
+  document.getElementById('banner-dry').classList.toggle('hidden', type!=='dry');
+  jDebouncedSave();
+}
+function jToggleDual() {
+  const on=document.getElementById('f-dual').checked;
+  document.getElementById('dual-fields').classList.toggle('hidden',!on);
+  jDebouncedSave();
+}
+
+/* ── Preset chips ────────────────────────────────────────────── */
+function jAddPreset(desc) {
+  for (const line of document.querySelectorAll('#job-lines .job-line')) {
+    const inp=line.querySelector('.line-desc');
+    if(inp&&!inp.value.trim()){ inp.value=desc; inp.nextElementSibling?.focus(); return; }
+  }
+  jAddLine(desc);
+}
+
+/* ── Job lines ───────────────────────────────────────────────── */
+function jAddLine(presetDesc) {
+  jLineIdx++;
+  const id=jLineIdx;
+  const div=document.createElement('div');
+  div.className='job-line'; div.id='line-'+id;
+  div.innerHTML=`<input type="text" class="line-desc" placeholder="Description…" value="${esc(presetDesc||'')}"><input type="number" class="line-hrs" min="0" step="0.1" placeholder="0.0" oninput="jRecalcTotals()"><button class="line-del" onclick="jRemoveLine(${id})" title="Remove">×</button>`;
+  document.getElementById('job-lines').appendChild(div);
+  jUpdateDelBtns();
+  if(presetDesc) setTimeout(()=>{ div.querySelector('.line-hrs')?.focus(); },50);
+}
+function jRemoveLine(id) {
+  const el=document.getElementById('line-'+id); if(el) el.remove();
+  if(!document.querySelectorAll('#job-lines .job-line').length){ jLineIdx=0; jAddLine(); return; }
+  jUpdateDelBtns(); jRecalcTotals();
+}
+function jUpdateDelBtns() {
+  const lines=document.querySelectorAll('#job-lines .job-line');
+  lines.forEach(l=>{ const b=l.querySelector('.line-del'); if(b) b.style.visibility=lines.length<=1?'hidden':'visible'; });
+}
+function jRecalcTotals() {
+  let t=0;
+  document.querySelectorAll('#job-lines .job-line').forEach(l=>{ t+=parseFloat(l.querySelector('.line-hrs')?.value)||0; });
+  document.getElementById('tot-hours').textContent=t.toFixed(1);
+}
+
+/* ── Client search ───────────────────────────────────────────── */
+async function jOnClientInput() {
+  const raw=document.getElementById('f-client').value;
+  const q=raw.trim().toLowerCase();
+  const dd=document.getElementById('client-dropdown');
+  if(raw.trim()){ document.getElementById('f-client').classList.remove('bad'); document.getElementById('err-client').classList.remove('show'); }
+  if(!q){ dd.classList.remove('open'); return; }
+  const recents=await jKvGet('recentClients',[]);
+  const matches=jLiveClients.filter(c=>c.toLowerCase().includes(q));
+  const recentMatches=recents.filter(c=>c.toLowerCase().includes(q));
+  if(!matches.length&&!recentMatches.length){ dd.classList.remove('open'); return; }
+  let html='';
+  if(recentMatches.length){ html+='<div class="client-section-hdr">Recent</div>'+recentMatches.map(c=>`<div class="client-opt" onclick="jPickClient('${esc(c)}')">${esc(c)}</div>`).join(''); }
+  if(!matches.length){ dd.innerHTML=html||`<div class="client-none">No match</div>`; }
+  else {
+    const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    html+=(html?'<div class="client-section-hdr">Contacts</div>':'')+matches.slice(0,12).map(c=>`<div class="client-opt" onclick="jPickClient('${esc(c)}')">${c.replace(re,'<mark>$1</mark>')}</div>`).join('');
+    dd.innerHTML=html;
+  }
+  dd.classList.add('open');
+}
+async function jPickClient(name) {
+  document.getElementById('f-client').value=name;
+  document.getElementById('client-dropdown').classList.remove('open');
+  document.getElementById('err-client').classList.remove('show');
+  document.getElementById('f-client').classList.remove('bad');
+  let recents=await jKvGet('recentClients',[]);
+  recents=[name,...recents.filter(r=>r!==name)].slice(0,5);
+  await jKvSet('recentClients',recents);
+  jDebouncedSave();
+}
+document.addEventListener('click', e => {
+  if(!e.target.closest('.client-picker-wrap'))
+    document.getElementById('client-dropdown')?.classList.remove('open');
+});
+
+/* ── Signature ───────────────────────────────────────────────── */
+function jInitSig() {
+  jSigCanvas=document.getElementById('jsig-canvas');
+  jSigCtx=jSigCanvas.getContext('2d');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>jResizeSig()));
+  const pos=e=>{ const r=jSigCanvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e; return{x:(s.clientX-r.left)*(jSigCanvas.width/r.width),y:(s.clientY-r.top)*(jSigCanvas.height/r.height)}; };
+  const start=e=>{ e.preventDefault(); jSigDrawing=true; const p=pos(e); jSigCtx.beginPath(); jSigCtx.moveTo(p.x,p.y); };
+  const move=e=>{
+    if(!jSigDrawing) return; e.preventDefault();
+    const p=pos(e);
+    jSigCtx.lineWidth=2.5; jSigCtx.lineCap='round'; jSigCtx.strokeStyle='#1A1D28';
+    jSigCtx.lineTo(p.x,p.y); jSigCtx.stroke();
+    jSigHasMark=true;
+    document.getElementById('jsig-wrap').classList.add('signed');
+    document.getElementById('jsig-hint').textContent='Signature captured ✓';
+    document.getElementById('err-sig').classList.remove('show');
+  };
+  const end=()=>{ jSigDrawing=false; };
+  jSigCanvas.addEventListener('mousedown',start); jSigCanvas.addEventListener('mousemove',move); jSigCanvas.addEventListener('mouseup',end);
+  jSigCanvas.addEventListener('touchstart',start,{passive:false}); jSigCanvas.addEventListener('touchmove',move,{passive:false}); jSigCanvas.addEventListener('touchend',end);
+}
+function jResizeSig() {
+  if(!jSigCanvas) return;
+  const r=jSigCanvas.getBoundingClientRect(); if(!r.width) return;
+  const dpr=window.devicePixelRatio||1, hadMark=jSigHasMark;
+  let imgData=null;
+  if(hadMark){ try{ imgData=jSigCtx.getImageData(0,0,jSigCanvas.width,jSigCanvas.height); }catch(e){} }
+  jSigCanvas.width=r.width*dpr; jSigCanvas.height=r.height*dpr;
+  jSigCtx.scale(dpr,dpr);
+  if(imgData&&hadMark){ try{ jSigCtx.putImageData(imgData,0,0); }catch(e){} }
+}
+function jClearSig() {
+  if(!jSigCtx) return;
+  jSigCtx.clearRect(0,0,jSigCanvas.width,jSigCanvas.height);
+  jSigHasMark=false;
+  document.getElementById('jsig-wrap').classList.remove('signed');
+  document.getElementById('jsig-hint').textContent='Sign above with your finger';
+}
+window.addEventListener('resize',()=>{ if(jSigCanvas) jResizeSig(); });
+
+/* ── Validation ──────────────────────────────────────────────── */
+function jClearFieldErrors() {
+  document.querySelectorAll('#screen-new .err').forEach(e=>e.classList.remove('show'));
+  document.querySelectorAll('#screen-new .bad').forEach(e=>e.classList.remove('bad'));
+}
+function jFieldErr(fid,eid) {
+  const f=document.getElementById(fid),e=document.getElementById(eid);
+  if(f) f.classList.add('bad'); if(e) e.classList.add('show');
+}
+function jValidateFinal() {
+  jClearFieldErrors(); let ok=true;
+  if(!jSigHasMark){ document.getElementById('err-sig').classList.add('show'); ok=false; }
+  return ok;
+}
+
+/* ── Auto-save ───────────────────────────────────────────────── */
+function jDebouncedSave() { clearTimeout(jAutoSaveTimer); jAutoSaveTimer=setTimeout(jSaveDraft,2000); }
+async function jSaveDraft() {
+  if(!document.getElementById('f-date').value) return;
+  try {
+    const rec=await jBuildRec('draft');
+    if(jDraftId){ await jSave({...rec,id:jDraftId}); }
+    else{ const r=await jAdd(rec); jDraftId=r; }
+    const pill=document.getElementById('autosave-pill');
+    if(pill){ pill.classList.add('show'); setTimeout(()=>pill.classList.remove('show'),1800); }
+  } catch(e){}
+}
+
+/* ── Build record ────────────────────────────────────────────── */
+async function jBuildRec(status) {
+  const pilots=jGetPilots(), aircraft=jGetFleet();
+  const pilotIdx=parseInt(document.getElementById('f-pilot').value);
+  const aircraftIdx=parseInt(document.getElementById('f-aircraft').value);
+  const isDual=document.getElementById('f-dual').checked;
+  const pilot2Idx=parseInt(document.getElementById('f-pilot2').value);
+  const aircraft2Idx=parseInt(document.getElementById('f-aircraft2').value);
+  const pilotName=pilots[pilotIdx]||'';
+  const aircraftObj=aircraft[aircraftIdx]||{};
+  const pilot2Name=isDual?(pilots[pilot2Idx]||''):'';
+  const aircraft2Obj=isDual?(aircraft[aircraft2Idx]||{}):{};
+  const lines=[];
+  document.querySelectorAll('#job-lines .job-line').forEach(l=>{
+    const desc=(l.querySelector('.line-desc')?.value||'').trim();
+    const hours=parseFloat(l.querySelector('.line-hrs')?.value)||0;
+    if(desc||hours) lines.push({desc,hours});
+  });
+  const totalHours=lines.reduce((s,l)=>s+l.hours,0);
+  const jobNo=parseInt(document.getElementById('f-jobno').value)||(await jPeekNextJobNo());
+  return {
+    jobNo, date:document.getElementById('f-date').value,
+    client:document.getElementById('f-client').value.trim(),
+    pilotName, aircraftReg:aircraftObj.reg||'', aircraftType:aircraftObj.type||'',
+    hireType:jCurrentHire, isDual, pilot2Name,
+    aircraft2Reg:aircraft2Obj.reg||'', aircraft2Type:aircraft2Obj.type||'',
+    lines, totalHours, notes:document.getElementById('f-notes').value.trim(),
+    signatureDataURL:jSigHasMark?jSigCanvas.toDataURL():null,
+    status, createdAt:Date.now(),
+    submittedAt:status==='submitted'?Date.now():null, syncedAt:null,
+  };
+}
+
+/* ── Submit ──────────────────────────────────────────────────── */
+async function jSubmitJob(status) {
+  if(status==='submitted'&&!jValidateFinal()) return;
+  jClearFieldErrors();
+  const jobNo=await jConsumeJobNo();
+  document.getElementById('f-jobno').value=jobNo;
+  const rec=await jBuildRec(status); rec.jobNo=jobNo;
+  let savedId;
+  if(jDraftId){ await jSave({...rec,id:jDraftId}); savedId=jDraftId; }
+  else { savedId=await jAdd(rec); }
+  jDraftId=null;
+  if(status==='submitted'){
+    const savedJob={...rec,id:savedId};
+    jShowConfirm(savedJob);
+    jSyncJobToServer(savedJob).then(async ok=>{
+      const cvEl=document.getElementById('confirm-cloud-status');
+      if(cvEl){ cvEl.textContent=ok?'☁ Sent to office':'⚠ Saved offline — will sync'; cvEl.className='cv '+(ok?'sent':'offline'); }
+      await jUpdateSyncBadge();
+    }).catch(()=>{});
+    await jUpdateSyncBadge();
+  } else {
+    toast('📋 Saved as draft');
+    await jInitForm(); window.scrollTo(0,0);
+  }
+}
+
+/* ── Confirm screen ──────────────────────────────────────────── */
+function jShowConfirm(job) {
+  document.querySelectorAll('.jsub').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.jtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('confirm-title').textContent='Job #'+job.jobNo+' Submitted';
+  document.getElementById('confirm-date').textContent=jFmtDate(job.date);
+  document.getElementById('confirm-card').innerHTML=`
+    <div class="ckv"><span class="ck">Pilot</span><span class="cv">${esc(job.pilotName)}</span></div>
+    <div class="ckv"><span class="ck">Aircraft</span><span class="cv">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</span></div>
+    <div class="ckv"><span class="ck">Hire Type</span><span class="cv">${({wet:'Wet Hire',dry:'Dry Hire'})[job.hireType]||job.hireType}${job.isDual?' · Dual':''}</span></div>
+    <div class="ckv"><span class="ck">Total Hours</span><span class="cv">${(job.totalHours||0).toFixed(1)} hrs</span></div>
+    <div class="ckv"><span class="ck">Office</span><span class="cv offline" id="confirm-cloud-status">Sending…</span></div>
+  `;
+  document.getElementById('screen-confirm').classList.add('active');
+  window.scrollTo(0,0);
+  setTimeout(()=>jInitForm(),200);
+}
+
+/* ── History ─────────────────────────────────────────────────── */
+function jSetHistFilter(f) {
+  jHistFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.toggle('active',c.dataset.filter===f));
+  jRenderHistory();
+}
+async function jRenderHistory() {
+  const jobs=await jAll();
+  const q=(document.getElementById('hist-search').value||'').trim().toLowerCase();
+  let list=jobs.sort((a,b)=>b.createdAt-a.createdAt);
+  if(jHistFilter!=='all') list=list.filter(j=>j.status===jHistFilter);
+  if(q) list=list.filter(j=>(j.client||'').toLowerCase().includes(q)||(j.pilotName||'').toLowerCase().includes(q)||String(j.jobNo).includes(q));
+  const el=document.getElementById('hist-list');
+  if(!list.length){ el.innerHTML='<div class="no-results">No records found</div>'; return; }
+  const groups=jGroupByDate(list);
+  el.innerHTML=groups.map(g=>`<div class="date-group-label">${g.label}</div>${g.jobs.map(j=>`<div class="hist-row" onclick="jShowDetail(${j.id})"><div class="hr-left"><div class="hr-job">Job #${j.jobNo} — ${esc(j.client)}</div><div class="hr-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${esc(j.aircraftReg)}</div><div class="hr-meta" style="margin-top:3px;"><span class="badge ${j.status}">${jStatusLabel(j.status)}</span></div></div><div class="hr-right"><div class="hr-hours">${(j.totalHours||0).toFixed(1)}</div><div class="hr-hrs-label">hrs</div></div></div>`).join('')}`).join('');
+}
+function jGroupByDate(jobs) {
+  const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  const weekAgo=today-6*86400000, monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+  const groups=[{label:'Today',jobs:[],test:d=>d>=today},{label:'This week',jobs:[],test:d=>d>=weekAgo&&d<today},{label:'This month',jobs:[],test:d=>d>=monthStart&&d<weekAgo},{label:'Older',jobs:[],test:d=>d<monthStart}];
+  jobs.forEach(j=>{ const d=j.createdAt||0; for(const g of groups){if(g.test(d)){g.jobs.push(j);break;}} });
+  return groups.filter(g=>g.jobs.length);
+}
+function jStatusLabel(s){ return s==='draft'?'Draft':s==='submitted'?'Submitted':'Synced'; }
+function jFmtDate(d){ if(!d) return '—'; try{ return new Date(d+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }catch{ return d; } }
+
+/* ── Detail view ─────────────────────────────────────────────── */
+async function jRenderDetail(id) {
+  const job=await jGet(id); if(!job) return;
+  const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
+  const linesHTML=(job.lines||[]).map(l=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;"><div style="flex:1;">${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);padding-left:12px;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const dual2HTML=job.isDual?`<div class="kv-row"><div class="k">2nd Pilot</div><div class="v">${esc(job.pilot2Name)||'—'}</div></div><div class="kv-row"><div class="k">2nd Aircraft</div><div class="v">${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</div></div>`:'';
+  document.getElementById('detail-content').innerHTML=`
+    <div class="detail-hdr"><div class="dh-jobno">Job #${job.jobNo}${job.isDual?' 🚁🚁':''}</div><div class="dh-sub">${jFmtDate(job.date)} · <span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
+    <div class="card"><div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}</div></div><div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div><div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}${job.isDual?' · Dual Operation':''}</div></div>${dual2HTML}${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}</div>
+    <div class="card"><div class="card-title">Flight Hours</div>${linesHTML}<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0 0;border-top:2px solid var(--navy);margin-top:4px;"><div style="font-weight:700;color:var(--navy);font-size:14px;">Total Flight Hours</div><div style="font-size:22px;font-weight:800;color:var(--orange);">${(job.totalHours||0).toFixed(1)} hrs</div></div></div>
+    ${job.signatureDataURL?`<div class="card"><div class="card-title">Pilot Signature</div><img src="${job.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>`:''}
+  `;
+  document.getElementById('det-edit-btn').style.display=job.status==='draft'?'':'none';
+  document.getElementById('det-send-btn').style.display=job.status!=='synced'?'':'none';
+}
+
+async function jEditJob() {
+  if(!jCurrentDetailId) return;
+  const job=await jGet(jCurrentDetailId); if(!job) return;
+  await jDel(jCurrentDetailId); jCurrentDetailId=null;
+  await jInitForm(true);
+  document.getElementById('f-date').value=job.date||'';
+  document.getElementById('f-jobno').value=job.jobNo||'';
+  document.getElementById('f-client').value=job.client||'';
+  document.getElementById('f-notes').value=job.notes||'';
+  jLoadPilotsAndFleet();
+  const pilots=jGetPilots(), aircraft=jGetFleet();
+  const pi=pilots.findIndex(n=>n===job.pilotName);
+  const ai=aircraft.findIndex(a=>a.reg===job.aircraftReg);
+  if(pi>=0) document.getElementById('f-pilot').value=pi;
+  if(ai>=0) document.getElementById('f-aircraft').value=ai;
+  jSetHire(job.hireType||'wet');
+  const wasDual=!!job.isDual;
+  document.getElementById('f-dual').checked=wasDual;
+  document.getElementById('dual-fields').classList.toggle('hidden',!wasDual);
+  if(wasDual){
+    const p2i=pilots.findIndex(n=>n===job.pilot2Name);
+    const a2i=aircraft.findIndex(a=>a.reg===job.aircraft2Reg);
+    if(p2i>=0) document.getElementById('f-pilot2').value=p2i;
+    if(a2i>=0) document.getElementById('f-aircraft2').value=a2i;
+  }
+  document.getElementById('job-lines').innerHTML=''; jLineIdx=0;
+  (job.lines||[]).forEach(l=>{ jAddLine(); const all=document.querySelectorAll('#job-lines .job-line'),last=all[all.length-1]; if(last){last.querySelector('.line-desc').value=l.desc||'';last.querySelector('.line-hrs').value=l.hours||'';} });
+  jRecalcTotals();
+  document.getElementById('screen-confirm').classList.remove('active');
+  document.querySelectorAll('.jsub').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.jtab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-new').classList.add('active');
+  document.getElementById('jtab-new').classList.add('active');
+  jCurrentTab='new'; toast('Job loaded for editing');
+}
+
+async function jSendToOffice() {
+  if(!jCurrentDetailId) return;
+  const job=await jGet(jCurrentDetailId); if(!job) return;
+  await jSave({...job,status:'submitted',submittedAt:Date.now()});
+  await jUpdateSyncBadge(); jRenderDetail(jCurrentDetailId); toast('📤 Queued for sync');
+}
+async function jPrintJob() {
+  const job=await jGet(jCurrentDetailId); if(!job) return;
+  jBuildPrint(job); window.print();
+}
+function jBuildPrint(job) {
+  const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
+  const rows=(job.lines||[]).map(l=>`<tr><td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td><td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td></tr>`).join('');
+  const pad=Math.max(0,5-(job.lines?.length||0));
+  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
+  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">Outback Helicopter Airwork NT Pty Ltd</div><div style="font-size:9pt;margin-top:3px;">ABN: 80 137 947 687 | ACN: 137 947 687</div><div style="font-size:9pt;">PO Box 37819 Winnellie NT 0821 | Ph: 8941 6811 | Mob: 0427 222 670</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${job.jobNo}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${job.isDual?' — Dual Operation':''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${job.isDual?`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>2ND PILOT:</b> ${esc(job.pilot2Name)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>2ND AIRCRAFT:</b> ${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</td></tr>`:''}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:70%;">DESCRIPTION</th><th colspan="2" style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
+}
+
+/* ── Sync ────────────────────────────────────────────────────── */
+async function jRenderSync() {
+  const jobs=await jAll();
+  const pending=jobs.filter(j=>j.status==='submitted');
+  const synced=jobs.filter(j=>j.status==='synced').sort((a,b)=>(b.syncedAt||0)-(a.syncedAt||0));
+  document.getElementById('jsync-pending-count').textContent=pending.length;
+  document.getElementById('jsync-queue').innerHTML=pending.length
+    ?pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">Job #${j.jobNo} — ${esc(j.client)}</div><div class="sq-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
+    :'<div class="no-results">All synced ✓</div>';
+  document.getElementById('jsync-log').innerHTML=synced.length
+    ?synced.slice(0,10).map(j=>`<div class="log-item">✅ Job #${j.jobNo} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
+    :'<div class="no-results">No sync activity yet</div>';
+}
+function jBuildServerBundle(job) {
+  return {
+    callsign:job.aircraftReg||'', formName:'Job Advice Sheet',
+    queuedAt:job.submittedAt||job.createdAt||Date.now(),
+    flightDate:job.date||'', flightTime:'', aircraftType:job.aircraftType||'',
+    sms:{ values:{pilotName:job.pilotName||'',pilotArn:''}, sigs:{pilotSig:job.signatureDataURL||null}, acks:{} },
+    pax:[], wb:null, client:job.client||'', hireType:job.hireType||'wet',
+    isDual:!!job.isDual, pilot2Name:job.pilot2Name||'', aircraft2Reg:job.aircraft2Reg||'', aircraft2Type:job.aircraft2Type||'',
+    lines:job.lines||[], totalHours:job.totalHours||0, notes:job.notes||'', jobNo:job.jobNo||0,
+  };
+}
+async function jSyncJobToServer(job) {
+  try {
+    const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),45000);
+    const res=await fetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(jBuildServerBundle(job)),signal:ctrl.signal});
+    clearTimeout(t); if(!res.ok) return false;
+    const data=await res.json();
+    if(data.ok){ await jSave({...job,status:'synced',syncedAt:Date.now(),oneDriveUrl:data.oneDriveUrl||null}); return true; }
+    return false;
+  } catch{ return false; }
+}
+async function jSyncNow() {
+  const jobs=await jAll(), pending=jobs.filter(j=>j.status==='submitted');
+  if(!pending.length){ toast('Nothing to sync — all up to date ✓'); return; }
+  const btn=document.getElementById('jsync-now-btn');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Syncing…'; }
+  let ok=0,fail=0;
+  for(const j of pending){ (await jSyncJobToServer(j))?ok++:fail++; await jUpdateSyncBadge(); jRenderSync(); }
+  if(btn){ btn.disabled=false; btn.innerHTML='☁️ Sync Now'; }
+  if(ok)   toast(`✅ Synced ${ok} sheet${ok>1?'s':''} to office!`);
+  if(fail) toast(`⚠ ${fail} sheet${fail>1?'s':''} failed — check internet`);
+}
+async function jUpdateSyncBadge() {
+  const jobs=await jAll(), n=jobs.filter(j=>j.status==='submitted').length;
+  const pip=document.getElementById('jsync-pip');
+  if(pip){ pip.textContent=n; pip.classList.toggle('show',n>0); }
+  const badge=document.getElementById('jsync-badge-count');
+  if(badge) badge.textContent=n+' pending';
+}
+
+/* ── CSV export ──────────────────────────────────────────────── */
+async function jExportCSV() {
+  const jobs=await jAll(), filtered=jobs.filter(j=>j.status!=='draft');
+  if(!filtered.length){ toast('No submitted records to export'); return; }
+  const header='Date,Job No,Client,Pilot,Aircraft,Hire Type,Total Flight Hours';
+  const rows=filtered.sort((a,b)=>a.jobNo-b.jobNo).map(j=>[j.date,j.jobNo,`"${(j.client||'').replace(/"/g,'""')}"`,`"${(j.pilotName||'').replace(/"/g,'""')}"`,`"${(j.aircraftReg||'').replace(/"/g,'""')}"`,j.hireType,(j.totalHours||0).toFixed(1)].join(','));
+  const csv=[header,...rows].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'}), url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`job-hours-${todayISO()}.csv`; a.click();
+  URL.revokeObjectURL(url); toast(`Exported ${filtered.length} records`);
+}
+
+/* ── Server config sync ──────────────────────────────────────── */
+async function jSyncFromServer() {
+  try {
+    const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),8000);
+    const res=await fetch('/api/config',{signal:ctrl.signal}); clearTimeout(t);
+    if(!res.ok) return false;
+    const cfg=await res.json();
+    if(Array.isArray(cfg.clients)&&cfg.clients.length) await jKvSet('clients',[...cfg.clients].sort());
+    await jKvSet('configSyncedAt',Date.now()); return true;
+  } catch{ return false; }
+}
+
+/* ── Main tab switching ──────────────────────────────────────── */
+function showMainTab(tab) {
+  document.querySelectorAll('.maintab').forEach(t=>t.classList.remove('mtactive'));
+  document.querySelectorAll('#maintabbar button').forEach(b=>b.classList.remove('mtactive'));
+  if(tab==='log'){
+    document.getElementById('maintab-safety').classList.add('mtactive');
+    document.getElementById('mtbtn-log').classList.add('mtactive');
+    App.showLog(); return;
+  }
+  if(tab==='settings'){
+    document.getElementById('maintab-safety').classList.add('mtactive');
+    document.getElementById('mtbtn-settings').classList.add('mtactive');
+    App.openSettings(); return;
+  }
+  const mt=document.getElementById('maintab-'+tab);
+  const btn=document.getElementById('mtbtn-'+tab);
+  if(mt) mt.classList.add('mtactive');
+  if(btn) btn.classList.add('mtactive');
+  window.scrollTo(0,0);
+}
+
+/* ── Job module boot ─────────────────────────────────────────── */
+async function jBoot() {
+  jJobPIN = await jKvGet('pin','');
+  jLiveClients = await jKvGet('clients',[]);
+  jSyncFromServer().then(async ok=>{
+    if(ok){ jLiveClients=await jKvGet('clients',[]); }
+  }).catch(()=>{});
+  await jInitForm();
+  jInitSig();
+  await jUpdateSyncBadge();
+}
+
 App.init();
+jBoot().catch(console.error);
 </script>
+
+<!-- ============ BOTTOM MAIN TAB BAR ============ -->
+<div id="maintabbar">
+  <button id="mtbtn-jobs" onclick="showMainTab('jobs')">
+    <span class="mti">🧾</span>Jobs
+  </button>
+  <button id="mtbtn-safety" class="mtactive" onclick="showMainTab('safety')">
+    <span class="mti">📋</span>Safety
+  </button>
+  <button id="mtbtn-log" onclick="showMainTab('log')">
+    <span class="mti">📒</span>Log
+  </button>
+  <button id="mtbtn-settings" onclick="showMainTab('settings')">
+    <span class="mti">⚙️</span>Settings
+  </button>
+</div>
+
 </body>
 </html>

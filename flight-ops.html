@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Outback Helicopter Airwork NT — Flight Paperwork</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -25,6 +22,7 @@
   --bg:#EDEBE8; --card:#FFFFFF;
   --green:#16753A; --green-bg:#E8F5EE; --green-dk:#125C2E;
   --red:#BC2018; --red-bg:#FCECEA;
+  --blue:#1566C0; --blue-bg:#E8F2FC;
   --or-t:#964808; --or-bg:#FEF2E6;
   --yl:#786000; --yl-bg:#FAF4D6;
   --r:14px; --r-lg:18px;
@@ -78,7 +76,7 @@ button{font-family:inherit;}
 #syncpill .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;}
 #btn-settings{
   background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#A8AECF;
-  border-radius:10px;min-width:40px;min-height:38px;font-size:17px;cursor:pointer;
+  border-radius:10px;min-width:44px;min-height:44px;font-size:17px;cursor:pointer;
   transition:background .15s,border-color .15s;
 }
 #btn-settings:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35);color:#fff;}
@@ -127,7 +125,7 @@ h1.page{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 16px;co
 }
 .btn.ghost:active{background:rgba(24,34,74,.06);}
 .btn.danger{background:linear-gradient(135deg,#D42820,var(--red));color:#fff;border-color:transparent;}
-.btn.small{min-height:40px;font-size:14px;width:auto;padding:7px 20px;}
+.btn.small{min-height:44px;font-size:14px;width:auto;padding:7px 20px;}
 .btn[disabled]{opacity:.35;pointer-events:none;}
 .btnrow{display:flex;gap:10px;margin-top:14px;}
 .btnrow .btn{flex:1;}
@@ -398,7 +396,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .dor-table th{background:var(--navy);color:#fff;font-weight:700;font-size:11px;padding:7px 5px;text-align:left;letter-spacing:.2px;white-space:nowrap;}
 .dor-table td{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:middle;}
 .dor-table tr.dor-ftot td{background:var(--or-bg);font-weight:800;}
-.dor-table input,.dor-table select{font-size:12.5px;padding:5px 6px;min-height:34px;border-radius:6px;border:1px solid #CCCCC7;background:#fff;font-family:inherit;width:100%;}
+.dor-table input,.dor-table select{font-size:12.5px;padding:5px 6px;min-height:44px;border-radius:6px;border:1px solid #CCCCC7;background:#fff;font-family:inherit;width:100%;}
 .dor-table input[type=number]{width:60px;}
 .dor-table input[type=time]{width:80px;}
 .dor-table .dor-calc{color:var(--navy);font-weight:800;font-size:13px;min-width:48px;white-space:nowrap;}
@@ -414,7 +412,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .crew-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);}
 .crew-row:last-child{border-bottom:0;}
 .crew-row .crew-num{width:22px;font-size:12px;font-weight:700;color:var(--mut);flex:none;text-align:center;}
-.crew-row input{flex:1;min-width:0;font-size:15px;padding:8px 10px;min-height:40px;}
+.crew-row input{flex:1;min-width:0;font-size:15px;padding:8px 10px;min-height:44px;}
 .crew-row input.arn{flex:0 0 110px;font-size:14px;}
 .crew-row .crew-del{background:transparent;border:0;color:var(--mut);font-size:20px;cursor:pointer;padding:4px 6px;flex:none;line-height:1;}
 .crew-row .crew-del:hover{color:var(--red);}
@@ -517,38 +515,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .step-nav{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:4px;}
 .step-nav.single{grid-template-columns:1fr;}
 
-/* Buttons */
-.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
-  min-height:50px;border-radius:14px;border:2px solid transparent;font-size:15px;font-weight:700;
-  letter-spacing:.2px;cursor:pointer;padding:10px 18px;
-  transition:filter .12s,transform .1s;-webkit-tap-highlight-color:transparent;}
-.btn:active{transform:scale(.97);filter:brightness(.9);}
-.btn.primary{background:var(--navy);color:#fff;}
-.btn.amber{background:var(--orange-dk);color:#fff;font-size:15px;}
-.btn.green{background:var(--green);color:#fff;}
-.btn.ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);font-weight:700;}
-.btn.ghost:active{background:rgba(24,34,74,.05);}
-.btn.small{min-height:40px;font-size:13px;width:auto;padding:7px 16px;}
-.btn.danger{background:transparent;color:var(--red);border:1.5px solid rgba(188,32,24,.25);}
-.btn[disabled]{opacity:.35;pointer-events:none;}
-.btnrow{display:flex;gap:10px;margin-top:12px;}
-.btnrow .btn{flex:1;}
-
-/* Inputs */
-label.fl{display:block;font-weight:700;font-size:11px;margin:14px 0 5px;color:var(--ink);
-  letter-spacing:.6px;text-transform:uppercase;}
-label.fl .req{color:var(--orange);}
-input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],select,textarea{
-  width:100%;font-size:16px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;
-  background:#FAFAF8;color:var(--ink);min-height:46px;font-family:inherit;
-  appearance:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s;}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.12);}
-input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
-input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:default;border-style:dashed;}
-.err{color:var(--red);font-size:12px;margin:3px 0 0 2px;display:none;}
-.err.show{display:block;}
+/* grid2 responsive (buttons/inputs defined once in the shared block above) */
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
 @media(max-width:480px){.grid2{grid-template-columns:1fr;}}
 
@@ -582,7 +549,7 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
   gap:6px;padding:7px 8px;border-bottom:1px solid var(--line);align-items:center;}
 .job-line:last-child{border-bottom:none;}
 .job-line:nth-child(even){background:#FAFAF8;}
-.job-line input{min-height:42px;font-size:15px;}
+.job-line input{min-height:44px;font-size:15px;}
 .line-del{background:none;border:1px solid var(--line);color:var(--mut);border-radius:7px;
   width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .line-del:active{background:var(--red-bg);color:var(--red);}
@@ -1168,7 +1135,7 @@ J. Blore, 0111222</textarea>
 <div class="screen" id="scr-flight">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
     <div id="flight-title" style="font-size:13px;font-weight:600;color:var(--mut);"></div>
-    <button class="btn ghost small" onclick="App.discardDraft()" style="color:var(--red);border-color:var(--red);min-height:34px;font-size:13px;padding:5px 14px;">✕ Start over</button>
+    <button class="btn ghost small" onclick="App.discardDraft()" style="color:var(--red);border-color:var(--red);min-height:44px;font-size:13px;padding:5px 14px;">✕ Start over</button>
   </div>
   <div id="stepper">
     <button class="st cur" data-step="0" onclick="App.gotoStep(0)">1. SMS form</button>
@@ -1624,6 +1591,171 @@ const FORM_DEFS = [{
   id:"form-mdr",formNo:"MDR",issue:"Issue 1.0",issueDate:"June 2022",
   company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
   title:"Maintenance Defect / Unserviceability Record",category:"maint",type:"mdr"
+},{
+  id:"form22", formNo:"Form 22", issue:"Issue 1.0", issueDate:"January 2024",
+  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  title:"SWMS – Aerial Spraying",
+  header:[
+    { id:"pilotName",   label:"Pilot – Task Specialist Name", type:"crew",    required:true },
+    { id:"trainerName", label:"Trainer Name",                  type:"crewOpt" },
+    { id:"reviewDate",  label:"Review Date",                   type:"date",    autofill:"today", required:true }
+  ],
+  signatures:[
+    { id:"pilotSig",   label:"Pilot signature",   required:true },
+    { id:"trainerSig", label:"Trainer signature",  required:false }
+  ],
+  ackText:"Reviewed & understood — controls in place",
+  sections:[
+    { step:"Block Checklist before start",
+      hazards:[{ hazard:["Accommodation, landing site details, windsock/approach/departure/reject, Air Traffic Services, Navaids (VOR/NDB/ILS/DME/GPS), services (crash/fire/rescue/hangar), fuel supplier, fuel storage/delivery method, fuel filtration/quality control, flight following primary comm. method, alternate method, planned communication time interval"],
+        rl:[3,2,5], controls:["Contract review by Chief Pilot – Client"],
+        resp:["Pilot","Ground Crew","Project Manager"], rr:[2,2,4] }]
+    },
+    { step:"Geography and Hazards",
+      hazards:[{ hazard:["Powerlines, towers/masts, known bird activity, known aircraft, urban areas, farm houses, airstrips, blasting areas, restricted/danger areas, politically sensitive areas"],
+        rl:[3,2,5], controls:["Contract review by Chief Pilot – Client"],
+        resp:["Pilot","Ground Crew","Project Manager"], rr:[2,2,4] }]
+    },
+    { step:"Weather",
+      hazards:[{ hazard:["Prevailing wind direction, avg. wind speed (knots), mean min/max temp (°C), remarks"],
+        rl:[3,2,5],
+        controls:[
+          "Weather forecast obtained prior to flight in accordance with CASA regulations",
+          "Pilots to show due caution with poor weather conditions",
+          "Pilots maintain the ability to access weather updates in flight",
+          "Pilots will not 'push on' in adverse weather — safety always prevails over pressure to complete a task in unsafe conditions"
+        ],
+        resp:["Pilot"], rr:[2,2,4] }]
+    },
+    { step:"Wire Strike & Other Potential Hazards",
+      hazards:[
+        { hazard:["Unmarked towers / powerlines not shown on available maps"],
+          rl:[3,2,5],
+          controls:[
+            "All available charts showing the location of lines are to be consulted and available to operational staff on site",
+            "An aerial reconnaissance to locate lines within the day's work area is to be completed prior to commencing operations",
+            "The survey is to be flown at a height above the highest known line in the operational area, also noting lines in the turning area outside of the operational area"
+          ],
+          resp:[], rr:[2,2,4] },
+        { hazard:["Known aircraft — unscheduled flights, local properties with own aircraft at low level"],
+          rl:[3,4,7],
+          controls:[
+            "Local aircraft frequencies are to be monitored by the pilot and appropriate location calls made",
+            "Pilot to be aware of unscheduled flights into local airports",
+            "Local properties may have own aircraft involved in low level flights — maintain vigilance at all times"
+          ],
+          resp:[], rr:[2,3,5] },
+        { hazard:["Elevation — maintaining minimum separation distances from built up areas and stock"],
+          rl:[2,2,4],
+          controls:[
+            "Due care is to be taken by the pilot while maintaining minimum separation distances from built up areas and in preventing injury or alarm to stock",
+            "Local authorities are to be made aware of operations prior to commencement"
+          ],
+          resp:[], rr:[2,1,3] }
+      ]
+    },
+    { step:"Helicopter and Crew Pre-Flight",
+      hazards:[
+        { hazard:["Weight and Balance — correct aircraft loading"],
+          rl:[3,4,7],
+          lead:"Pilots are responsible to:",
+          controls:[
+            "Ensure the gross weight of the aircraft does not exceed the aircraft limitations and is such that flight performance in accordance with the standards specified by CASA for the type of operation to be undertaken is possible under the prevailing conditions",
+            "Ensure any directions of CASA with respect to the loading of the aircraft have been complied with",
+            "Aircraft shall at all times be loaded in accordance with the weight and balance limitations specified in its approved FM and the loading system. Zero Fuel Weight, Ramp Weight, Take-off Weight, Landing Weight and any performance limited weights must be considered as appropriate"
+          ],
+          resp:["Pilot"], rr:[2,3,5] },
+        { hazard:["Fuel storage / delivery method (tanker, buried tanks, bladder, drums)"],
+          rl:[2,4,6],
+          controls:[
+            "Pre-Flight inspection conducted prior to flight and maintenance release signed",
+            "Maintenance conducted by approved maintenance personnel in accordance with aircraft maintenance schedule",
+            "ECTM program in use"
+          ],
+          resp:["Pilot","Approved Maintenance Provider"], rr:[2,2,4] },
+        { hazard:["Fuel filtration / quality control"],
+          rl:[2,4,6],
+          controls:[
+            "Pre-use inspection of equipment conducted prior to work starting",
+            "Only serviceable equipment to be used",
+            "A register of equipment is maintained with a service inspection history"
+          ],
+          resp:["Pilot","Ground Crew","Approved Safety Inspectors"], rr:[2,2,4] },
+        { hazard:["Flight following — take-off and landing direction, HLS size"],
+          rl:[2,4,6],
+          controls:[
+            "The aircraft take-off and landing direction shall be discussed with the ground crew at the pre-start meeting",
+            "Minimum HLS size is 2 × D"
+          ],
+          resp:["Pilot","Ground Crew"], rr:[2,2,4] }
+      ]
+    },
+    { step:"Flight Operations",
+      hazards:[
+        { hazard:["Fuel monitoring — burn rate variance from gauge reading"],
+          rl:[3,4,7],
+          controls:[
+            "Pilots are to continually monitor and assess fuel burn for all flight operations",
+            "Pilots will cross check fuel consumption using flight time and known consumption vs fuel gauge — in the event of a substantial variance, work with the worst scenario",
+            "Pilots will record and calculate actual fuel burn for every flight and record on the DOR as per CASA regulations and Company Operating Procedures. Any variations will be reported to the Chief Pilot",
+            "Fuel monitoring and calculations are included in all company flight reviews",
+            "Land if unsure — fuel can always be delivered"
+          ],
+          resp:["Pilot"], rr:[2,3,5] },
+        { hazard:["Reduced visibility — brownout / whiteout (dust, fog, cloud, drizzle, smoke)"],
+          rl:[3,4,7],
+          controls:[
+            "Pilots will fly with due caution in areas prone to brownouts or whiteouts",
+            "Where available, pilots will converse with ground crew as to the conditions at a proposed landing site",
+            "An alternate site will be used if there is any doubt about safety",
+            "Hand held radios or mobile phones can be used to provide air-to-ground communications",
+            "Where dust is of concern, water trucks may be utilised to wet down the landing site",
+            "Minimum HLS size is 2 × D"
+          ],
+          resp:["Pilot","Ground Crew"], rr:[2,3,5] },
+        { hazard:["Loose items in cabin — tail rotor strike risk (cameras, phones, tablets — doors-off operations)"],
+          rl:[3,4,7],
+          controls:[
+            "Safety briefing to include the instruction that no equipment (cameras, phones, tablets etc.) is to be used during doors-off operations",
+            "All items to be stowed in cargo bays or left at departure / return point",
+            "Windows to remain closed whenever practical"
+          ],
+          resp:["Pilot","Ground Crew","Site Personnel"], rr:[2,3,5] },
+        { hazard:["Emergency landings — remote area operations"],
+          rl:[3,5,8],
+          controls:[
+            "Before commencing works, all persons involved will receive a safety briefing from the pilot (on the HLS or in the aircraft)",
+            "Satellite phones to be carried for remote area operations",
+            "All personnel to have general emergency training"
+          ],
+          resp:["Pilot","Ground Crew","Site Personnel"], rr:[2,4,6] },
+        { hazard:["Adverse weather"],
+          rl:[3,3,6],
+          controls:[
+            "Weather forecast obtained prior to flight in accordance with CASA regulations",
+            "Pilots to show due caution with poor weather conditions",
+            "Pilots maintain the ability to access weather updates in flight",
+            "Pilots will not 'push on' in adverse weather — safety always prevails over pressure to complete a task in unsafe conditions"
+          ],
+          resp:["Pilot"], rr:[2,2,4] },
+        { hazard:["No Fly / Restricted Zones"],
+          rl:[2,2,4],
+          controls:[
+            "Pilots will check any airspace restrictions along the prescribed route prior to flight",
+            "Pilots can access airspace restrictions and changes/updates via Oz Runways en-route"
+          ],
+          resp:["Pilot"], rr:[2,1,3] },
+        { hazard:["Airprox / Loss of Separation / Mid Air Collision"],
+          rl:[3,5,8],
+          controls:[
+            "Pilots will maintain situational awareness at all times",
+            "Pilots will monitor local area radio frequencies and converse with any traffic that may cause a conflict during flight operations",
+            "Ground crew will alert air crew via radio/phone or text if any aircraft are observed operating in the vicinity"
+          ],
+          resp:["Pilot","Ground Crew"], rr:[2,5,7] }
+      ]
+    }
+  ]
 }];
 
 /* ================================================================
@@ -1926,7 +2058,7 @@ function validateVH(cs) { return VH_RE.test((cs || '').trim().toUpperCase()); }
 
 const FORM_CATEGORIES = [
   { key:'safety', label:'Safety Management', dotClass:'dot-safety',
-    ids:['form14','form15','form16','form17','form18','form19','form-hir'] },
+    ids:['form14','form15','form16','form17','form18','form19','form22','form-hir'] },
   { key:'flight', label:'Flight Records', dotClass:'dot-flight',
     ids:['form-dor','form-psbr'] },
   { key:'maint',  label:'Maintenance',  dotClass:'dot-maint',
@@ -2305,11 +2437,12 @@ const App = {
     if (!v.reviewDate) v.reviewDate = ns.date;
 
     const crewOpts = sel => '<option value="">— Select —</option>' +
-      this.S.crew.map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
 
     let h = '<div class="swms-head"><div class="t1">' + esc(F.title) + '</div>' +
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
-      ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>';
+      ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>' +
+      '<button class="btn ghost small" style="margin-bottom:10px;" onclick="App.showRiskGuide()">📋 Risk Guide (Form 27)</button>';
 
     const showTrainer = !!v.showTrainer;
     h += '<div class="card"><h2>Sign-on</h2><div class="grid2">' +
@@ -2363,6 +2496,58 @@ const App = {
       if (this.flight.sms.sigs[k]) this._sigs[k].load(this.flight.sms.sigs[k]);
     });
   },
+  showRiskGuide() {
+    Modal.show(
+      '<h3 style="margin:0 0 12px;">Risk Guide — Form 27</h3>' +
+      '<p style="font-size:13px;color:var(--mut);margin:0 0 14px;">SWMS Assessment Process · Outback Helicopters NT · January 2024</p>' +
+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--navy);">Table 1 — Consequence (C)</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">' +
+      '<tr style="background:var(--navy);color:#fff;"><th style="padding:5px 8px;text-align:left;">Level</th><th style="padding:5px 8px;text-align:left;">Degree</th><th style="padding:5px 8px;text-align:left;">Description</th></tr>' +
+      '<tr style="background:#FCECEA;"><td style="padding:5px 8px;font-weight:700;text-align:center;">5</td><td style="padding:5px 8px;font-weight:700;">Severe</td><td style="padding:5px 8px;">Multiple deaths. Equipment destroyed. Financial loss impacting ongoing viability.</td></tr>' +
+      '<tr style="background:#FEF2E6;"><td style="padding:5px 8px;font-weight:700;text-align:center;">4</td><td style="padding:5px 8px;font-weight:700;">Major</td><td style="padding:5px 8px;">Single death. Extensive injuries requiring hospitalisation. Major equipment damage (out of service ≥1 week).</td></tr>' +
+      '<tr style="background:#FAF4D6;"><td style="padding:5px 8px;font-weight:700;text-align:center;">3</td><td style="padding:5px 8px;font-weight:700;">Moderate</td><td style="padding:5px 8px;">Medical treatment required at scene. Equipment out of service &lt;1 week.</td></tr>' +
+      '<tr style="background:#E8F5EE;"><td style="padding:5px 8px;font-weight:700;text-align:center;">2</td><td style="padding:5px 8px;font-weight:700;">Minor</td><td style="padding:5px 8px;">First aid with medical follow-up. Minor equipment damage (not out of service).</td></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">1</td><td style="padding:5px 8px;font-weight:700;">Negligible</td><td style="padding:5px 8px;">First aid, no follow-up. No equipment damage. Low financial impact.</td></tr>' +
+      '</table>' +
+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--navy);">Table 2 — Likelihood (L)</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">' +
+      '<tr style="background:var(--navy);color:#fff;"><th style="padding:5px 8px;text-align:left;">Level</th><th style="padding:5px 8px;text-align:left;">Degree</th><th style="padding:5px 8px;text-align:left;">Frequency</th></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">5</td><td style="padding:5px 8px;font-weight:700;">Almost Certain</td><td style="padding:5px 8px;">More than once per year</td></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">4</td><td style="padding:5px 8px;font-weight:700;">Likely</td><td style="padding:5px 8px;">At least once per year</td></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">3</td><td style="padding:5px 8px;font-weight:700;">Possible</td><td style="padding:5px 8px;">At least once in 5 years</td></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">2</td><td style="padding:5px 8px;font-weight:700;">Unlikely</td><td style="padding:5px 8px;">At least once in 10 years</td></tr>' +
+      '<tr><td style="padding:5px 8px;font-weight:700;text-align:center;">1</td><td style="padding:5px 8px;font-weight:700;">Rare</td><td style="padding:5px 8px;">At least once in 15 years</td></tr>' +
+      '</table>' +
+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--navy);">Table 3 — Risk Level (L × C)</div>' +
+      '<table style="border-collapse:collapse;font-size:11px;margin-bottom:16px;">' +
+      '<tr><th style="padding:5px 8px;background:var(--navy);color:#fff;">L \\ C</th>' +
+      '<th style="padding:5px 8px;background:var(--navy);color:#fff;">1</th><th style="padding:5px 8px;background:var(--navy);color:#fff;">2</th>' +
+      '<th style="padding:5px 8px;background:var(--navy);color:#fff;">3</th><th style="padding:5px 8px;background:var(--navy);color:#fff;">4</th>' +
+      '<th style="padding:5px 8px;background:var(--navy);color:#fff;">5</th></tr>' +
+      [5,4,3,2,1].map(l => {
+        const lbls = {5:'5 Almost Certain',4:'4 Likely',3:'3 Possible',2:'2 Unlikely',1:'1 Rare'};
+        return '<tr><td style="padding:5px 8px;font-weight:700;background:var(--bg);">' + lbls[l] + '</td>' +
+          [1,2,3,4,5].map(c => {
+            const v = l+c; const bg = v>=8?'#BC2018':v>=6?'#E8720C':v>=4?'#786000':'#16753A'; const fg='#fff';
+            return '<td style="padding:5px 10px;text-align:center;font-weight:800;background:'+bg+';color:'+fg+';">'+v+'</td>';
+          }).join('') + '</tr>';
+      }).join('') +
+      '</table>' +
+
+      '<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--navy);">Table 4 — Risk Treatment</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;">' +
+      '<tr style="background:var(--navy);color:#fff;"><th style="padding:5px 8px;text-align:left;">Rating</th><th style="padding:5px 8px;text-align:left;">Level</th><th style="padding:5px 8px;text-align:left;">Action required</th><th style="padding:5px 8px;text-align:left;">Acceptance</th></tr>' +
+      '<tr style="background:#FCECEA;"><td style="padding:5px 8px;font-weight:800;">8–10</td><td style="padding:5px 8px;font-weight:700;color:#BC2018;">Extreme</td><td style="padding:5px 8px;">Do Not Operate — Stop Work. Written approval of Directors required.</td><td style="padding:5px 8px;">Director / CEO</td></tr>' +
+      '<tr style="background:#FEF2E6;"><td style="padding:5px 8px;font-weight:800;">6–7</td><td style="padding:5px 8px;font-weight:700;color:#964808;">High</td><td style="padding:5px 8px;">Stop Work unless treatment plan with CEO written approval is in place.</td><td style="padding:5px 8px;">Chief Pilot or higher</td></tr>' +
+      '<tr style="background:#FAF4D6;"><td style="padding:5px 8px;font-weight:800;">4–5</td><td style="padding:5px 8px;font-weight:700;color:#786000;">Medium</td><td style="padding:5px 8px;">Acceptable if all controls noted in the accepted risk assessment are in place.</td><td style="padding:5px 8px;">Line Pilot / Ground Crew</td></tr>' +
+      '<tr style="background:#E8F5EE;"><td style="padding:5px 8px;font-weight:800;">2–3</td><td style="padding:5px 8px;font-weight:700;color:#16753A;">Low</td><td style="padding:5px 8px;">No additional action required.</td><td style="padding:5px 8px;">Nil</td></tr>' +
+      '</table>' +
+      '<button class="btn ghost small" style="margin-top:8px;" onclick="Modal.hide()">Close</button>'
+    );
+  },
   toggleSec(si) { $('sec-' + si).classList.toggle('open'); },
   toggleAck(si) {
     const a = this.flight.sms.acks;
@@ -2378,7 +2563,7 @@ const App = {
   },
   smsCrewPick(which) {
     const name = $('sms-' + which + 'Name').value;
-    const c = this.S.crew.find(x => x.name === name);
+    const c = (this.S && this.S.crew ? this.S.crew : []).find(x => x.name === name);
     const arnEl = $('sms-' + which + 'Arn');
     if (arnEl) arnEl.value = c ? c.arn : '';
     // Also store directly so forms without a visible ARN field (e.g. SWMS) still capture it
@@ -2406,7 +2591,7 @@ const App = {
     const ns = nowStamp(), v = this.flight.sms.values;
     if (!v.reviewDate) v.reviewDate = ns.date;
     const crewOpts = sel => '<option value="">— Select —</option>' +
-      this.S.crew.map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
     const sigH = (id, label) =>
       '<div class="card"><h2>' + esc(label) + ' <span class="req">*</span></h2>' +
       '<div class="sigwrap" id="wrap-' + id + '"><canvas id="sig-' + id + '"></canvas></div>' +
@@ -3308,7 +3493,7 @@ function jGetFleet()   {
 
 /* ── State ───────────────────────────────────────────────────── */
 let jCurrentHire = 'wet';
-let jSigCanvas, jSigCtx, jSigDrawing=false, jSigHasMark=false;
+let jSigPad = null; // uses shared SigPad class
 let jCurrentDetailId = null;
 let jPrevTab = 'new', jCurrentTab = 'new';
 let jLineIdx = 0;
@@ -3374,7 +3559,7 @@ function jShowStep(n) {
   if (lbl) lbl.textContent = J_STEP_LABELS[n-1];
   if (num) num.textContent = 'Step '+n+' of 3';
   window.scrollTo(0,0);
-  if (n===3) requestAnimationFrame(()=>requestAnimationFrame(()=>jResizeSig()));
+  if (n===3 && jSigPad) requestAnimationFrame(()=>requestAnimationFrame(()=>jSigPad._initCtx()));
 }
 function jValidateStep(n) {
   jClearFieldErrors();
@@ -3535,45 +3720,25 @@ document.addEventListener('click', e => {
     document.getElementById('client-dropdown')?.classList.remove('open');
 });
 
-/* ── Signature ───────────────────────────────────────────────── */
+/* ── Signature (uses shared SigPad class) ────────────────────── */
 function jInitSig() {
-  jSigCanvas=document.getElementById('jsig-canvas');
-  jSigCtx=jSigCanvas.getContext('2d');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>jResizeSig()));
-  const pos=e=>{ const r=jSigCanvas.getBoundingClientRect(),s=e.touches?e.touches[0]:e; return{x:(s.clientX-r.left)*(jSigCanvas.width/r.width),y:(s.clientY-r.top)*(jSigCanvas.height/r.height)}; };
-  const start=e=>{ e.preventDefault(); jSigDrawing=true; const p=pos(e); jSigCtx.beginPath(); jSigCtx.moveTo(p.x,p.y); };
-  const move=e=>{
-    if(!jSigDrawing) return; e.preventDefault();
-    const p=pos(e);
-    jSigCtx.lineWidth=2.5; jSigCtx.lineCap='round'; jSigCtx.strokeStyle='#1A1D28';
-    jSigCtx.lineTo(p.x,p.y); jSigCtx.stroke();
-    jSigHasMark=true;
-    document.getElementById('jsig-wrap').classList.add('signed');
-    document.getElementById('jsig-hint').textContent='Signature captured ✓';
-    document.getElementById('err-sig').classList.remove('show');
-  };
-  const end=()=>{ jSigDrawing=false; };
-  jSigCanvas.addEventListener('mousedown',start); jSigCanvas.addEventListener('mousemove',move); jSigCanvas.addEventListener('mouseup',end);
-  jSigCanvas.addEventListener('touchstart',start,{passive:false}); jSigCanvas.addEventListener('touchmove',move,{passive:false}); jSigCanvas.addEventListener('touchend',end);
-}
-function jResizeSig() {
-  if(!jSigCanvas) return;
-  const r=jSigCanvas.getBoundingClientRect(); if(!r.width) return;
-  const dpr=window.devicePixelRatio||1, hadMark=jSigHasMark;
-  let imgData=null;
-  if(hadMark){ try{ imgData=jSigCtx.getImageData(0,0,jSigCanvas.width,jSigCanvas.height); }catch(e){} }
-  jSigCanvas.width=r.width*dpr; jSigCanvas.height=r.height*dpr;
-  jSigCtx.scale(dpr,dpr);
-  if(imgData&&hadMark){ try{ jSigCtx.putImageData(imgData,0,0); }catch(e){} }
+  const canvas = document.getElementById('jsig-canvas');
+  if (!canvas) return;
+  jSigPad = new SigPad(canvas, () => {
+    const hint = document.getElementById('jsig-hint');
+    if (hint) hint.textContent = jSigPad.empty ? 'Sign above with your finger' : 'Signature captured ✓';
+    if (!jSigPad.empty) {
+      const err = document.getElementById('err-sig');
+      if (err) err.classList.remove('show');
+    }
+  });
 }
 function jClearSig() {
-  if(!jSigCtx) return;
-  jSigCtx.clearRect(0,0,jSigCanvas.width,jSigCanvas.height);
-  jSigHasMark=false;
-  document.getElementById('jsig-wrap').classList.remove('signed');
-  document.getElementById('jsig-hint').textContent='Sign above with your finger';
+  if (!jSigPad) return;
+  jSigPad.clear();
+  const hint = document.getElementById('jsig-hint');
+  if (hint) hint.textContent = 'Sign above with your finger';
 }
-window.addEventListener('resize',()=>{ if(jSigCanvas) jResizeSig(); });
 
 /* ── Validation ──────────────────────────────────────────────── */
 function jClearFieldErrors() {
@@ -3586,7 +3751,7 @@ function jFieldErr(fid,eid) {
 }
 function jValidateFinal() {
   jClearFieldErrors(); let ok=true;
-  if(!jSigHasMark){ document.getElementById('err-sig').classList.add('show'); ok=false; }
+  if(!jSigPad || jSigPad.empty){ document.getElementById('err-sig').classList.add('show'); ok=false; }
   return ok;
 }
 
@@ -3630,7 +3795,7 @@ async function jBuildRec(status) {
     hireType:jCurrentHire, isDual, pilot2Name,
     aircraft2Reg:aircraft2Obj.reg||'', aircraft2Type:aircraft2Obj.type||'',
     lines, totalHours, notes:document.getElementById('f-notes').value.trim(),
-    signatureDataURL:jSigHasMark?jSigCanvas.toDataURL():null,
+    signatureDataURL:jSigPad ? jSigPad.data() : null,
     status, createdAt:Date.now(),
     submittedAt:status==='submitted'?Date.now():null, syncedAt:null,
   };

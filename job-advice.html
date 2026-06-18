@@ -26,9 +26,10 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
   font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;
-  font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;}
-body{padding-bottom:env(safe-area-inset-bottom);}
-button{font-family:inherit;}
+  font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;}
+body{padding-bottom:env(safe-area-inset-bottom);overscroll-behavior:none;}
+button{font-family:inherit;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
 .hidden{display:none !important;}
 
 /* Topbar */
@@ -47,7 +48,7 @@ button{font-family:inherit;}
 #sync-badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex:none;}
 #sync-badge.pending{color:#FFB060;border-color:rgba(232,114,12,.4);background:rgba(232,114,12,.15);}
 #btn-settings{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#A8AECF;
-  border-radius:10px;min-width:38px;min-height:36px;font-size:16px;cursor:pointer;}
+  border-radius:10px;min-width:44px;min-height:44px;font-size:16px;cursor:pointer;}
 #home-btn{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.18);color:#C0C6E0;border-radius:8px;padding:5px 10px;
   font-size:11px;font-weight:700;text-decoration:none;letter-spacing:.3px;white-space:nowrap;}
@@ -115,7 +116,7 @@ button{font-family:inherit;}
 .btn.green{background:var(--green);color:#fff;}
 .btn.ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);font-weight:700;}
 .btn.ghost:active{background:rgba(24,34,74,.05);}
-.btn.small{min-height:40px;font-size:13px;width:auto;padding:7px 16px;}
+.btn.small{min-height:44px;font-size:13px;width:auto;padding:7px 16px;}
 .btn.danger{background:transparent;color:var(--red);border:1.5px solid rgba(188,32,24,.25);}
 .btn[disabled]{opacity:.35;pointer-events:none;}
 .btnrow{display:flex;gap:10px;margin-top:12px;}
@@ -126,9 +127,10 @@ label.fl{display:block;font-weight:700;font-size:11px;margin:14px 0 5px;color:va
   letter-spacing:.6px;text-transform:uppercase;}
 label.fl .req{color:var(--orange);}
 input[type=text],input[type=number],input[type=date],input[type=email],input[type=password],select,textarea{
-  width:100%;font-size:16px;padding:11px 13px;border:1.5px solid var(--line);border-radius:10px;
-  background:#FAFAF8;color:var(--ink);min-height:46px;font-family:inherit;
-  appearance:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s;}
+  width:100%;font-size:16px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;
+  background:#FAFAF8;color:var(--ink);min-height:48px;font-family:inherit;
+  appearance:none;-webkit-appearance:none;transition:border-color .15s,box-shadow .15s;
+  touch-action:manipulation;}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.12);}
@@ -340,6 +342,8 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
 
 <div id="topbar">
   <a href="./index.html" id="home-btn">‹ Home</a>
+  <img src="logo.png" alt="" onerror="this.style.display='none'"
+       style="width:32px;height:32px;object-fit:contain;flex:none;">
   <div>
     <div class="b1">Job Advice Sheet</div>
     <div class="b2">Outback Helicopter Airwork NT</div>
@@ -633,11 +637,11 @@ const jDel  = (s,k)   => jTx(s,'readwrite', o => o.delete(k));
 const jAll  = (s)     => jTx(s,'readonly',  o => o.getAll());
 async function jKvGet(k,fb=null){ const r=await jGet('kv',k); return r!==undefined?r:fb; }
 async function jKvSet(k,v){ await jPut('kv',v,k); }
-/* ── Read shared data from heliops DB (flight-ops) ─ */
+/* ── Read/write shared data in heliops DB (flight-ops) ─ */
 function readHeliopsSetting(key) {
   return new Promise(resolve => {
     try {
-      const rq = indexedDB.open('heliops', 1);
+      const rq = indexedDB.open('heliops'); // no version — opens current (v2)
       rq.onerror = () => resolve(null);
       rq.onsuccess = () => {
         const db = rq.result;
@@ -649,6 +653,23 @@ function readHeliopsSetting(key) {
         } catch { db.close(); resolve(null); }
       };
     } catch { resolve(null); }
+  });
+}
+function writeHeliopsSetting(key, value) {
+  return new Promise(resolve => {
+    try {
+      const rq = indexedDB.open('heliops');
+      rq.onerror = () => resolve(false);
+      rq.onsuccess = () => {
+        const db = rq.result;
+        try {
+          const tx = db.transaction('kv', 'readwrite');
+          const r  = tx.objectStore('kv').put(value, key);
+          r.onsuccess = () => { db.close(); resolve(true); };
+          r.onerror   = () => { db.close(); resolve(false); };
+        } catch { db.close(); resolve(false); }
+      };
+    } catch { resolve(false); }
   });
 }
 async function getPilots() {
@@ -1596,66 +1617,59 @@ function showPinModal(onSuccess) {
 }
 
 async function showSettingsMain() {
-  const email      = await jKvGet('syncEmail','');
-  const heliopsSt  = await readHeliopsSetting('settings');
-  const usingShared = heliopsSt && Array.isArray(heliopsSt.crew) && heliopsSt.crew.length;
-  const pilots   = await getPilots();
-  const aircraft = await getAircraft();
+  const st    = (await readHeliopsSetting('settings')) || { crew: [], fleet: [], opsEmail: '', pin: '' };
+  const crew  = Array.isArray(st.crew)  ? st.crew  : [];
+  const fleet = Array.isArray(st.fleet) ? st.fleet : [];
+  // Deduplicate fleet by callsign for display/edit
+  const fleetUniq = [...new Map(fleet.map(a => [a.callsign, a])).values()];
 
-  const sharedNote = usingShared
-    ? `<div style="background:var(--blue-bg);border:1px solid #BBDAF7;color:var(--blue);border-radius:8px;padding:8px 11px;font-size:12px;font-weight:600;margin-bottom:8px;">
-        ✓ Pilots &amp; aircraft are shared from the Flight Ops app. To change them, go to Flight Ops → ⚙️ Settings.
-       </div>`
-    : '';
+  const crewRows = crew.map((c, i) => `
+    <div class="set-row">
+      <span class="set-label">${esc(c.name||c)}<span class="set-sub">${c.arn?' — '+esc(c.arn):''}</span></span>
+      <button class="set-del" onclick="delPilot(${i})">×</button>
+    </div>
+  `).join('') || '<div class="set-empty">No pilots added yet</div>';
 
-  const pilotRows = pilots.map((name,i) =>
-    usingShared
-      ? `<div class="set-row"><span class="set-label">${esc(name)}</span></div>`
-      : `<div class="set-row"><span class="set-label">${esc(name)}</span><button class="set-del" onclick="delPilot(${i})">×</button></div>`
-  ).join('') || '<div class="set-empty">No pilots — set up Flight Ops first, or add below</div>';
+  const fleetRows = fleetUniq.map((a, i) => `
+    <div class="set-row">
+      <span class="set-label">${esc(a.callsign)}<span class="set-sub"> — ${esc(a.type||'')}</span></span>
+      <button class="set-del" onclick="delAircraft(${i})">×</button>
+    </div>
+  `).join('') || '<div class="set-empty">No aircraft added yet</div>';
 
-  const aircraftRows = aircraft.map((a,i) =>
-    usingShared
-      ? `<div class="set-row"><span class="set-label">${esc(a.reg)}<span class="set-sub"> — ${esc(a.type)}</span></span></div>`
-      : `<div class="set-row"><span class="set-label">${esc(a.reg)}<span class="set-sub">${a.type?' — '+esc(a.type):''}</span></span><button class="set-del" onclick="delAircraft(${i})">×</button></div>`
-  ).join('') || '<div class="set-empty">No aircraft — set up Flight Ops first, or add below</div>';
-
-  const addPilotSection = usingShared ? '' : `
+  openModal(`
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3>⚙️ Settings</h3>
+    <div class="set-section">
+      <div class="set-head">Pilot List</div>
+      <div id="pilot-list">${crewRows}</div>
       <div class="set-add-row" id="add-pilot-row">
         <input id="new-pilot-name" class="set-input" placeholder="Full name" autocorrect="off">
+        <input id="new-pilot-arn" class="set-input" placeholder="ARN / licence" style="max-width:140px" autocorrect="off">
         <button class="set-save-btn" onclick="confirmAddPilot()">Add</button>
         <button class="set-cancel-btn" onclick="document.getElementById('add-pilot-row').style.display='none'">Cancel</button>
       </div>
-      <button class="set-add-btn" onclick="document.getElementById('add-pilot-row').style.display='flex';document.getElementById('new-pilot-name').focus()">+ Add Pilot</button>`;
-
-  const addAircraftSection = usingShared ? '' : `
+      <button class="set-add-btn" onclick="document.getElementById('add-pilot-row').style.display='flex';document.getElementById('new-pilot-name').focus()">+ Add Pilot</button>
+    </div>
+    <div class="set-section">
+      <div class="set-head">Fleet</div>
+      <div id="aircraft-list">${fleetRows}</div>
       <div class="set-add-row" id="add-aircraft-row">
         <input id="new-ac-reg" class="set-input" placeholder="VH-XXX" style="max-width:110px" autocorrect="off" autocapitalize="characters">
         <input id="new-ac-type" class="set-input" placeholder="Type (e.g. R44)" autocorrect="off">
         <button class="set-save-btn" onclick="confirmAddAircraft()">Add</button>
         <button class="set-cancel-btn" onclick="document.getElementById('add-aircraft-row').style.display='none'">Cancel</button>
       </div>
-      <button class="set-add-btn" onclick="document.getElementById('add-aircraft-row').style.display='flex';document.getElementById('new-ac-reg').focus()">+ Add Aircraft</button>`;
-
-  openModal(`
-    <button class="modal-close" onclick="closeModal()">×</button>
-    <h3>⚙️ Settings</h3>
-    ${sharedNote}
-    <div class="set-section">
-      <div class="set-head">Pilots</div>
-      <div id="pilot-list">${pilotRows}</div>
-      ${addPilotSection}
+      <button class="set-add-btn" onclick="document.getElementById('add-aircraft-row').style.display='flex';document.getElementById('new-ac-reg').focus()">+ Add Aircraft</button>
     </div>
     <div class="set-section">
-      <div class="set-head">Aircraft</div>
-      <div id="aircraft-list">${aircraftRows}</div>
-      ${addAircraftSection}
+      <div class="set-head">Sending</div>
+      <label class="fl">Operations Email</label>
+      <input type="email" id="set-email" value="${esc(st.opsEmail||st.email||'')}" placeholder="ops@company.com.au">
     </div>
     <div class="set-section">
-      <div class="set-head">Email & PIN</div>
-      <label class="fl">Office Email</label>
-      <input type="email" id="set-email" value="${esc(email)}" placeholder="office@example.com">
-      <label class="fl" style="margin-top:12px">Change PIN (4 digits, blank = no PIN)</label>
+      <div class="set-head">PIN</div>
+      <label class="fl">Change PIN (4 digits, blank = no PIN)</label>
       <input type="password" id="set-pin1" maxlength="4" placeholder="••••" inputmode="numeric">
       <label class="fl">Confirm PIN</label>
       <input type="password" id="set-pin2" maxlength="4" placeholder="••••" inputmode="numeric">
@@ -1665,36 +1679,53 @@ async function showSettingsMain() {
 }
 
 window.delPilot = async (idx) => {
-  const pilots = await getPilots(); pilots.splice(idx,1); await jKvSet('pilots',pilots);
+  const st   = (await readHeliopsSetting('settings')) || {};
+  const crew = Array.isArray(st.crew) ? [...st.crew] : [];
+  crew.splice(idx, 1);
+  await writeHeliopsSetting('settings', { ...st, crew });
   await showSettingsMain(); await loadPilotsAndFleet();
 };
 window.confirmAddPilot = async () => {
   const name = document.getElementById('new-pilot-name').value.trim();
+  const arn  = (document.getElementById('new-pilot-arn')?.value||'').trim();
   if (!name) { toast('Enter a name'); return; }
-  const pilots = await getPilots();
-  if (pilots.includes(name)) { toast('Already in list'); return; }
-  pilots.push(name); await jKvSet('pilots',pilots);
+  const st   = (await readHeliopsSetting('settings')) || {};
+  const crew = Array.isArray(st.crew) ? [...st.crew] : [];
+  if (crew.find(c => (c.name||c) === name)) { toast('Already in list'); return; }
+  crew.push({ name, arn });
+  await writeHeliopsSetting('settings', { ...st, crew, configured: st.configured ?? true });
   await showSettingsMain(); await loadPilotsAndFleet(); toast(`${name} added ✓`);
 };
 window.delAircraft = async (idx) => {
-  const aircraft = await getAircraft(); aircraft.splice(idx,1); await jKvSet('aircraft',aircraft);
+  const st    = (await readHeliopsSetting('settings')) || {};
+  const fleet = Array.isArray(st.fleet) ? [...st.fleet] : [];
+  // idx refers to deduplicated list; remove all entries with that callsign
+  const uniq     = [...new Map(fleet.map(a => [a.callsign, a])).values()];
+  const toRemove = uniq[idx]?.callsign;
+  const newFleet = toRemove ? fleet.filter(a => a.callsign !== toRemove) : fleet;
+  await writeHeliopsSetting('settings', { ...st, fleet: newFleet });
   await showSettingsMain(); await loadPilotsAndFleet();
 };
 window.confirmAddAircraft = async () => {
-  const reg  = document.getElementById('new-ac-reg').value.trim().toUpperCase();
-  const type = document.getElementById('new-ac-type').value.trim();
-  if (!reg) { toast('Enter registration'); return; }
-  const aircraft = await getAircraft();
-  if (aircraft.find(a => a.reg===reg)) { toast('Already in list'); return; }
-  aircraft.push({reg,type}); await jKvSet('aircraft',aircraft);
-  await showSettingsMain(); await loadPilotsAndFleet(); toast(`${reg} added ✓`);
+  const callsign = document.getElementById('new-ac-reg').value.trim().toUpperCase();
+  const type     = document.getElementById('new-ac-type').value.trim();
+  if (!callsign) { toast('Enter registration'); return; }
+  const st    = (await readHeliopsSetting('settings')) || {};
+  const fleet = Array.isArray(st.fleet) ? [...st.fleet] : [];
+  if (fleet.find(a => a.callsign === callsign)) { toast('Already in list'); return; }
+  fleet.push({ id: Date.now().toString(), callsign, type });
+  await writeHeliopsSetting('settings', { ...st, fleet, configured: st.configured ?? true });
+  await showSettingsMain(); await loadPilotsAndFleet(); toast(`${callsign} added ✓`);
 };
 async function saveSettings() {
   const p1 = document.getElementById('set-pin1').value;
   const p2 = document.getElementById('set-pin2').value;
-  if (p1 && (!/^\d{4}$/.test(p1) || p1!==p2)) { toast('PIN must be 4 digits and must match'); return; }
-  if (p1) { APP_PIN=p1; await jKvSet('pin',p1); } else { APP_PIN=''; await jKvSet('pin',''); }
-  await jKvSet('syncEmail', document.getElementById('set-email').value.trim());
+  if (p1 && (!/^\d{4}$/.test(p1) || p1 !== p2)) { toast('PIN must be 4 digits and must match'); return; }
+  const email = document.getElementById('set-email').value.trim();
+  const st    = (await readHeliopsSetting('settings')) || {};
+  const newPin = p1 || st.pin || '';
+  APP_PIN = newPin;
+  await writeHeliopsSetting('settings', { ...st, pin: newPin, opsEmail: email, configured: st.configured ?? true });
   toast('Saved ✓'); closeModal();
 }
 
@@ -1721,7 +1752,9 @@ async function syncFromServer() {
 /* ── Boot ────────────────────────────────────────── */
 async function boot() {
   await openJobDb();
-  APP_PIN = await jKvGet('pin','');
+  // PIN lives in the shared heliops settings; fall back to legacy job-advice own kv
+  const _hst = await readHeliopsSetting('settings');
+  APP_PIN = _hst?.pin || await jKvGet('pin', '');
   LIVE_CLIENTS = await jKvGet('clients', []);
   syncFromServer().then(async ok => {
     if (ok) { LIVE_CLIENTS = await jKvGet('clients',[]); await loadPilotsAndFleet(); }

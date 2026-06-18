@@ -34,9 +34,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
   font-family:'Inter',-apple-system,'Helvetica Neue',Arial,sans-serif;
-  font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;}
-body{padding-bottom:env(safe-area-inset-bottom);}
-button{font-family:inherit;}
+  font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;}
+body{padding-bottom:env(safe-area-inset-bottom);overscroll-behavior:none;}
+button{font-family:inherit;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+a{touch-action:manipulation;}
 .hidden{display:none !important;}
 
 /* ── Top bar ─────────────────────────────────────────────── */
@@ -144,6 +146,7 @@ input[type=email],input[type=password],select,textarea{
   background:#FAFAF8;color:var(--ink);min-height:48px;
   font-family:inherit;appearance:none;-webkit-appearance:none;
   transition:border-color .15s,box-shadow .15s;
+  touch-action:manipulation;
 }
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
 input:focus,select:focus,textarea:focus{
@@ -653,7 +656,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   z-index:100;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto;}
 #modal-bg.show{display:flex;}
 .modal-box{background:var(--card);border-radius:var(--r-lg);max-width:580px;width:100%;
-  max-height:88vh;overflow-y:auto;padding:20px;box-shadow:var(--shadow-md);
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;box-shadow:var(--shadow-md);
   border:1px solid var(--line);position:relative;}
 .modal-box h3{margin:0 0 14px;font-size:17px;font-weight:800;color:var(--navy);}
 .modal-close{position:absolute;top:14px;right:14px;background:var(--line);border:none;
@@ -721,6 +724,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
    UNIFIED APP — main tab bar + job module overrides
    ============================================================ */
 #maintabbar {
+  display: none !important;
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
   display: flex; background: #0D1228;
   border-top: 1px solid rgba(255,255,255,.13);
@@ -743,6 +747,61 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 /* Job sub-screens within jobs tab */
 .jsub { display: none; padding: 0 0 90px; }
 .jsub.active { display: block; }
+
+/* ── App home landing ─────────────────────────────────────────── */
+#maintab-home {
+  display: none;
+  min-height: 100vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px 40px;
+  box-sizing: border-box;
+}
+#maintab-home.mtactive { display: flex; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.home-brand {
+  display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 44px; gap: 6px;
+}
+.home-brand img { width: 72px; height: 72px; object-fit: contain; }
+.home-brand .hb1 { font-weight: 800; font-size: 20px; color: var(--orange); letter-spacing: .5px; }
+.home-brand .hb2 { font-size: 12px; color: var(--mut); letter-spacing: 1.5px; text-transform: uppercase; }
+.home-cards {
+  display: flex; flex-direction: column; gap: 16px;
+  width: 100%; max-width: 420px;
+}
+.home-card {
+  background: var(--card); border: 1.5px solid var(--line);
+  border-radius: var(--r-lg); padding: 22px 24px;
+  display: flex; align-items: center; gap: 20px;
+  cursor: pointer; text-align: left;
+  transition: background .12s, border-color .12s, transform .08s;
+  -webkit-tap-highlight-color: transparent;
+}
+.home-card:active { transform: scale(.97); background: var(--line); }
+.home-card .hc-icon { font-size: 36px; line-height: 1; flex-shrink: 0; }
+.home-card .hc-text { flex: 1; }
+.home-card .hc-label { font-size: 18px; font-weight: 700; color: var(--fg); line-height: 1.2; }
+.home-card .hc-sub   { font-size: 13px; color: var(--mut); margin-top: 3px; }
+.home-card .hc-arrow { font-size: 20px; color: var(--mut); flex-shrink: 0; }
+@media (max-height: 680px) {
+  .home-brand { margin-bottom: 24px; }
+  .home-brand img { width: 52px; height: 52px; }
+  .home-cards { gap: 12px; }
+  .home-card { padding: 16px 18px; }
+  .home-card .hc-icon { font-size: 28px; }
+  .home-card .hc-label { font-size: 16px; }
+  .home-card .hc-sub { font-size: 12px; }
+}
+@media (min-width: 768px) {
+  /* iPad — wider cards with more breathing room */
+  .home-cards { max-width: 520px; }
+  .home-card { padding: 26px 28px; }
+  .home-card .hc-icon { font-size: 42px; }
+  .home-card .hc-label { font-size: 20px; }
+  .home-brand img { width: 88px; height: 88px; }
+  .home-brand .hb1 { font-size: 24px; }
+}
 
 /* Job inner tab bar */
 #jobtabbar {
@@ -802,8 +861,45 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 </div>
 
 
+<!-- ============ MAIN HOME LANDING ============ -->
+<div id="maintab-home" class="maintab mtactive">
+  <div class="home-brand">
+    <img src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
+    <div class="hb1">OUTBACK HELICOPTER</div>
+    <div class="hb2">Airwork NT — Flight Paperwork</div>
+  </div>
+  <div class="home-cards">
+    <button class="home-card" onclick="showMainTab('jobs')">
+      <span class="hc-icon">🗒️</span>
+      <div class="hc-text">
+        <div class="hc-label">Job Advice Sheet</div>
+        <div class="hc-sub">Client jobs, quoting &amp; records</div>
+      </div>
+      <span class="hc-arrow">›</span>
+    </button>
+    <button class="home-card" onclick="showMainTab('safety')">
+      <span class="hc-icon">📋</span>
+      <div class="hc-text">
+        <div class="hc-label">Ops Forms</div>
+        <div class="hc-sub">SWMS, W&amp;B, pax briefing &amp; flight log</div>
+      </div>
+      <span class="hc-arrow">›</span>
+    </button>
+    <button class="home-card" onclick="showMainTab('settings')">
+      <span class="hc-icon">⚙️</span>
+      <div class="hc-text">
+        <div class="hc-label">Settings</div>
+        <div class="hc-sub">Fleet, crew, PIN &amp; preferences</div>
+      </div>
+      <span class="hc-arrow">›</span>
+    </button>
+  </div>
+</div>
+
 <!-- ============ MAIN TAB: JOBS ============ -->
 <div id="maintab-jobs" class="maintab">
+
+  <div style="padding:10px 16px 0;"><button class="btn ghost small" onclick="showMainTab('home')">‹ Home</button></div>
 
   <!-- Inner job tab bar -->
   <div id="jobtabbar">
@@ -1026,7 +1122,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 </div><!-- end maintab-jobs -->
 
 
-<div id="maintab-safety" class="maintab mtactive">
+<div id="maintab-safety" class="maintab">
 
 <!-- ============ SETUP WIZARD ============ -->
 <div class="screen" id="scr-setup">
@@ -1074,7 +1170,8 @@ J. Blore, 0111222</textarea>
 
 <!-- ============ HOME ============ -->
 <div class="screen" id="scr-home">
-  <h1 class="page" id="home-title">Flight paperwork</h1>
+  <button class="btn ghost small" style="margin-bottom:12px;" onclick="showMainTab('home')">‹ Home</button>
+  <h1 class="page" id="home-title">Ops Forms</h1>
   <button class="btn amber bigaction" id="btn-newflight" onclick="App.newFlight()">Start new flight paperwork</button>
   <button class="btn ghost" style="margin-top:12px;" onclick="App.showLog()">Flight log &mdash; pilots &amp; helicopters</button>
   <div id="resume-wrap"></div>
@@ -2109,11 +2206,8 @@ const App = {
     setTimeout(() => el.classList.add('gone'), 520);
   },
   show(id) {
-    // Ensure safety maintab is active when showing safety screens
     document.querySelectorAll('.maintab').forEach(t => t.classList.remove('mtactive'));
     $('maintab-safety').classList.add('mtactive');
-    document.querySelectorAll('#maintabbar button').forEach(b => b.classList.remove('mtactive'));
-    $('mtbtn-safety').classList.add('mtactive');
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     $(id).classList.add('active');
     window.scrollTo(0, 0);
@@ -2206,9 +2300,8 @@ const App = {
   goHome() {
     this.flight = null;
     this.setChip(this.fleetChip());
-    this.renderHome();
-    this.show('scr-home');
     this.updatePill();
+    showMainTab('home');
   },
   renderHome() {
     const draft = this.flights.find(f => f.status === 'draft');
@@ -4022,21 +4115,24 @@ async function jSyncFromServer() {
 /* ── Main tab switching ──────────────────────────────────────── */
 function showMainTab(tab) {
   document.querySelectorAll('.maintab').forEach(t=>t.classList.remove('mtactive'));
-  document.querySelectorAll('#maintabbar button').forEach(b=>b.classList.remove('mtactive'));
+  if(tab==='home'){
+    document.getElementById('maintab-home').classList.add('mtactive');
+    window.scrollTo(0,0); return;
+  }
   if(tab==='log'){
     document.getElementById('maintab-safety').classList.add('mtactive');
-    document.getElementById('mtbtn-log').classList.add('mtactive');
     App.showLog(); return;
   }
   if(tab==='settings'){
     document.getElementById('maintab-safety').classList.add('mtactive');
-    document.getElementById('mtbtn-settings').classList.add('mtactive');
     App.openSettings(); return;
   }
+  if(tab==='safety'){
+    App.renderHome();
+    App.show('scr-home'); return;
+  }
   const mt=document.getElementById('maintab-'+tab);
-  const btn=document.getElementById('mtbtn-'+tab);
   if(mt) mt.classList.add('mtactive');
-  if(btn) btn.classList.add('mtactive');
   window.scrollTo(0,0);
 }
 

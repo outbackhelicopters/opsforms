@@ -512,6 +512,24 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   .form-item .fname{font-size:13.5px;}
 }
 
+/* Step bar */
+.step-bar{display:flex;align-items:center;gap:12px;padding:10px 16px 10px;
+  background:var(--card);border-bottom:1px solid var(--line);}
+.step-dots{display:flex;align-items:center;gap:0;flex:none;}
+.sdot{width:28px;height:28px;border-radius:50%;background:var(--line);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;color:var(--mut);transition:all .25s;flex:none;}
+.sdot.active{background:var(--orange);color:#fff;}
+.sdot.done{background:var(--navy);color:#fff;}
+.sline{width:20px;height:2px;background:var(--line);flex:none;transition:background .25s;}
+.sline.done{background:var(--navy);}
+.step-info{flex:1;min-width:0;}
+.step-name{font-size:13px;font-weight:700;color:var(--navy);line-height:1.2;}
+.step-num{font-size:11px;color:var(--mut);margin-top:1px;}
+.autosave-pill{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;
+  padding:2px 8px;border-radius:20px;background:#DCFCE7;color:#15803d;
+  border:1px solid #bbf7d0;white-space:nowrap;}
+
 /* Step panels */
 .step-panel{display:none;}
 .step-panel.active{display:block;}
@@ -1148,9 +1166,23 @@ VH-IBS, Robinson R44 Raven II (Spray equipped)</textarea>
   <div class="card">
     <h2>Pilot List</h2>
     <p class="sub">One name per line. Pilots pick their name from the dropdown on every form.</p>
-    <textarea id="su-crew" rows="4">M. Dundee, 0123456
-S. Irwin, 0654321
-J. Blore, 0111222</textarea>
+    <textarea id="su-crew" rows="10">Angus Watson
+Annie Blore
+Anton Williams
+Belinda Brace
+Brodie Zammit
+Christopher Howard
+Danny Clarris
+Jack Donohoe
+Jack Ward
+Joanna Atkins
+John Blore
+Lachlan French
+Nicholas Murphy
+Nicolas Muldoon
+Paul Blore
+Samuel Gray
+Thomas B Harrower</textarea>
   </div>
   <div class="card">
     <h2>Sending (can stay as placeholders)</h2>
@@ -1985,9 +2017,23 @@ const DEFAULT_SETTINGS = {
   opsEmail: "pilots@outbackhelicopters.com.au",
   driveFolder: "Helicopter Paperwork",
   crew: [
-    { name: "J. Blore",   arn: "0111222" },
-    { name: "M. Dundee",  arn: "0123456" },
-    { name: "S. Irwin",   arn: "0654321" }
+    { name: "Angus Watson",       arn: "" },
+    { name: "Annie Blore",        arn: "" },
+    { name: "Anton Williams",     arn: "" },
+    { name: "Belinda Brace",      arn: "" },
+    { name: "Brodie Zammit",      arn: "" },
+    { name: "Christopher Howard", arn: "" },
+    { name: "Danny Clarris",      arn: "" },
+    { name: "Jack Donohoe",       arn: "" },
+    { name: "Jack Ward",          arn: "" },
+    { name: "Joanna Atkins",      arn: "" },
+    { name: "John Blore",         arn: "" },
+    { name: "Lachlan French",     arn: "" },
+    { name: "Nicholas Murphy",    arn: "" },
+    { name: "Nicolas Muldoon",    arn: "" },
+    { name: "Paul Blore",         arn: "" },
+    { name: "Samuel Gray",        arn: "" },
+    { name: "Thomas B Harrower",  arn: "" }
   ],
   fleet: [
     /* iBal-verified aircraft ------------------------------------ */
@@ -2186,6 +2232,21 @@ const App = {
       delete this.S.callsign; delete this.S.aircraftType; delete this.S.wb;
       if (this.S.configured) await DB.put('kv', this.S, 'settings');
     }
+    /* Patch stale cached data — update aircraft types/W&B from DEFAULT_SETTINGS */
+    let _settingsDirty = false;
+    if (Array.isArray(this.S.fleet)) {
+      DEFAULT_SETTINGS.fleet.forEach(def => {
+        const ac = this.S.fleet.find(a => a.callsign === def.callsign && a.id === def.id);
+        if (ac && (ac.type !== def.type || !ac.wb || !ac.wb.verified)) {
+          ac.type = def.type; ac.wb = def.wb; _settingsDirty = true;
+        }
+      });
+    }
+    /* Replace dummy pilot list (legacy M. Dundee / S. Irwin) with real pilots */
+    if (Array.isArray(this.S.crew) && this.S.crew.some(c => (c.name||c).includes('Dundee') || (c.name||c).includes('Irwin'))) {
+      this.S.crew = DEFAULT_SETTINGS.crew; _settingsDirty = true;
+    }
+    if (_settingsDirty && this.S.configured) await DB.put('kv', this.S, 'settings');
     window.addEventListener('online',  () => { this.updatePill(); this.trySync(); });
     window.addEventListener('offline', () => this.updatePill());
     this.setChip(this.fleetChip());

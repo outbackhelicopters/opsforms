@@ -237,6 +237,25 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 }
 .swms-head .t1{font-weight:700;font-size:16px;letter-spacing:-.1px;}
 .swms-head .t2{color:#8A93BE;font-size:12px;margin-top:4px;letter-spacing:.2px;}
+/* ── Pax safety briefing checklist ──────────────────────── */
+.brief-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);min-height:48px;transition:background .15s;}
+.brief-item:last-child{border-bottom:0;}
+.brief-item .bi-label{flex:1;font-size:13.5px;line-height:1.4;}
+.brief-item.bi-on{background:var(--green-bg);}
+.brief-item.bi-on .bi-label{color:var(--green-dk);}
+.brief-hd{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
+.brief-hd .bh-icon{font-size:20px;}
+.brief-hd h2{margin:0;color:var(--navy);}
+/* ── Risk Matrix sticky ref ─────────────────────────────── */
+.risk-ref{position:sticky;top:0;z-index:50;background:#0B1120;border-radius:0 0 12px 12px;padding:10px 14px 11px;margin:0 0 12px;box-shadow:0 3px 14px rgba(0,0,0,.35);}
+.risk-ref .rr-title{font-size:10px;font-weight:700;color:#8A93BE;letter-spacing:.6px;text-transform:uppercase;margin-bottom:7px;}
+.risk-ref table{border-collapse:collapse;width:100%;table-layout:fixed;}
+.risk-ref th{background:#1A2240;color:#8A93BE;padding:4px 3px;text-align:center;font-weight:600;font-size:10px;}
+.risk-ref th:first-child{text-align:left;padding-left:6px;min-width:72px;}
+.risk-ref td{text-align:center;font-weight:800;font-size:12px;color:#fff;padding:5px 2px;border:1px solid #0B1120;}
+.risk-ref td:first-child{text-align:left;padding-left:6px;color:#8A93BE;font-weight:600;font-size:10px;background:#1A2240!important;border-color:#0B1120;}
+.risk-ref .rr-legend{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+.risk-ref .rr-leg{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:4px;}
 .sec{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
 .sec>.sechead{
   display:flex;align-items:center;gap:10px;width:100%;
@@ -444,6 +463,8 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   input::placeholder,textarea::placeholder{color:var(--mut);}
   .btn.ghost{background:transparent;color:var(--navy);border-color:#242838;}
   .swms-head{background:#0E1020;}
+  .risk-ref{background:#06090F;}
+  .risk-ref th,.risk-ref td:first-child{background:#101828!important;}
   .vh-prefix{background:#1A1D28;border-color:#242838;}
   .sec,.paxcard{background:var(--card);}
   .sec>.sechead{background:var(--card);}
@@ -1166,7 +1187,6 @@ VH-IBS, Robinson R44 Raven II (Spray equipped)</textarea>
     <textarea id="su-crew" rows="9">Brodie Zammit
 Christopher Howard
 Danny Clarris
-Jack Donohoe
 Jack Ward
 Nicholas Murphy
 Nicolas Muldoon
@@ -1282,7 +1302,7 @@ Thomas B Harrower</textarea>
     <div id="pax-mount"></div>
     <div class="btnrow">
       <button class="btn ghost" onclick="App.gotoStep(1)">‹ Back</button>
-      <button class="btn primary" onclick="App.gotoStep(3)">Next: Review ›</button>
+      <button class="btn primary" onclick="App.completePax()">Next: Review ›</button>
     </div>
   </div>
 
@@ -2009,7 +2029,6 @@ const DEFAULT_SETTINGS = {
     { name: "Brodie Zammit" },
     { name: "Christopher Howard" },
     { name: "Danny Clarris" },
-    { name: "Jack Donohoe" },
     { name: "Jack Ward" },
     { name: "Nicholas Murphy" },
     { name: "Nicolas Muldoon" },
@@ -2499,7 +2518,8 @@ const App = {
       sms: { formId, values: {}, acks: {}, sigs: {}, done: false },
       wb: { kg: { pilot:0, pax:0, fuel:0, baggage:0 }, fuelL: 0, fuelMode: 'L', result: null, done: false },
       pax: [],
-      noPax: false
+      noPax: false,
+      paxBriefAcks: {}
     };
     this.flights.unshift(this.flight);
     await DB.put('flights', this.flight);
@@ -2556,6 +2576,51 @@ const App = {
     window.scrollTo(0, 0);
   },
 
+  /* ================== PASSENGER SAFETY BRIEFING DATA ================== */
+  _PAX_BRIEF: {
+    R44: {
+      title: 'R44 Passenger Safety Briefing',
+      sub: 'Confirm each point has been verbally covered with all passengers before departure',
+      items: [
+        'Approach & departure zones shown — front of aircraft only, never from the uphill side',
+        'Tail rotor danger area clearly demonstrated — never approach the rear of the aircraft',
+        'Stay LOW and WALK under rotor blades — never raise arms or objects above head',
+        'Hold hats, jackets and loose items firmly — DO NOT drop or throw objects near aircraft',
+        'FIRMLY HOLD children\'s hands at all times around the aircraft',
+        'Safety belt secured & operation demonstrated (tongue clicks in, lift buckle past 90° to release)',
+        'Emergency egress demonstrated — D-handle: lift UP, slide forward to unlatch; DO NOT push rear locks down',
+        'No smoking on board or within 10 m of aircraft — confirmed',
+        'No intoxicated passengers confirmed',
+        'Survival & first aid equipment location pointed out (under rear right seat — lift cushion)',
+        'Fire extinguisher location shown (forward left foot area) — Remove pin, hold upright, stand back 6 ft, aim at base, sweep',
+      ]
+    },
+    B206: {
+      title: 'Bell 206 JetRanger Passenger Safety Briefing',
+      sub: 'Confirm each point has been verbally covered with all passengers before departure',
+      items: [
+        'Approach & departure zones shown — avoid all red danger areas (nose, tail rotor and sides)',
+        'No electronic devices, cameras, phones or smoking on board or near aircraft — confirmed',
+        'Seat belt type demonstrated and secured — must be worn during all phases of flight',
+        'Life vest location advised (if carried) and donning procedure demonstrated',
+        'During flight: remain seated, follow all verbal instructions and comply with crew instructions',
+        'Emergency landing brace position demonstrated',
+        'Fire extinguisher location pointed out — use in sweeping motion to operate',
+        'Safety equipment location shown (rear baggage area)',
+        'Emergency door exit procedures explained — assess outside before opening',
+        'DO NOT open door if fire, water above sill or debris exists — proceed to alternate exit',
+        'Comply with all placards, illuminated signs and verbal instructions from crew',
+      ]
+    }
+  },
+  _getPaxBrief(aircraftType) {
+    if (!aircraftType) return null;
+    const t = aircraftType.toLowerCase();
+    if (t.includes('r44') || t.includes('raven')) return this._PAX_BRIEF.R44;
+    if (t.includes('206') || t.includes('jetranger')) return this._PAX_BRIEF.B206;
+    return null;
+  },
+
   /* ================== STEP 1 — SMS FORM (schema-driven) ================== */
   renderSms() {
     const F = FORM_DEFS.find(d => d.id === this.flight.sms.formId);
@@ -2593,6 +2658,29 @@ const App = {
       '</div>';
 
     h += '<div class="note">Work through each job step below exactly as on the paper form, then flick the green switch to confirm it has been reviewed and the controls are in place. <b>All sections are required.</b></div>';
+
+    // ── Sticky risk matrix ref ───────────────────────────────────────────
+    const RM_ROWS = [
+      {l:5, lbl:'5 Almost Certain'},
+      {l:4, lbl:'4 Likely'},
+      {l:3, lbl:'3 Possible'},
+      {l:2, lbl:'2 Unlikely'},
+      {l:1, lbl:'1 Rare'},
+    ];
+    const rmCell = v => { const bg = v>=8?'#BC2018':v>=6?'#E8720C':v>=4?'#786000':'#16753A'; return '<td style="background:'+bg+'">'+v+'</td>'; };
+    h += '<div class="risk-ref">' +
+      '<div class="rr-title">⚡ Risk Level — L × C (Likelihood × Consequence)</div>' +
+      '<table>' +
+      '<tr><th>L \\ C</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>' +
+      RM_ROWS.map(r => '<tr><td>'+r.lbl+'</td>' + [1,2,3,4,5].map(c => rmCell(r.l+c)).join('') + '</tr>').join('') +
+      '</table>' +
+      '<div class="rr-legend">' +
+      '<span class="rr-leg" style="background:#16753A">Low ≤3</span>' +
+      '<span class="rr-leg" style="background:#786000">Medium 4–5</span>' +
+      '<span class="rr-leg" style="background:#E8720C">High 6–7</span>' +
+      '<span class="rr-leg" style="background:#BC2018">Extreme 8+</span>' +
+      '</div></div>';
+    // ────────────────────────────────────────────────────────────────────
 
     h += F.sections.map((sec, si) => {
       const on = !!acks[si];
@@ -2685,6 +2773,14 @@ const App = {
     );
   },
   toggleSec(si) { $('sec-' + si).classList.toggle('open'); },
+  togglePaxBrief(i) {
+    if (!this.flight.paxBriefAcks) this.flight.paxBriefAcks = {};
+    const on = !this.flight.paxBriefAcks[i];
+    this.flight.paxBriefAcks[i] = on;
+    const el = $('bi-' + i); if (el) { el.classList.toggle('bi-on', on); }
+    const btn = $('bat-' + i); if (btn) { btn.classList.toggle('on', on); }
+    this.saveDraft();
+  },
   toggleAck(si) {
     const a = this.flight.sms.acks;
     a[si] = !a[si];
@@ -3294,13 +3390,35 @@ const App = {
   },
   renderPaxList() {
     const f = this.flight;
-    $('pax-list').innerHTML = f.pax.map((p, i) =>
+    let h = f.pax.map((p, i) =>
       '<div class="paxcard"><div class="paxhead">' +
       '<div class="paxname">' + (i + 1) + '. ' + esc(p.name) + '</div>' +
       (p.sig ? '<span class="paxdone">Signed ✓ ' + esc(p.time) + '</span>' : '<span style="color:var(--red);font-weight:700;">Not signed</span>') +
       '<button class="btn ghost small" onclick="App.delPax(' + i + ')">Remove</button>' +
       '</div>' + (p.sig ? '<img src="' + p.sig + '" style="height:64px;margin-top:8px;border:1px solid var(--line);border-radius:8px;background:#fff;">' : '') + '</div>'
     ).join('');
+    // Safety briefing checklist — appears once passengers are on board
+    if (f.pax.length > 0) {
+      const brief = this._getPaxBrief(f.aircraftType);
+      if (brief) {
+        const ba = f.paxBriefAcks || {};
+        const allDone = brief.items.every((_, i) => !!ba[i]);
+        h += '<div class="card" style="margin-top:14px;">' +
+          '<div class="brief-hd"><span class="bh-icon">🛡</span><h2>' + esc(brief.title) + '</h2></div>' +
+          '<p class="sub" style="margin:4px 0 10px;">Work through each item before departure — confirm each is briefed</p>' +
+          '<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;">' +
+          brief.items.map((item, i) => {
+            const on = !!ba[i];
+            return '<div class="brief-item' + (on ? ' bi-on' : '') + '" id="bi-' + i + '">' +
+              '<span class="bi-label">' + esc(item) + '</span>' +
+              '<button type="button" class="tgl' + (on ? ' on' : '') + '" id="bat-' + i + '" onclick="App.togglePaxBrief(' + i + ')"></button></div>';
+          }).join('') +
+          '</div>' +
+          (allDone ? '<div style="margin-top:10px;padding:8px 12px;background:var(--green-bg);border-radius:8px;color:var(--green-dk);font-weight:700;font-size:13px;">✓ All briefing items confirmed — ready to proceed</div>' : '') +
+          '</div>';
+      }
+    }
+    $('pax-list').innerHTML = h;
   },
   toggleNoPax(btn) {
     const f = this.flight;
@@ -3335,6 +3453,19 @@ const App = {
     toast('✓ ' + name + ' recorded');
   },
   delPax(i) { this.flight.pax.splice(i, 1); this.renderPaxList(); this.saveDraft(); },
+  completePax() {
+    const f = this.flight;
+    if (!f.pax.length && !f.noPax) return toast('Add at least one passenger — or tick "No passengers carried"');
+    if (f.pax.length > 0) {
+      const brief = this._getPaxBrief(f.aircraftType);
+      if (brief) {
+        const ba = f.paxBriefAcks || {};
+        const unDone = brief.items.filter((_, i) => !ba[i]).length;
+        if (unDone) return toast('Complete the passenger safety briefing — ' + unDone + ' item' + (unDone > 1 ? 's' : '') + ' remaining');
+      }
+    }
+    this.gotoStep(3);
+  },
 
   /* ================== STEP 4 — REVIEW & SEND ================== */
   renderReview() {

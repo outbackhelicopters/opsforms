@@ -2621,6 +2621,23 @@ const App = {
     return null;
   },
 
+  /* ================== FUEL CAPACITY LIMITS ================== */
+  _FUEL_LIMITS: {
+    R22:  { main: 64.01, aux: 35.61 },
+    Cabri: { main: 168.51 },
+    R44:  { main: 111.71, aux: 64.41 },
+    B206: { main: 284.01 },
+  },
+  _getFuelLimits(aircraftType) {
+    if (!aircraftType) return null;
+    const t = aircraftType.toLowerCase();
+    if (t.includes('r22'))                           return this._FUEL_LIMITS.R22;
+    if (t.includes('cabri'))                         return this._FUEL_LIMITS.Cabri;
+    if (t.includes('r44') || t.includes('raven'))    return this._FUEL_LIMITS.R44;
+    if (t.includes('206') || t.includes('jetranger')) return this._FUEL_LIMITS.B206;
+    return null;
+  },
+
   /* ================== STEP 1 — SMS FORM (schema-driven) ================== */
   renderSms() {
     const F = FORM_DEFS.find(d => d.id === this.flight.sms.formId);
@@ -3202,6 +3219,30 @@ const App = {
       '<input type="number" inputmode="decimal" id="wb-' + id + '" class="wbinput" value="' + (val || '') + '" min="0" placeholder="' + (placeholder || '0') + '" oninput="App.wbCalc()">' +
       '<div class="wbunit">' + unit + '</div></div>';
 
+    /* ── Fuel capacity limits for this aircraft ── */
+    const flims   = this._getFuelLimits(this.flight.aircraftType);
+    const hasAux  = !!(flims && flims.aux != null);
+    if (!f.fuelAuxL) f.fuelAuxL = 0;
+    const capNote = cap => '<span style="display:block;font-size:10px;color:var(--mut);font-weight:500;margin-top:1px;">max ' + cap + ' L</span>';
+    const capErrDiv = id => '<div id="' + id + '" style="display:none;color:var(--red);font-size:12px;padding:0 0 4px 2px;font-weight:600;"></div>';
+    const fuelSection =
+      '<div class="wbrow">' +
+      '<div class="wblab">' + (hasAux ? 'Fuel — Main' : 'Fuel') +
+        '<span id="wb-fuel-kg" style="display:block;font-size:11px;color:var(--mut);font-weight:400;margin-top:1px;"></span>' +
+        (flims ? capNote(flims.main) : '') +
+      '</div>' +
+      '<input type="number" inputmode="decimal" id="wb-fuel" class="wbinput" value="' + (f.fuelL || '') + '" min="0" placeholder="0" oninput="App.wbCalc()">' +
+      '<div class="wbunit">L</div></div>' +
+      capErrDiv('wb-fuel-cap-err') +
+      (hasAux
+        ? '<div class="wbrow">' +
+          '<div class="wblab">Fuel — Aux' + capNote(flims.aux) + '</div>' +
+          '<input type="number" inputmode="decimal" id="wb-fuel-aux" class="wbinput" value="' + (f.fuelAuxL || '') + '" min="0" placeholder="0" oninput="App.wbCalc()">' +
+          '<div class="wbunit">L</div></div>' +
+          capErrDiv('wb-fuel-aux-cap-err')
+        : '') +
+      '<div class="wb-src">' + fuelType + ' · ' + fuelDens + ' kg/L</div>';
+
     let h = '<div class="card">' +
       '<h2>Weight &amp; balance</h2>' +
       '<p class="sub">' + esc(this.flight.callsign) + ' · ' + esc(this.flight.aircraftType) + '</p>' +
@@ -3219,12 +3260,8 @@ const App = {
       wbRow('pax',     'Passenger(s)',kg.pax     || '', 'kg', 'kg') +
       wbRow('baggage', 'Baggage',     kg.baggage || '', 'kg', 'kg') +
 
-      /* Fuel row — always litres */
-      '<div class="wbrow">' +
-      '<div class="wblab">Fuel<span id="wb-fuel-kg" style="display:block;font-size:11px;color:var(--mut);font-weight:400;margin-top:1px;"></span></div>' +
-      '<input type="number" inputmode="decimal" id="wb-fuel" class="wbinput" value="' + (f.fuelL || '') + '" min="0" placeholder="0" oninput="App.wbCalc()">' +
-      '<div class="wbunit">L</div></div>' +
-      '<div class="wb-src">' + fuelType + ' · ' + fuelDens + ' kg/L</div>' +
+      /* Fuel row(s) — always litres, aux-aware */
+      fuelSection +
 
       '<div class="wbsep"></div>' +
 
@@ -3284,14 +3321,32 @@ const App = {
 
     const fuelDens = W.fuelDensity || 0.720;
     const fuelType = fuelDens >= 0.79 ? 'Jet A-1' : 'AvGas 100LL';
-    /* Always litres */
-    const fuelRaw = num(($('wb-fuel') || {}).value);
-    const fuelKg = fuelRaw * fuelDens;
-    f.fuelL = fuelRaw;
-    f.kg.fuel = +fuelKg.toFixed(2);
-    /* Show kg equivalent inline */
+    /* Always litres — main + optional aux tank */
+    const fuelRaw    = num(($('wb-fuel')     || {}).value);
+    const fuelAuxRaw = num(($('wb-fuel-aux') || {}).value);
+    const fuelKg     = (fuelRaw + fuelAuxRaw) * fuelDens;
+    f.fuelL    = fuelRaw;
+    f.fuelAuxL = fuelAuxRaw;
+    f.kg.fuel  = +fuelKg.toFixed(2);
+    /* Show combined kg equivalent under main label */
     const fuelKgEl = $('wb-fuel-kg');
-    if (fuelKgEl) fuelKgEl.textContent = fuelRaw > 0 ? '= ' + fuelKg.toFixed(1) + ' kg' : '';
+    if (fuelKgEl) fuelKgEl.textContent = (fuelRaw + fuelAuxRaw) > 0 ? '= ' + fuelKg.toFixed(1) + ' kg' : '';
+    /* Capacity validation */
+    const _flims = this._getFuelLimits(this.flight.aircraftType);
+    let fuelOverCap = false;
+    const _chkCap = (errId, inpId, val, max) => {
+      const errEl = $(errId), inpEl = $(inpId);
+      if (!errEl || !inpEl) return false;
+      const over = max != null && val > max;
+      errEl.style.display = over ? '' : 'none';
+      if (over) errEl.textContent = 'Exceeds max capacity of ' + max + ' L';
+      inpEl.classList.toggle('bad', over);
+      return over;
+    };
+    if (_flims) {
+      if (_chkCap('wb-fuel-cap-err',     'wb-fuel',     fuelRaw,    _flims.main)) fuelOverCap = true;
+      if (_chkCap('wb-fuel-aux-cap-err', 'wb-fuel-aux', fuelAuxRaw, _flims.aux))  fuelOverCap = true;
+    }
 
     f.kg.pilot   = num(($('wb-pilot')   || {}).value);
     f.kg.pax     = num(($('wb-pax')     || {}).value);
@@ -3346,7 +3401,7 @@ const App = {
       cgEl.innerHTML = cgMapSvg(+cgArm.toFixed(1), +total.toFixed(1), W);
     }
 
-    f.result = { total: +total.toFixed(1), mtow, fuelKg: +fuelKg.toFixed(2), pass, entered,
+    f.result = { total: +total.toFixed(1), mtow, fuelKg: +fuelKg.toFixed(2), pass, entered, fuelOverCap,
                  cgArm: +cgArm.toFixed(1), cgInLimits: W.cgEnv ? cgInPoly(cgArm, total, W.cgEnv.poly) : null };
     this.saveDraft();
   },
@@ -3358,6 +3413,7 @@ const App = {
     if (!W.verified || !W.emptyWeight) return toast('Enter aircraft W&B data in Settings first');
     const r = this.flight.wb.result;
     if (!r || !r.entered) return toast('Enter at least pilot weight or fuel before continuing');
+    if (r.fuelOverCap) return toast('Fuel exceeds tank capacity — reduce fuel quantity before continuing');
     if (!r.pass) return toast('Over MTOW — reduce load before continuing');
     /* Copy CG envelope + BEW + fuel density into flight bundle so server can draw chart and email */
     this.flight.wb.fuelDensity  = W.fuelDensity  || 0.720;

@@ -416,7 +416,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .crew-row:last-child{border-bottom:0;}
 .crew-row .crew-num{width:22px;font-size:12px;font-weight:700;color:var(--mut);flex:none;text-align:center;}
 .crew-row input{flex:1;min-width:0;font-size:15px;padding:8px 10px;min-height:44px;}
-.crew-row input.arn{flex:0 0 110px;font-size:14px;}
+
 .crew-row .crew-del{background:transparent;border:0;color:var(--mut);font-size:20px;cursor:pointer;padding:4px 6px;flex:none;line-height:1;}
 .crew-row .crew-del:hover{color:var(--red);}
 
@@ -2782,7 +2782,6 @@ const App = {
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + '</div></div>';
     h += '<div class="card"><h2>Pilot sign-on</h2><div class="grid2">' +
       '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '</div></div>';
     h += '<div class="card"><h2>Flight entries</h2>' +
@@ -2843,7 +2842,6 @@ const App = {
     this.smsField();
     const v = this.flight.sms.values;
     if (!v.pilotName) return toast('Pilot name is required');
-    if (!v.pilotArn)  return toast('Pilot ARN is required');
     if (!v.dorRows || !v.dorRows.length) return toast('Add at least one flight entry');
     const incomplete = v.dorRows.find(r => !r.dep || !r.dest);
     if (incomplete) return toast('All flight entries must have departure and destination');
@@ -2875,7 +2873,6 @@ const App = {
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + '</div></div>';
     h += '<div class="card"><h2>Pilot sign-on</h2><div class="grid2">' +
       '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Flight date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Number of passengers briefed <span class="req">*</span></label><input type="number" id="psbr-numpax" min="1" step="1" value="' + (v.numPax||'') + '" oninput="App.psbrField()"></div>' +
       '</div></div>';
@@ -2912,7 +2909,6 @@ const App = {
     this.smsField(); this.psbrField();
     const v = this.flight.sms.values;
     if (!v.pilotName) return toast('Pilot name is required');
-    if (!v.pilotArn)  return toast('Pilot ARN is required');
     if (!v.numPax || v.numPax < 1) return toast('Number of passengers briefed is required');
     const doneCount = (v.psbrItems||[]).filter(Boolean).length;
     if (doneCount < 10) return toast('All 10 safety briefing items must be confirmed before submitting (' + doneCount + '/10 done)');
@@ -2930,7 +2926,6 @@ const App = {
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>';
     h += '<div class="card"><h2>Report details</h2><div class="grid2">' +
       '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Time of occurrence</label><input type="time" id="hir-time" value="' + esc(v.hirTime||ns.time) + '" oninput="App.hirField()"></div>' +
       '<div><label class="fl">Location <span class="req">*</span></label><input type="text" id="hir-location" value="' + esc(v.location||'') + '" placeholder="e.g. 15 NM NE Darwin" oninput="App.hirField()"></div>' +
@@ -2976,7 +2971,6 @@ const App = {
     this.smsField(); this.hirField();
     const v = this.flight.sms.values;
     if (!v.pilotName) return toast('Pilot name is required');
-    if (!v.pilotArn)  return toast('Pilot ARN is required');
     if (!v.location)  return toast('Location of occurrence is required');
     if (!v.reportType) return toast('Type of report is required');
     if (!v.description || v.description.trim().length < 10) return toast('Description of occurrence must be provided (at least 10 characters)');
@@ -2998,7 +2992,6 @@ const App = {
     if (grounded) h += '<div class="warn-banner">⚠ AIRCRAFT GROUNDED — NOT AIRWORTHY</div>';
     h += '<div class="card"><h2>Defect details</h2><div class="grid2">' +
       '<div><label class="fl">Pilot Name <span class="req">*</span></label><select id="sms-pilotName" autocomplete="off" onchange="App.smsCrewPick(\'pilot\')">' + crewOpts(v.pilotName) + '</select></div>' +
-      '<div><label class="fl">ARN <span class="req">*</span></label><input type="text" id="sms-pilotArn" inputmode="numeric" autocomplete="off" value="' + esc(v.pilotArn||'') + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Date <span class="req">*</span></label><input type="date" id="sms-reviewDate" autocomplete="off" value="' + esc(v.reviewDate) + '" oninput="App.smsField()"></div>' +
       '<div><label class="fl">Total aircraft hours at time of defect</label><input type="number" id="mdr-hours" min="0" step="0.1" value="' + esc(v.aircraftHours||'') + '" oninput="App.mdrField()"></div>' +
       '<div><label class="fl">System affected <span class="req">*</span></label><select id="mdr-system" onchange="App.mdrField()"><option value="">— Select —</option>' + selOpt(SYSTEMS, v.systemAffected) + '</select></div>' +
@@ -3039,7 +3032,6 @@ const App = {
     this.smsField(); this.mdrField();
     const v = this.flight.sms.values;
     if (!v.pilotName) return toast('Pilot name is required');
-    if (!v.pilotArn)  return toast('Pilot ARN is required');
     if (!v.defectDescription || v.defectDescription.trim().length < 5) return toast('Defect description is required');
     if (!v.systemAffected) return toast('System affected is required');
     if (!this.flight.sms.sigs.pilotSig) return toast('Pilot signature is required');
@@ -3059,10 +3051,8 @@ const App = {
     this.smsField();
     const v = this.flight.sms.values, miss = [];
     $('sms-pilotName').classList.toggle('bad', !v.pilotName);
-    if ($('sms-pilotArn')) $('sms-pilotArn').classList.toggle('bad', !v.pilotArn);
     $('sms-reviewDate').classList.toggle('bad', !v.reviewDate);
     if (!v.pilotName) miss.push('pilot name');
-    if (!v.pilotArn) miss.push('pilot ARN');
     if (!v.reviewDate) miss.push('review date');
     const unacked = F.sections.map((s, i) => this.flight.sms.acks[i] ? null : s.step).filter(Boolean);
     if (unacked.length) miss.push('review confirmations: ' + unacked.join(', '));
@@ -3350,7 +3340,7 @@ const App = {
     const wbSummary = f.wb.done && r ? (r.pass ? 'PASS · ' + r.total + ' kg ≤ MTOW ' + r.mtow + ' kg' : 'OVER MTOW — ' + r.total + ' kg exceeds ' + r.mtow + ' kg') : 'Not completed — go back to step 2';
     $('review-mount').innerHTML =
       '<div class="card"><h2>Review — ' + esc(name) + '.pdf</h2>' +
-      line(f.sms.done, 'SMS form — ' + esc((FORM_DEFS.find(d => d.id === f.sms.formId) || FORM_DEFS[0]).title), f.sms.done ? 'Pilot: ' + esc(f.sms.values.pilotName) + ' (ARN ' + esc(f.sms.values.pilotArn) + ') · signed' : 'Incomplete — go back to step 1') +
+      line(f.sms.done, 'SMS form — ' + esc((FORM_DEFS.find(d => d.id === f.sms.formId) || FORM_DEFS[0]).title), f.sms.done ? 'Pilot: ' + esc(f.sms.values.pilotName) + ' · signed' : 'Incomplete — go back to step 1') +
       line(wbOk, 'Weight &amp; balance', wbSummary) +
       line(paxOk, 'Passenger briefing signatures', f.noPax ? 'No passengers carried this flight' : f.pax.length + ' passenger' + (f.pax.length === 1 ? '' : 's') + ' signed: ' + f.pax.map(p => esc(p.name)).join(', ')) +
       '</div>' +
@@ -3566,9 +3556,8 @@ const App = {
     const pilotRows = pilotNames.map(nm => {
       const fl = byPilot[nm] || [];
       const crew = this.S.crew.find(c => c.name === nm);
-      const arn = crew ? crew.arn : (fl[0] ? fl[0].sms.values.pilotArn : '');
-      return '<div class="kv"><div class="k">' + esc(nm) + '</div><div class="v">ARN ' + esc(arn || '—') +
-        ' · ' + fl.length + ' flight' + (fl.length === 1 ? '' : 's') +
+      return '<div class="kv"><div class="k">' + esc(nm) + '</div><div class="v">' +
+        fl.length + ' flight' + (fl.length === 1 ? '' : 's') +
         (fl.length ? ' · last ' + fmtDT(Math.max(...fl.map(f => f.createdAt))) : '') + '</div></div>';
     }).join('');
     const acRows = acNames.map(cs => {

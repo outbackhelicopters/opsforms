@@ -65,6 +65,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 
+/* ── Serve static app files (flight-ops.html, sw.js, etc.) ── */
+app.use(express.static(path.join(__dirname, '..')));
+
 /* ── Shared config (pilots, aircraft, clients) ────────────── */
 /* Edit /api/config.json in GitHub to update all devices */
 app.get(['/config', '/api/config'], (_req, res) => {

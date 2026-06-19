@@ -952,10 +952,6 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 
     <!-- STEP 1 -->
     <div id="step-1" class="step-panel active">
-      <div class="letterhead">
-        <div class="lh-company">Outback Helicopter Airwork NT Pty Ltd</div>
-        <div class="lh-details">ABN: 80 137 947 687 &nbsp;|&nbsp; Ph: 8941 6811 &nbsp;|&nbsp; Mob: 0427 222 670</div>
-      </div>
       <div class="card">
         <div class="card-title">Job Details</div>
         <div class="grid2">
@@ -1166,22 +1162,14 @@ VH-IBS, Robinson R44 Raven II (Spray equipped)</textarea>
   <div class="card">
     <h2>Pilot List</h2>
     <p class="sub">One name per line. Pilots pick their name from the dropdown on every form.</p>
-    <textarea id="su-crew" rows="10">Angus Watson
-Annie Blore
-Anton Williams
-Belinda Brace
-Brodie Zammit
+    <textarea id="su-crew" rows="9">Brodie Zammit
 Christopher Howard
 Danny Clarris
 Jack Donohoe
 Jack Ward
-Joanna Atkins
-John Blore
-Lachlan French
 Nicholas Murphy
 Nicolas Muldoon
 Paul Blore
-Samuel Gray
 Thomas B Harrower</textarea>
   </div>
   <div class="card">
@@ -2017,23 +2005,15 @@ const DEFAULT_SETTINGS = {
   opsEmail: "pilots@outbackhelicopters.com.au",
   driveFolder: "Helicopter Paperwork",
   crew: [
-    { name: "Angus Watson",       arn: "" },
-    { name: "Annie Blore",        arn: "" },
-    { name: "Anton Williams",     arn: "" },
-    { name: "Belinda Brace",      arn: "" },
-    { name: "Brodie Zammit",      arn: "" },
-    { name: "Christopher Howard", arn: "" },
-    { name: "Danny Clarris",      arn: "" },
-    { name: "Jack Donohoe",       arn: "" },
-    { name: "Jack Ward",          arn: "" },
-    { name: "Joanna Atkins",      arn: "" },
-    { name: "John Blore",         arn: "" },
-    { name: "Lachlan French",     arn: "" },
-    { name: "Nicholas Murphy",    arn: "" },
-    { name: "Nicolas Muldoon",    arn: "" },
-    { name: "Paul Blore",         arn: "" },
-    { name: "Samuel Gray",        arn: "" },
-    { name: "Thomas B Harrower",  arn: "" }
+    { name: "Brodie Zammit" },
+    { name: "Christopher Howard" },
+    { name: "Danny Clarris" },
+    { name: "Jack Donohoe" },
+    { name: "Jack Ward" },
+    { name: "Nicholas Murphy" },
+    { name: "Nicolas Muldoon" },
+    { name: "Paul Blore" },
+    { name: "Thomas B Harrower" }
   ],
   fleet: [
     /* iBal-verified aircraft ------------------------------------ */
@@ -2242,8 +2222,10 @@ const App = {
         }
       });
     }
-    /* Replace dummy pilot list (legacy M. Dundee / S. Irwin) with real pilots */
-    if (Array.isArray(this.S.crew) && this.S.crew.some(c => (c.name||c).includes('Dundee') || (c.name||c).includes('Irwin'))) {
+    /* Replace dummy/old pilot list with current list */
+    const _knownNames = new Set(DEFAULT_SETTINGS.crew.map(c => c.name));
+    if (Array.isArray(this.S.crew) && this.S.crew.some(c => (c.name||c).includes('Dundee') || (c.name||c).includes('Irwin') ||
+        ((c.name||c).includes('Angus') || (c.name||c).includes('Lachlan') || (c.name||c).includes('Samuel') || (c.name||c).includes('Anton') || (c.name||c).includes('Annie') || (c.name||c).includes('Belinda') || (c.name||c).includes('Joanna') || (c.name||c).includes('John Blore')))) {
       this.S.crew = DEFAULT_SETTINGS.crew; _settingsDirty = true;
     }
     if (_settingsDirty && this.S.configured) await DB.put('kv', this.S, 'settings');
@@ -2322,15 +2304,14 @@ const App = {
   },
   parseCrew(text) {
     return text.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
-      const [name, arn] = l.split(',').map(x => (x || '').trim());
-      return { name, arn: arn || '' };
+      const name = l.split(',')[0].trim();
+      return { name };
     });
   },
   _crewRowHtml(c, i) {
     return '<div class="crew-row" id="crew-row-' + i + '">' +
       '<span class="crew-num">' + (i+1) + '</span>' +
       '<input type="text" class="crew-name" placeholder="Full name" value="' + esc(c.name||'') + '" oninput="App._renumberCrew()">' +
-      '<input type="text" class="crew-arn arn" placeholder="ARN" value="' + esc(c.arn||'') + '" inputmode="numeric" maxlength="7">' +
       '<button class="crew-del" onclick="App.removeCrewRow(this)" title="Remove">×</button>' +
       '</div>';
   },
@@ -2352,8 +2333,7 @@ const App = {
   },
   _collectCrewRows() {
     return Array.from(document.querySelectorAll('.crew-row')).map(r => ({
-      name: (r.querySelector('.crew-name')?.value || '').trim(),
-      arn: (r.querySelector('.crew-arn')?.value || '').trim()
+      name: (r.querySelector('.crew-name')?.value || '').trim()
     })).filter(c => c.name);
   },
 
@@ -2590,8 +2570,9 @@ const App = {
     const ns = nowStamp();
     if (!v.reviewDate) v.reviewDate = ns.date;
 
-    const crewOpts = sel => '<option value="">— Select —</option>' +
-      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+    const crewOpts = sel => '<option value="">— Select pilot —</option>' +
+      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+      '<option value="__other__"' + (sel === '__other__' || (sel && !(this.S.crew||[]).find(c=>c.name===sel)) ? ' selected' : '') + '>Other…</option>';
 
     let h = '<div class="swms-head"><div class="t1">' + esc(F.title) + '</div>' +
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
@@ -2716,20 +2697,33 @@ const App = {
     this.saveDraft();
   },
   smsCrewPick(which) {
-    const name = $('sms-' + which + 'Name').value;
-    const c = (this.S && this.S.crew ? this.S.crew : []).find(x => x.name === name);
-    const arnEl = $('sms-' + which + 'Arn');
-    if (arnEl) arnEl.value = c ? c.arn : '';
-    // Also store directly so forms without a visible ARN field (e.g. SWMS) still capture it
-    if (which === 'pilot')   this.flight.sms.values.pilotArn   = c ? c.arn : '';
-    if (which === 'trainer') this.flight.sms.values.trainerArn = c ? c.arn : '';
+    const sel = $('sms-' + which + 'Name').value;
+    const otherId = 'sms-' + which + 'NameOther';
+    let otherWrap = $(otherId + '-wrap');
+    if (sel === '__other__') {
+      if (!otherWrap) {
+        otherWrap = document.createElement('div');
+        otherWrap.id = otherId + '-wrap';
+        otherWrap.style.marginTop = '6px';
+        otherWrap.innerHTML = '<input type="text" id="' + otherId + '" placeholder="Enter pilot name" style="width:100%;font-size:15px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);min-height:44px;" oninput="App.smsField()">';
+        $('sms-' + which + 'Name').parentNode.appendChild(otherWrap);
+      }
+      setTimeout(() => $(otherId) && $(otherId).focus(), 50);
+    } else {
+      if (otherWrap) otherWrap.remove();
+    }
     this.smsField();
   },
   smsField() {
     const v = this.flight.sms.values;
-    if ($('sms-pilotName'))   v.pilotName   = $('sms-pilotName').value;
-    if ($('sms-pilotArn'))    v.pilotArn    = $('sms-pilotArn').value;
-    if ($('sms-trainerName')) v.trainerName = $('sms-trainerName').value;
+    if ($('sms-pilotName')) {
+      const sel = $('sms-pilotName').value;
+      v.pilotName = sel === '__other__' ? ($('sms-pilotNameOther')?.value || '') : sel;
+    }
+    if ($('sms-trainerName')) {
+      const sel = $('sms-trainerName').value;
+      v.trainerName = sel === '__other__' ? ($('sms-trainerNameOther')?.value || '') : sel;
+    }
     if ($('sms-reviewDate'))  v.reviewDate  = $('sms-reviewDate').value;
     this.saveDraft();
   },
@@ -2744,8 +2738,9 @@ const App = {
   _specialHead(F) {
     const ns = nowStamp(), v = this.flight.sms.values;
     if (!v.reviewDate) v.reviewDate = ns.date;
-    const crewOpts = sel => '<option value="">— Select —</option>' +
-      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+    const crewOpts = sel => '<option value="">— Select pilot —</option>' +
+      (this.S && this.S.crew ? this.S.crew : []).map(c => '<option value="' + esc(c.name) + '"' + (sel === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+      '<option value="__other__"' + (sel === '__other__' || (sel && !(this.S.crew||[]).find(c=>c.name===sel)) ? ' selected' : '') + '>Other…</option>';
     const sigH = (id, label) =>
       '<div class="card"><h2>' + esc(label) + ' <span class="req">*</span></h2>' +
       '<div class="sigwrap" id="wrap-' + id + '"><canvas id="sig-' + id + '"></canvas></div>' +

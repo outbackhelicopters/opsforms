@@ -337,9 +337,15 @@ async function buildPDF(bundle) {
     doc.rect(50, 50 + HDR_H, W, 3).fill(ORANGE);
     doc.y = 50 + HDR_H + 3 + 18;
 
+    /* ── Page overflow guard ── */
+    const checkY = (needed = 30) => {
+      if (doc.y + needed > 758) doc.addPage();
+    };
+
     /* ── Section heading ── */
     const secHead = title => {
-      doc.moveDown(0.6);
+      checkY(56);
+      doc.moveDown(0.3);
       const y = doc.y;
       doc.rect(50, y, W, 20).fill('#E8EBF5');
       doc.fillColor(NAVY).font('Helvetica-Bold').fontSize(9.5)
@@ -350,6 +356,7 @@ async function buildPDF(bundle) {
 
     /* ── Key/value row ── */
     const kv = (k, v, color) => {
+      checkY(18);
       const y = doc.y;
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor(MUT)
          .text(k, 50, y, { width: 128, lineBreak: false });
@@ -364,7 +371,6 @@ async function buildPDF(bundle) {
     kv('Aircraft', bundle.callsign);
     kv('Form',     bundle.formName || '—');
     kv('Pilot',    bundle.sms?.values?.pilotName);
-    kv('ARN',      bundle.sms?.values?.pilotArn);
     /* Use pilot-set flight date/time if available, fall back to submission time */
     const flightDateStr = bundle.flightDate
       ? new Date(bundle.flightDate + 'T12:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'long', year: 'numeric' })
@@ -393,6 +399,7 @@ async function buildPDF(bundle) {
       doc.y = hY + 14;
       doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB'); doc.y += 6;
       bundle.lines.forEach((l, i) => {
+        checkY(18);
         const y = doc.y;
         if (i % 2 === 0) { doc.rect(50, y-2, W, 17).fill('#F9FAFB'); }
         doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28')
@@ -436,6 +443,7 @@ async function buildPDF(bundle) {
     if (bundle.sms?.acks && Object.keys(bundle.sms.acks).length) {
       secHead('SAFETY MANAGEMENT — SECTION ACKNOWLEDGMENTS');
       Object.entries(bundle.sms.acks).forEach(([i, v]) => {
+        checkY(18);
         const y = doc.y;
         doc.font('Helvetica').fontSize(9.5).fillColor(v ? '#15803D' : '#B91C1C')
            .text((v ? '✓  ' : '✗  ') + 'Section ' + (parseInt(i) + 1), 50, y, { width: W, lineBreak: false });
@@ -446,6 +454,7 @@ async function buildPDF(bundle) {
     /* ── Passengers ── */
     if ((bundle.pax || []).length) {
       secHead('PASSENGERS');
+      checkY(54);
       const hY = doc.y;
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor(MUT);
       doc.text('NAME',    50,  hY, { width: 190, lineBreak: false });
@@ -456,6 +465,7 @@ async function buildPDF(bundle) {
       doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB');
       doc.y += 6;
       bundle.pax.forEach((p, i) => {
+        checkY(18);
         const y = doc.y;
         if (i % 2 === 0) { doc.rect(50, y - 2, W, 17).fill('#F9FAFB'); doc.fillColor('#1C1F28'); }
         doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28').text(p.name || '—', 50, y, { width: 190, lineBreak: false });
@@ -474,6 +484,7 @@ async function buildPDF(bundle) {
     sigDefs.forEach(({ id, label, nameKey }) => {
       const data = bundle.sms?.sigs?.[id];
       if (!data) return;
+      checkY(130);
       secHead(label);
       try {
         const raw = data.replace(/^data:image\/png;base64,/, '');

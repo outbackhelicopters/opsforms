@@ -432,10 +432,10 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
     <div class="card">
       <div class="card-title">Hire Type</div>
       <div class="seg" id="hire-seg">
-        <button class="seg-btn active" data-hire="wet" onclick="setHire('wet')">Wet Hire<br><small style="font-weight:500;font-size:11px;">Aircraft + Pilot</small></button>
-        <button class="seg-btn" data-hire="dry" onclick="setHire('dry')">Dry Hire<br><small style="font-weight:500;font-size:11px;">Aircraft Only</small></button>
+        <button class="seg-btn active" data-hire="wet" onclick="setHire('wet')">Wet Hire<br><small style="font-weight:500;font-size:11px;">Aircraft + Fuel</small></button>
+        <button class="seg-btn" data-hire="dry" onclick="setHire('dry')">Dry Hire<br><small style="font-weight:500;font-size:11px;">No Fuel Included</small></button>
       </div>
-      <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — client is responsible for fuel and fuel costs.</div>
+      <div id="banner-dry" class="hire-banner dry hidden">⚠️&nbsp; Dry Hire — fuel not included. Client is responsible for supplying and paying for fuel.</div>
     </div>
 
     <div class="card">
@@ -848,14 +848,16 @@ async function initForm(keepJobNo=false) {
   _draftId = null;
 }
 
+function fmtJobNo(n) { return 'A' + String(n).padStart(5, '0'); }
 async function peekNextJobNo() {
   const last = await jKvGet('jobCounter', 0);
-  return last + 1;
+  return fmtJobNo(last + 1);
 }
 async function consumeJobNo() {
-  const next = await peekNextJobNo();
+  const last = await jKvGet('jobCounter', 0);
+  const next = last + 1;
   await jKvSet('jobCounter', next);
-  return next;
+  return fmtJobNo(next);
 }
 
 function startNewJob() {
@@ -1131,7 +1133,7 @@ async function buildRec(status) {
     if (desc||hours) lines.push({ desc, hours });
   });
   const totalHours = lines.reduce((s,l) => s+l.hours, 0);
-  const jobNo = parseInt(document.getElementById('f-jobno').value) || (await peekNextJobNo());
+  const jobNo = document.getElementById('f-jobno').value.trim() || (await peekNextJobNo());
   return {
     jobNo,
     date:          document.getElementById('f-date').value,
@@ -1203,7 +1205,7 @@ function showConfirm(job, cloudOk) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 
-  document.getElementById('confirm-title').textContent = 'Job #' + job.jobNo + ' Submitted';
+  document.getElementById('confirm-title').textContent = 'Job ' + job.jobNo + ' Submitted';
   document.getElementById('confirm-date').textContent = fmtDate(job.date);
   document.getElementById('confirm-card').innerHTML = `
     <div class="ckv"><span class="ck">Pilot</span><span class="cv">${esc(job.pilotName)}</span></div>
@@ -1249,7 +1251,7 @@ async function renderHistory() {
     ${g.jobs.map(j => `
       <div class="hist-row" onclick="showDetail(${j.id})">
         <div class="hr-left">
-          <div class="hr-job">Job #${j.jobNo} — ${esc(j.client)}</div>
+          <div class="hr-job">Job ${j.jobNo} — ${esc(j.client)}</div>
           <div class="hr-meta">${fmtDate(j.date)} · ${esc(j.pilotName)} · ${esc(j.aircraftReg)}</div>
           <div class="hr-meta" style="margin-top:3px;"><span class="badge ${j.status}">${statusLabel(j.status)}</span></div>
         </div>
@@ -1309,7 +1311,7 @@ async function renderDetail(id) {
 
   document.getElementById('detail-content').innerHTML = `
     <div class="detail-hdr">
-      <div class="dh-jobno">Job #${job.jobNo}${job.isDual?' 🚁🚁':''}</div>
+      <div class="dh-jobno">Job ${job.jobNo}${job.isDual?' 🚁🚁':''}</div>
       <div class="dh-sub">${fmtDate(job.date)} · <span class="badge ${job.status}">${statusLabel(job.status)}</span></div>
       <div class="dh-client">${esc(job.client)}</div>
     </div>
@@ -1469,11 +1471,11 @@ async function renderSync() {
   document.getElementById('sync-pending-count').textContent = pending.length;
   const qEl = document.getElementById('sync-queue');
   qEl.innerHTML = pending.length
-    ? pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">Job #${j.jobNo} — ${esc(j.client)}</div><div class="sq-meta">${fmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
+    ? pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">Job ${j.jobNo} — ${esc(j.client)}</div><div class="sq-meta">${fmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
     : '<div class="no-results">All synced ✓</div>';
   const lEl = document.getElementById('sync-log');
   lEl.innerHTML = synced.length
-    ? synced.slice(0,10).map(j=>`<div class="log-item">✅ Job #${j.jobNo} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
+    ? synced.slice(0,10).map(j=>`<div class="log-item">✅ Job ${j.jobNo} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
     : '<div class="no-results">No sync activity yet</div>';
 }
 
@@ -1562,7 +1564,7 @@ async function exportCSV() {
   const filtered = jobs.filter(j => j.status!=='draft');
   if (!filtered.length) { toast('No submitted records to export'); return; }
   const header = 'Date,Job No,Client,Pilot,Aircraft,Hire Type,Total Flight Hours';
-  const rows = filtered.sort((a,b) => a.jobNo-b.jobNo).map(j=>[
+  const rows = filtered.sort((a,b) => String(a.jobNo).localeCompare(String(b.jobNo))).map(j=>[
     j.date, j.jobNo,
     `"${(j.client||'').replace(/"/g,'""')}"`,
     `"${(j.pilotName||'').replace(/"/g,'""')}"`,

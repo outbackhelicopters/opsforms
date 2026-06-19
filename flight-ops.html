@@ -885,6 +885,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
     <img src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
     <div class="hb1">OUTBACK HELICOPTER</div>
     <div class="hb2">Airwork NT — Flight Paperwork</div>
+    <div style="font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px;">v41</div>
   </div>
   <div class="home-cards">
     <button class="home-card" onclick="showMainTab('jobs')">
@@ -2496,7 +2497,7 @@ const App = {
       aircraftType: ac.type,
       status: 'draft',
       sms: { formId, values: {}, acks: {}, sigs: {}, done: false },
-      wb: { kg: { pilot:0, pax:0, fuel:0, baggage:0 }, fuelL: 0, fuelMode: 'kg', result: null, done: false },
+      wb: { kg: { pilot:0, pax:0, fuel:0, baggage:0 }, fuelL: 0, fuelMode: 'L', result: null, done: false },
       pax: [],
       noPax: false
     };
@@ -3073,7 +3074,7 @@ const App = {
     const f = this.flight.wb;
     if (!f.kg) f.kg = { pilot: 0, pax: 0, fuel: 0, baggage: 0 };
     if (!f.fuelL) f.fuelL = 0;
-    if (!f.fuelMode) f.fuelMode = 'kg';
+    if (!f.fuelMode || f.fuelMode === 'kg') f.fuelMode = 'L';
 
     if (!W.verified || !W.emptyWeight) {
       $('wb-mount').innerHTML =
@@ -3091,8 +3092,13 @@ const App = {
 
     const bew = W.emptyWeight, mtow = W.mtow, src = W.source || '';
     const kg = f.kg;
-    const fuelMode = f.fuelMode || 'kg';
     const fuelDens = W.fuelDensity || 0.720;
+    const fuelType = fuelDens >= 0.79 ? 'Jet A-1' : 'AvGas 100LL';
+    /* Always use litres — migrate any legacy kg-mode flights */
+    if (f.fuelMode !== 'L') {
+      f.fuelL = f.kg.fuel ? +(f.kg.fuel / fuelDens).toFixed(1) : 0;
+      f.fuelMode = 'L';
+    }
 
     const wbRow = (id, label, val, unit, placeholder) =>
       '<div class="wbrow">' +
@@ -3117,15 +3123,12 @@ const App = {
       wbRow('pax',     'Passenger(s)',kg.pax     || '', 'kg', 'kg') +
       wbRow('baggage', 'Baggage',     kg.baggage || '', 'kg', 'kg') +
 
-      /* Fuel row with L↔kg toggle */
+      /* Fuel row — always litres */
       '<div class="wbrow">' +
-      '<div class="wblab">Fuel' +
-      '<button class="wb-fuel-toggle" onclick="App.wbToggleFuelMode()">' +
-      (fuelMode === 'kg' ? 'Enter in litres instead' : 'Enter in kg instead') +
-      '</button></div>' +
-      '<input type="number" inputmode="decimal" id="wb-fuel" class="wbinput" value="' + (fuelMode === 'kg' ? (kg.fuel || '') : (f.fuelL || '')) + '" min="0" placeholder="0" oninput="App.wbCalc()">' +
-      '<div class="wbunit">' + fuelMode + '</div></div>' +
-      (fuelMode === 'L' ? '<div class="wb-src">@ ' + fuelDens + ' kg/L (Avgas 100LL)</div>' : '') +
+      '<div class="wblab">Fuel<span id="wb-fuel-kg" style="display:block;font-size:11px;color:var(--mut);font-weight:400;margin-top:1px;"></span></div>' +
+      '<input type="number" inputmode="decimal" id="wb-fuel" class="wbinput" value="' + (f.fuelL || '') + '" min="0" placeholder="0" oninput="App.wbCalc()">' +
+      '<div class="wbunit">L</div></div>' +
+      '<div class="wb-src">' + fuelType + ' · ' + fuelDens + ' kg/L</div>' +
 
       '<div class="wbsep"></div>' +
 
@@ -3184,10 +3187,15 @@ const App = {
     if (!f.kg) f.kg = {};
 
     const fuelDens = W.fuelDensity || 0.720;
-    const fuelMode = f.fuelMode || 'kg';
+    const fuelType = fuelDens >= 0.79 ? 'Jet A-1' : 'AvGas 100LL';
+    /* Always litres */
     const fuelRaw = num(($('wb-fuel') || {}).value);
-    const fuelKg = fuelMode === 'L' ? fuelRaw * fuelDens : fuelRaw;
-    if (fuelMode === 'L') f.fuelL = fuelRaw; else f.kg.fuel = fuelRaw;
+    const fuelKg = fuelRaw * fuelDens;
+    f.fuelL = fuelRaw;
+    f.kg.fuel = +fuelKg.toFixed(2);
+    /* Show kg equivalent inline */
+    const fuelKgEl = $('wb-fuel-kg');
+    if (fuelKgEl) fuelKgEl.textContent = fuelRaw > 0 ? '= ' + fuelKg.toFixed(1) + ' kg' : '';
 
     f.kg.pilot   = num(($('wb-pilot')   || {}).value);
     f.kg.pax     = num(($('wb-pax')     || {}).value);
@@ -3195,8 +3203,7 @@ const App = {
 
     const bew  = W.emptyWeight || 0;
     const mtow = W.mtow || 0;
-    const fuelKgFinal = fuelMode === 'kg' ? f.kg.fuel : fuelKg;
-    const total = bew + f.kg.pilot + f.kg.pax + fuelKgFinal + f.kg.baggage;
+    const total = bew + f.kg.pilot + f.kg.pax + fuelKg + f.kg.baggage;
 
     const totalEl = $('wb-total');
     if (totalEl) totalEl.textContent = total.toFixed(1);
@@ -3212,7 +3219,7 @@ const App = {
       const bewMom   = bew            * (W.emptyLongArm || 0);
       const pilotMom = f.kg.pilot     * (E.pilotArm    || W.emptyLongArm);
       const paxMom   = f.kg.pax       * (E.paxArm      || W.emptyLongArm);
-      const fuelMom  = fuelKgFinal    * (E.fuelArm     || W.emptyLongArm);
+      const fuelMom  = fuelKg         * (E.fuelArm     || W.emptyLongArm);
       const bagMom   = f.kg.baggage   * (E.baggageArm  || W.emptyLongArm);
       cgArm = (bewMom + pilotMom + paxMom + fuelMom + bagMom) / total;
     }

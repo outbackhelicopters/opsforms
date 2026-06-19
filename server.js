@@ -105,7 +105,7 @@ app.get('/api/jobs', requireReportsAuth, async (req, res) => {
     }
 
     const token      = await getGraphToken();
-    const driveUser  = process.env.SENDER_EMAIL;
+    const driveUser  = process.env.OPS_EMAIL;
     const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
     const recPath    = encodeURIComponent(`${folderName}/_records`);
 
@@ -171,29 +171,149 @@ app.post('/send', async (req, res) => {
 
     /* 3 — Send email via Office 365 */
     const pilot   = bundle.sms?.values?.pilotName || 'Unknown pilot';
-    const subject = `Flight Paperwork — ${bundle.callsign} — ${bundle.formName || 'Form'} — ${dateStr}`;
-    const sender  = process.env.SENDER_EMAIL;   // e.g. ops@outbackhelicopters.com.au
-    const opsTo   = process.env.OPS_EMAIL;      // who receives the paperwork
+    const trainer = bundle.sms?.values?.trainerName || '';
+    const formName = bundle.formName || bundle.sms?.formId || 'Flight Operations Form';
+    const formNo   = bundle.formNo   || '';
+    const subject = `Flight Paperwork — ${bundle.callsign} — ${formName} — ${dateStr}`;
+    const sender  = process.env.SENDER_EMAIL;
+    const opsTo   = process.env.OPS_EMAIL;
+
+    /* ── W&B ── */
+    const wb = bundle.wb || {};
+    const wbResult = wb.result || {};
+    const fuelDens = wb.fuelDensity || 0.720;
+    const fuelType = fuelDens >= 0.79 ? 'Jet A-1' : 'AvGas 100LL';
+    const fuelL    = wb.fuelL || 0;
+    const fuelKg   = wb.kg?.fuel || +(fuelL * fuelDens).toFixed(1);
+
+    /* ── Shared inline style strings ── */
+    const S = {
+      wrap:     'font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;max-width:620px;margin:0 auto;background:#ffffff;',
+      hdr:      'background:linear-gradient(135deg,#0E1835 0%,#1E2F5C 60%,#243669 100%);padding:28px 36px;',
+      coName:   'font-size:18px;font-weight:800;color:#ffffff;letter-spacing:.2px;margin:0;',
+      coSub:    'font-size:12px;color:rgba(255,255,255,.5);margin:3px 0 0;font-weight:500;',
+      badge:    'display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.9);border-radius:5px;padding:4px 11px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;float:right;margin-top:4px;',
+      body:     'padding:28px 36px 32px;',
+      title:    'font-size:20px;font-weight:800;color:#18224A;margin:0 0 3px;',
+      sub:      'font-size:13px;color:#888;font-weight:500;margin:0 0 24px;',
+      sec:      'border:1px solid #E8EBF2;border-radius:9px;overflow:hidden;margin-bottom:20px;',
+      secHd:    'background:#F2F4FA;border-bottom:1px solid #E8EBF2;padding:8px 16px;font-size:10.5px;font-weight:800;color:#18224A;letter-spacing:.6px;text-transform:uppercase;',
+      kv:       'display:table;width:100%;padding:7px 16px;border-bottom:1px solid #F2F4FA;box-sizing:border-box;',
+      kvLast:   'display:table;width:100%;padding:7px 16px;box-sizing:border-box;',
+      k:        'display:table-cell;font-size:12px;font-weight:600;color:#888;width:150px;padding-right:12px;vertical-align:top;padding-top:1px;',
+      v:        'display:table-cell;font-size:13px;color:#1C1F28;font-weight:500;vertical-align:top;',
+      ackOk:    'background:#F0FDF4;border-radius:6px;padding:7px 11px;margin:3px 0;display:table;width:100%;box-sizing:border-box;',
+      ackFail:  'background:#FEF2F2;border-radius:6px;padding:7px 11px;margin:3px 0;display:table;width:100%;box-sizing:border-box;',
+      ackIcon:  'display:table-cell;width:24px;font-size:13px;vertical-align:middle;',
+      ackNum:   'display:table-cell;width:24px;font-size:12px;font-weight:700;vertical-align:middle;',
+      ackLab:   'display:table-cell;font-size:12.5px;font-weight:500;vertical-align:middle;',
+      sumOk:    'background:#DCFCE7;border:1px solid #BBF7D0;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:700;color:#15803D;margin:8px 0 4px;',
+      sumWarn:  'background:#FEF3C7;border:1px solid #FDE68A;border-radius:6px;padding:8px 13px;font-size:12px;font-weight:700;color:#92400E;margin:8px 0 4px;',
+      footer:   'background:#F7F8FA;border-top:1px solid #E8EBF2;padding:14px 36px;font-size:11.5px;color:#aaa;',
+    };
+
+    /* ── Builder helpers ── */
+    const kv = (k, v, last) =>
+      `<div style="${last ? S.kvLast : S.kv}"><span style="${S.k}">${k}</span><span style="${S.v}">${v}</span></div>`;
+    const section = (icon, title, inner) =>
+      `<div style="${S.sec}"><div style="${S.secHd}">${icon}&nbsp; ${title}</div>${inner}</div>`;
+    const ackItem = (ok, num, label) =>
+      `<div style="${ok ? S.ackOk : S.ackFail};color:${ok ? '#15803D' : '#B91C1C'};">` +
+      `<span style="${S.ackIcon}">${ok ? '✅' : '❌'}</span>` +
+      `<span style="${S.ackNum}">${num}.</span>` +
+      `<span style="${S.ackLab}">${label}</span></div>`;
+
+    /* ── W&B result pill ── */
+    const wbPill = wbResult.pass != null
+      ? (wbResult.pass
+        ? `<span style="display:inline-block;background:#DCFCE7;color:#15803D;border:1px solid #BBF7D0;border-radius:20px;padding:3px 12px;font-size:12.5px;font-weight:700;">✅ PASS &nbsp;·&nbsp; ${wbResult.total} kg / ${wbResult.mtow} kg MTOW</span>`
+        : `<span style="display:inline-block;background:#FEE2E2;color:#B91C1C;border:1px solid #FECACA;border-radius:20px;padding:3px 12px;font-size:12.5px;font-weight:700;">❌ OVER MTOW — ${wbResult.total} kg exceeds ${wbResult.mtow} kg MTOW</span>`)
+      : 'Not recorded';
+
+    /* ── SWMS acknowledgments block ── */
+    const ackLabels = bundle.smsAckLabels || [];
+    const acks      = bundle.sms?.acks || {};
+    let acksSection = '';
+    if (ackLabels.length) {
+      const allAcked = ackLabels.every(a => a.acked);
+      const ackItems = ackLabels.map((a, i) => ackItem(a.acked, i + 1, esc(a.step))).join('');
+      const summary  = allAcked
+        ? `<div style="${S.sumOk}">✅ All ${ackLabels.length} sections read, understood and acknowledged by pilot — signed.</div>`
+        : `<div style="${S.sumWarn}">⚠ Not all sections acknowledged — review required before filing.</div>`;
+      acksSection = section('📋', 'Safety Management — Section Acknowledgments',
+        `<div style="padding:10px 16px 14px;">` +
+        `<div style="font-size:12px;color:#666;margin-bottom:8px;">Pilot confirms they have read, understood and will comply with each section below.</div>` +
+        ackItems + summary + `</div>`);
+    } else if (Object.keys(acks).length) {
+      const ackItems = Object.entries(acks).map(([i, v]) => ackItem(v, parseInt(i) + 1, `Section ${parseInt(i) + 1}`)).join('');
+      acksSection = section('📋', 'Safety Management — Section Acknowledgments',
+        `<div style="padding:10px 16px 14px;">${ackItems}</div>`);
+    }
+
+    /* ── Passengers block ── */
+    const pax = bundle.pax || [];
+    const paxInner = pax.length
+      ? pax.map((p, i) =>
+          `<div style="${i === pax.length - 1 ? S.kvLast : S.kv}">` +
+          `<span style="${S.k}">${i + 1}.</span>` +
+          `<span style="${S.v}">${esc(p.name)}${p.weight ? ` <span style="color:#888;">— ${p.weight} kg</span>` : ''}${p.date ? ` <span style="color:#aaa;font-size:11.5px;">· briefed ${esc(p.date)}</span>` : ''}</span></div>`
+        ).join('')
+      : `<div style="padding:12px 16px;font-size:13px;color:#aaa;font-style:italic;">No passengers carried this flight</div>`;
+
+    const submittedTime = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Darwin', hour:'2-digit', minute:'2-digit', hour12:false });
 
     const html = `
-      <h2 style="font-family:sans-serif;color:#18224A;">Outback Helicopter Airwork NT</h2>
-      <h3 style="font-family:sans-serif;margin-top:0;">Flight Paperwork Received</h3>
-      <table style="font-family:sans-serif;font-size:14px;border-collapse:collapse;">
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;white-space:nowrap;">Aircraft</td><td>${esc(bundle.callsign)}</td></tr>
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">Form</td><td>${esc(bundle.formName || '—')}</td></tr>
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">Pilot</td><td>${esc(pilot)}</td></tr>
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">Date</td><td>${dateStr}</td></tr>
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">W&amp;B</td><td>${
-          bundle.wb?.result?.pass
-            ? '✅ PASS — ' + bundle.wb.result.total + ' kg / ' + bundle.wb.result.mtow + ' kg MTOW'
-            : bundle.wb?.result ? '❌ OVER MTOW' : 'Not recorded'
-        }</td></tr>
-        <tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">Passengers</td><td>${(bundle.pax || []).length}</td></tr>
-        ${oneDriveUrl ? `<tr><td style="padding:5px 16px 5px 0;font-weight:700;color:#555;">OneDrive</td><td><a href="${oneDriveUrl}">View filed PDF</a></td></tr>` : ''}
-      </table>
-      <p style="font-family:sans-serif;font-size:12px;color:#999;margin-top:24px;">
-        PDF attached · Sent automatically by the Outback Helicopter flight paperwork app
-      </p>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px 12px 48px;background:#ECEEF3;">
+<div style="${S.wrap}border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.10);overflow:hidden;">
+
+  <!-- Header -->
+  <div style="${S.hdr}">
+    <span style="${S.badge}">Flight Paperwork</span>
+    <div style="${S.coName}">Outback Helicopter Airwork NT</div>
+    <div style="${S.coSub}">ABN 80 137 947 687 &nbsp;·&nbsp; Darwin, NT</div>
+  </div>
+
+  <!-- Body -->
+  <div style="${S.body}">
+    <div style="${S.title}">Flight Paperwork Received</div>
+    <div style="${S.sub}">Submitted ${dateStr} at ${submittedTime} ACST — PDF attached</div>
+
+    ${section('✈', 'Flight Details',
+        kv('Aircraft',   `${esc(bundle.callsign)} — ${esc(bundle.aircraftType || '')}`) +
+        kv('Form',       esc((formNo ? formNo + ' — ' : '') + formName)) +
+        kv('Pilot',      esc(pilot)) +
+        (trainer ? kv('Trainer / Supervisor', esc(trainer)) : '') +
+        kv('Date',       dateStr) +
+        kv('PDF file',   esc(filename)) +
+        (oneDriveUrl ? kv('OneDrive', `<a href="${oneDriveUrl}" style="color:#18224A;font-weight:600;">View filed PDF ↗</a>`, true) : kv('PDF file', esc(filename), true))
+    )}
+
+    ${section('⚖️', 'Weight &amp; Balance',
+        kv('Result',        wbPill) +
+        kv('Aircraft (BEW)', (wb.emptyWeight || '—') + ' kg') +
+        kv('Pilot',          (wb.kg?.pilot   || 0) + ' kg') +
+        kv('Passenger(s)',   (wb.kg?.pax     || 0) + ' kg') +
+        kv('Baggage',        (wb.kg?.baggage || 0) + ' kg') +
+        kv('Fuel',           `${fuelL} L (${fuelKg} kg) <span style="color:#888;font-size:11.5px;">— ${fuelType} @ ${fuelDens} kg/L</span>`) +
+        kv('Total weight',   `<strong>${wbResult.total || '—'} kg</strong>`) +
+        kv('MTOW',           (wbResult.mtow  || '—') + ' kg') +
+        kv('CG arm',         wbResult.cgArm != null ? Math.round(wbResult.cgArm) + ' mm' : '—', true)
+    )}
+
+    ${acksSection}
+
+    ${section('👤', 'Passengers &amp; Safety Briefing', paxInner)}
+
+  </div>
+
+  <!-- Footer -->
+  <div style="${S.footer}">
+    PDF attached · Sent automatically by the Outback Helicopter flight paperwork app · v42
+  </div>
+
+</div>
+</body></html>
     `;
 
     await graphSendMail(token, sender, opsTo, subject, html, pdfBuffer, filename);
@@ -234,7 +354,7 @@ async function saveJobRecord(token, bundle, oneDriveUrl) {
     oneDriveUrl:  oneDriveUrl || '',
   };
 
-  const driveUser  = process.env.SENDER_EMAIL;
+  const driveUser  = process.env.OPS_EMAIL;
   const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   const ts  = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const reg = (record.aircraftReg).replace(/[^A-Z0-9]/gi,'');
@@ -284,7 +404,7 @@ async function graphSendMail(token, from, to, subject, html, pdfBuffer, filename
 
 /* ── Upload to OneDrive via Microsoft Graph ───────────────── */
 async function uploadToOneDrive(token, pdfBuffer, filename, callsign, month) {
-  const driveUser   = process.env.SENDER_EMAIL;
+  const driveUser   = process.env.OPS_EMAIL;
   const folderName  = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   const uploadPath  = `${folderName}/${callsign}/${month}/${filename}`;
   const baseUrl     = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive`;
@@ -445,11 +565,19 @@ async function buildPDF(bundle) {
     /* ── SWMS acknowledgments ── */
     if (bundle.sms?.acks && Object.keys(bundle.sms.acks).length) {
       secHead('SAFETY MANAGEMENT — SECTION ACKNOWLEDGMENTS');
+      doc.font('Helvetica').fontSize(8.5).fillColor(MUT)
+         .text('Pilot confirms they have read, understood and will comply with each section below.', 50, doc.y, { width: W });
+      doc.y += 6;
+      const ackLabels = bundle.smsAckLabels || [];
       Object.entries(bundle.sms.acks).forEach(([i, v]) => {
         checkY(18);
         const y = doc.y;
-        doc.font('Helvetica').fontSize(9.5).fillColor(v ? '#15803D' : '#B91C1C')
-           .text((v ? '✓  ' : '✗  ') + 'Section ' + (parseInt(i) + 1), 50, y, { width: W, lineBreak: false });
+        const idx = parseInt(i);
+        const label = ackLabels[idx]?.step || ('Section ' + (idx + 1));
+        doc.font('Helvetica-Bold').fontSize(9).fillColor(v ? '#15803D' : '#B91C1C')
+           .text((v ? '✓' : '✗'), 50, y, { width: 16, lineBreak: false });
+        doc.font('Helvetica').fontSize(9).fillColor(v ? '#15803D' : '#B91C1C')
+           .text((idx + 1) + '. ' + label, 68, y, { width: W - 18, lineBreak: false });
         doc.y = y + 16;
       });
     }

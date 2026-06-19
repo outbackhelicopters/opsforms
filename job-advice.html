@@ -82,19 +82,20 @@ button{font-family:inherit;touch-action:manipulation;user-select:none;-webkit-us
 .lh-details{color:#7A85BC;font-size:11px;margin-top:4px;line-height:1.7;}
 
 /* Step wizard */
-.step-bar{display:flex;align-items:center;gap:0;margin-bottom:16px;padding:12px 16px;
-  background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line);box-shadow:var(--shadow);}
-.step-dots{display:flex;align-items:center;gap:0;flex:1;}
-.sdot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+.step-bar{display:flex;align-items:center;gap:0;margin-bottom:16px;padding:10px 14px;
+  background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line);box-shadow:var(--shadow);
+  min-width:0;overflow:hidden;}
+.step-dots{display:flex;align-items:center;gap:0;flex:1;min-width:0;}
+.sdot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
   font-size:11px;font-weight:700;border:2px solid var(--line);background:var(--bg);color:var(--mut);
   transition:all .2s;flex:none;}
 .sdot.active{border-color:var(--orange);background:var(--orange);color:#fff;}
 .sdot.done{border-color:var(--green);background:var(--green);color:#fff;}
-.sline{flex:1;height:2px;background:var(--line);margin:0 4px;transition:background .2s;}
+.sline{flex:1;height:2px;background:var(--line);margin:0 6px;transition:background .2s;min-width:12px;}
 .sline.done{background:var(--green);}
-.step-info{margin-left:12px;text-align:right;}
-.step-name{font-size:12px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
-.step-num{font-size:10px;color:var(--mut);margin-top:1px;}
+.step-info{flex:none;margin-left:14px;text-align:right;white-space:nowrap;}
+.step-name{font-size:13px;font-weight:700;color:var(--navy);letter-spacing:.2px;}
+.step-num{font-size:11px;color:var(--mut);margin-top:1px;}
 .autosave-pill{font-size:10px;color:var(--green-dk);background:var(--green-bg);
   border-radius:6px;padding:2px 7px;margin-top:2px;display:none;}
 .autosave-pill.show{display:inline-block;}
@@ -390,11 +391,6 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
 
   <!-- STEP 1: Job Details -->
   <div id="step-1" class="step-panel active">
-
-    <div class="letterhead">
-      <div class="lh-company">Outback Helicopter Airwork NT Pty Ltd</div>
-      <div class="lh-details">ABN: 80 137 947 687 &nbsp;|&nbsp; Ph: 8941 6811 &nbsp;|&nbsp; Mob: 0427 222 670</div>
-    </div>
 
     <div class="card">
       <div class="card-title">Job Details</div>

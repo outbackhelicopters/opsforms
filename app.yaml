@@ -1,32 +1,32 @@
 # Digital Ocean App Platform — Outback Helicopter Airwork NT
-# Two components in one app: static PWA + Node.js API
+# Single Node.js service that serves both the static PWA files and the /api/* endpoints.
+# The Express server uses express.static to serve index.html, flight-ops.html, job-advice.html etc.
+# Routes: ALL traffic (/) goes through this service.
 
 name: outbackheli-app
 
 services:
   - name: api
-    source_dir: /api
+    source_dir: /
     github:
-      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this
+      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this if using doctl
       branch: main
       deploy_on_push: true
-    run_command: node server.js
+    build_command: cd api && npm install --production
+    run_command: node api/server.js
     environment_slug: node-js
     instance_size_slug: apps-s-1vcpu-0.5gb
     instance_count: 1
     http_port: 3000
     routes:
-      - path: /api
+      - path: /          # ← CHANGED: was /api — now serves ALL routes including static files
     envs:
       - key: SENDER_EMAIL
         scope: RUN_TIME
         type: SECRET
-        # Your Office 365 address, e.g. ops@outbackhelicopters.com.au
-        # This is both the FROM address and the OneDrive account used for filing
       - key: OPS_EMAIL
         scope: RUN_TIME
         type: SECRET
-        # Where completed paperwork emails should be delivered
       - key: MS_TENANT_ID
         scope: RUN_TIME
         type: SECRET
@@ -40,15 +40,5 @@ services:
         scope: RUN_TIME
         value: Helicopter Paperwork
 
-static_sites:
-  - name: pwa
-    source_dir: /
-    github:
-      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this
-      branch: main
-      deploy_on_push: true
-    output_dir: /
-    index_document: index.html
-    error_document: index.html
-    routes:
-      - path: /
+# Static site component removed — Express now serves static files directly.
+# This avoids the DO static site limitation where newly added files weren't served.

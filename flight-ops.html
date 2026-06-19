@@ -3263,11 +3263,12 @@ const App = {
     const r = this.flight.wb.result;
     if (!r || !r.entered) return toast('Enter at least pilot weight or fuel before continuing');
     if (!r.pass) return toast('Over MTOW — reduce load before continuing');
-    /* Copy CG envelope + BEW reference into flight bundle so server can draw the chart */
+    /* Copy CG envelope + BEW + fuel density into flight bundle so server can draw chart and email */
+    this.flight.wb.fuelDensity  = W.fuelDensity  || 0.720;
+    this.flight.wb.emptyWeight  = W.emptyWeight  || 0;
+    this.flight.wb.emptyLongArm = W.emptyLongArm || 0;
     if (W.cgEnv) {
       this.flight.wb.cgEnv = W.cgEnv;
-      this.flight.wb.emptyLongArm = W.emptyLongArm || 0;
-      this.flight.wb.emptyWeight  = W.emptyWeight  || 0;
     }
     this.flight.wb.done = true;
     this.flight.wb.completedAt = Date.now();
@@ -3363,6 +3364,13 @@ const App = {
   async finalize() {
     const f = this.flight, ns = nowStamp();
     f.bundleName = f.callsign + '_' + ns.date + '_' + ns.time.replace(':', '');
+    /* Stamp form metadata so server can use actual section titles */
+    const F = FORM_DEFS.find(d => d.id === f.sms.formId) || FORM_DEFS[0];
+    f.formName = F.title;
+    f.formNo   = F.formNo;
+    if (F.sections) {
+      f.smsAckLabels = F.sections.map((s, i) => ({ step: s.step, acked: !!f.sms.acks[i] }));
+    }
     f.status = 'queued';
     f.queuedAt = Date.now();
     await DB.put('flights', f);

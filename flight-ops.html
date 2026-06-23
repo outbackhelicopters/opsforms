@@ -584,14 +584,20 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .preset-chip:active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
 /* Job lines */
-.lines-hdr{display:grid;grid-template-columns:1fr 96px 34px;gap:6px;
+.lines-hdr{display:grid;grid-template-columns:110px 1fr 80px 34px;gap:6px;
   padding:7px 10px;background:var(--navy);color:#fff;
   border-radius:10px 10px 0 0;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
-.job-line{display:grid;grid-template-columns:1fr 96px 34px;
+.job-line{display:grid;grid-template-columns:110px 1fr 80px 34px;
   gap:6px;padding:7px 8px;border-bottom:1px solid var(--line);align-items:center;}
 .job-line:last-child{border-bottom:none;}
 .job-line:nth-child(even){background:#FAFAF8;}
 .job-line input{min-height:44px;font-size:15px;}
+.job-line .line-date{font-size:13px;padding:10px 8px;}
+@media(max-width:480px){
+  .lines-hdr,.job-line{grid-template-columns:95px 1fr 70px 30px;}
+  .job-line .line-date{font-size:12px;padding:10px 5px;}
+}
+select.has-value{font-weight:700;color:var(--navy);}
 .line-del{background:none;border:1px solid var(--line);color:var(--mut);border-radius:7px;
   width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .line-del:active{background:var(--red-bg);color:var(--red);}
@@ -1056,12 +1062,13 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <div class="lines-hdr">
+          <div>Date</div>
           <div>Description</div>
           <div style="text-align:center;" id="col-hrs-head">Hours</div>
           <div></div>
         </div>
         <div id="job-lines"></div>
-        <button id="add-line-btn" onclick="jAddLine()">＋ Add line</button>
+        <button id="add-line-btn" onclick="jAddLine()">＋ Add job description</button>
       </div>
       <div class="err" id="err-lines" style="margin:4px 0 10px 2px;">At least one line with hours &gt; 0 required</div>
       <div class="hours-total" style="margin-bottom:14px;">
@@ -3959,20 +3966,48 @@ function jStartNewJob() {
 }
 
 /* ── Pilots & fleet dropdowns ─────────────────────────────────── */
-function jLoadPilotsAndFleet() {
+function jUpdateSelectBold(sel) {
+  if (sel.value && sel.value !== '') {
+    sel.classList.add('has-value');
+  } else {
+    sel.classList.remove('has-value');
+  }
+}
+
+async function jLoadPilotsAndFleet() {
   const pilots  = jGetPilots();
   const aircraft = jGetFleet();
-  ['f-pilot','f-pilot2'].forEach((id,i)=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    sel.innerHTML = pilots.length
-      ? `<option value="">Select pilot…</option>` + pilots.map((n,idx)=>`<option value="${idx}">${esc(n)}</option>`).join('')
-      : '<option value="">No pilots — go to Settings to add</option>';
+
+  // Sort pilots: most recently used first
+  const recentPilots = await jKvGet('recentPilots', []);
+  const sortedPilots = [...pilots].sort((a, b) => {
+    const ai = recentPilots.indexOf(a), bi = recentPilots.indexOf(b);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1; if (bi === -1) return -1;
+    return ai - bi;
   });
-  ['f-aircraft','f-aircraft2'].forEach((id,i)=>{
-    const sel=document.getElementById(id); if(!sel) return;
+
+  // Use pilot name as option value (not index) for stability across re-sorts
+  ['f-pilot','f-pilot2'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = sortedPilots.length
+      ? `<option value="">Select pilot…</option>` + sortedPilots.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')
+      : '<option value="">No pilots — go to Settings to add</option>';
+    if (prev) sel.value = prev;
+  });
+  ['f-aircraft','f-aircraft2'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
     sel.innerHTML = aircraft.length
       ? `<option value="">Select aircraft…</option>` + aircraft.map((a,idx)=>`<option value="${idx}">${esc(a.reg)}${a.type?' — '+esc(a.type):''}</option>`).join('')
       : '<option value="">No aircraft — go to Settings to add</option>';
+  });
+  document.querySelectorAll('#maintab-jobs select').forEach(sel => {
+    jUpdateSelectBold(sel);
+    if (!sel.dataset.boldWired) {
+      sel.dataset.boldWired = '1';
+      sel.addEventListener('change', () => jUpdateSelectBold(sel));
+    }
   });
 }
 
@@ -3990,7 +4025,22 @@ function jToggleDual() {
 }
 
 /* ── Preset chips ────────────────────────────────────────────── */
-function jAddPreset(desc) {
+async function jAddPreset(rawDesc) {
+  let desc = rawDesc;
+  // Auto-populate Mustering with selected helicopter type and rego
+  if (rawDesc === 'Mustering') {
+    const acSel = document.getElementById('f-aircraft');
+    if (acSel && acSel.value !== '') {
+      const aircraft = jGetFleet();
+      const ac = aircraft[parseInt(acSel.value)];
+      if (ac) {
+        const parts = [];
+        if (ac.type) parts.push(ac.type);
+        if (ac.reg) parts.push(ac.reg);
+        if (parts.length) desc = 'Mustering in the ' + parts.join(' ');
+      }
+    }
+  }
   for (const line of document.querySelectorAll('#job-lines .job-line')) {
     const inp=line.querySelector('.line-desc');
     if(inp&&!inp.value.trim()){ inp.value=desc; inp.nextElementSibling?.focus(); return; }
@@ -3999,12 +4049,12 @@ function jAddPreset(desc) {
 }
 
 /* ── Job lines ───────────────────────────────────────────────── */
-function jAddLine(presetDesc) {
+function jAddLine(presetDesc, presetDate) {
   jLineIdx++;
   const id=jLineIdx;
   const div=document.createElement('div');
   div.className='job-line'; div.id='line-'+id;
-  div.innerHTML=`<input type="text" class="line-desc" placeholder="Description…" value="${esc(presetDesc||'')}"><input type="number" class="line-hrs" min="0" step="0.1" placeholder="0.0" oninput="jRecalcTotals()"><button class="line-del" onclick="jRemoveLine(${id})" title="Remove">×</button>`;
+  div.innerHTML=`<input type="date" class="line-date" value="${esc(presetDate||todayISO())}"><input type="text" class="line-desc" placeholder="Description…" value="${esc(presetDesc||'')}"><input type="number" class="line-hrs" min="0" step="0.1" placeholder="0.0" oninput="jRecalcTotals()"><button class="line-del" onclick="jRemoveLine(${id})" title="Remove">×</button>`;
   document.getElementById('job-lines').appendChild(div);
   jUpdateDelBtns();
   if(presetDesc) setTimeout(()=>{ div.querySelector('.line-hrs')?.focus(); },50);
@@ -4110,21 +4160,20 @@ async function jSaveDraft() {
 
 /* ── Build record ────────────────────────────────────────────── */
 async function jBuildRec(status) {
-  const pilots=jGetPilots(), aircraft=jGetFleet();
-  const pilotIdx=parseInt(document.getElementById('f-pilot').value);
+  const aircraft=jGetFleet();
+  const pilotName=document.getElementById('f-pilot').value||'';
   const aircraftIdx=parseInt(document.getElementById('f-aircraft').value);
   const isDual=document.getElementById('f-dual').checked;
-  const pilot2Idx=parseInt(document.getElementById('f-pilot2').value);
+  const pilot2Name=isDual?(document.getElementById('f-pilot2').value||''):'';
   const aircraft2Idx=parseInt(document.getElementById('f-aircraft2').value);
-  const pilotName=pilots[pilotIdx]||'';
   const aircraftObj=aircraft[aircraftIdx]||{};
-  const pilot2Name=isDual?(pilots[pilot2Idx]||''):'';
   const aircraft2Obj=isDual?(aircraft[aircraft2Idx]||{}):{};
   const lines=[];
   document.querySelectorAll('#job-lines .job-line').forEach(l=>{
+    const date=(l.querySelector('.line-date')?.value||'');
     const desc=(l.querySelector('.line-desc')?.value||'').trim();
     const hours=parseFloat(l.querySelector('.line-hrs')?.value)||0;
-    if(desc||hours) lines.push({desc,hours});
+    if(desc||hours) lines.push({date,desc,hours});
   });
   const totalHours=lines.reduce((s,l)=>s+l.hours,0);
   const jobNo=parseInt(document.getElementById('f-jobno').value)||(await jPeekNextJobNo());
@@ -4148,6 +4197,14 @@ async function jSubmitJob(status) {
   const jobNo=await jConsumeJobNo();
   document.getElementById('f-jobno').value=jobNo;
   const rec=await jBuildRec(status); rec.jobNo=jobNo;
+
+  // Track most recently used pilot so they appear first next time
+  if (rec.pilotName) {
+    let recentPilots = await jKvGet('recentPilots', []);
+    recentPilots = [rec.pilotName, ...recentPilots.filter(n => n !== rec.pilotName)].slice(0, 20);
+    await jKvSet('recentPilots', recentPilots);
+  }
+
   let savedId;
   if(jDraftId){ await jSave({...rec,id:jDraftId}); savedId=jDraftId; }
   else { savedId=await jAdd(rec); }
@@ -4216,7 +4273,7 @@ function jFmtDate(d){ if(!d) return '—'; try{ return new Date(d+'T00:00:00').t
 async function jRenderDetail(id) {
   const job=await jGet(id); if(!job) return;
   const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
-  const linesHTML=(job.lines||[]).map(l=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;"><div style="flex:1;">${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);padding-left:12px;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:#666;font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
   const dual2HTML=job.isDual?`<div class="kv-row"><div class="k">2nd Pilot</div><div class="v">${esc(job.pilot2Name)||'—'}</div></div><div class="kv-row"><div class="k">2nd Aircraft</div><div class="v">${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</div></div>`:'';
   document.getElementById('detail-content').innerHTML=`
     <div class="detail-hdr"><div class="dh-jobno">Job #${job.jobNo}${job.isDual?' 🚁🚁':''}</div><div class="dh-sub">${jFmtDate(job.date)} · <span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
@@ -4237,24 +4294,23 @@ async function jEditJob() {
   document.getElementById('f-jobno').value=job.jobNo||'';
   document.getElementById('f-client').value=job.client||'';
   document.getElementById('f-notes').value=job.notes||'';
-  jLoadPilotsAndFleet();
-  const pilots=jGetPilots(), aircraft=jGetFleet();
-  const pi=pilots.findIndex(n=>n===job.pilotName);
+  await jLoadPilotsAndFleet();
+  const aircraft=jGetFleet();
+  // Set pilots by name (select values are now name strings)
+  if(job.pilotName) document.getElementById('f-pilot').value=job.pilotName;
   const ai=aircraft.findIndex(a=>a.reg===job.aircraftReg);
-  if(pi>=0) document.getElementById('f-pilot').value=pi;
   if(ai>=0) document.getElementById('f-aircraft').value=ai;
   jSetHire(job.hireType||'wet');
   const wasDual=!!job.isDual;
   document.getElementById('f-dual').checked=wasDual;
   document.getElementById('dual-fields').classList.toggle('hidden',!wasDual);
   if(wasDual){
-    const p2i=pilots.findIndex(n=>n===job.pilot2Name);
+    if(job.pilot2Name) document.getElementById('f-pilot2').value=job.pilot2Name;
     const a2i=aircraft.findIndex(a=>a.reg===job.aircraft2Reg);
-    if(p2i>=0) document.getElementById('f-pilot2').value=p2i;
     if(a2i>=0) document.getElementById('f-aircraft2').value=a2i;
   }
   document.getElementById('job-lines').innerHTML=''; jLineIdx=0;
-  (job.lines||[]).forEach(l=>{ jAddLine(); const all=document.querySelectorAll('#job-lines .job-line'),last=all[all.length-1]; if(last){last.querySelector('.line-desc').value=l.desc||'';last.querySelector('.line-hrs').value=l.hours||'';} });
+  (job.lines||[]).forEach(l=>{ jAddLine(l.desc||'', l.date||''); const all=document.querySelectorAll('#job-lines .job-line'),last=all[all.length-1]; if(last){ last.querySelector('.line-hrs').value=l.hours||''; } });
   jRecalcTotals();
   document.getElementById('screen-confirm').classList.remove('active');
   document.querySelectorAll('.jsub').forEach(s=>s.classList.remove('active'));
@@ -4276,10 +4332,10 @@ async function jPrintJob() {
 }
 function jBuildPrint(job) {
   const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
-  const rows=(job.lines||[]).map(l=>`<tr><td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td><td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td></tr>`).join('');
+  const rows=(job.lines||[]).map(l=>`<tr><td style="border:1px solid #000;padding:6px 8px;width:95px;">${l.date?jFmtDate(l.date):''}</td><td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td><td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td></tr>`).join('');
   const pad=Math.max(0,5-(job.lines?.length||0));
-  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
-  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">Outback Helicopter Airwork NT Pty Ltd</div><div style="font-size:9pt;margin-top:3px;">ABN: 80 137 947 687 | ACN: 137 947 687</div><div style="font-size:9pt;">PO Box 37819 Winnellie NT 0821 | Ph: 8941 6811 | Mob: 0427 222 670</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${job.jobNo}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${job.isDual?' — Dual Operation':''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${job.isDual?`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>2ND PILOT:</b> ${esc(job.pilot2Name)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>2ND AIRCRAFT:</b> ${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</td></tr>`:''}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:70%;">DESCRIPTION</th><th colspan="2" style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
+  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
+  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">Outback Helicopter Airwork NT Pty Ltd</div><div style="font-size:9pt;margin-top:3px;">ABN: 80 137 947 687 | ACN: 137 947 687</div><div style="font-size:9pt;">PO Box 37819 Winnellie NT 0821 | Ph: 8941 6811 | Mob: 0427 222 670</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${job.jobNo}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${job.isDual?' — Dual Operation':''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${job.isDual?`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>2ND PILOT:</b> ${esc(job.pilot2Name)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>2ND AIRCRAFT:</b> ${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</td></tr>`:''}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
 }
 
 /* ── Sync ────────────────────────────────────────────────────── */

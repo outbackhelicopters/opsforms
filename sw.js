@@ -7,7 +7,7 @@
    Bump CACHE_NAME on every deploy to purge stale asset cache.
    ============================================================ */
 
-const CACHE_NAME = 'heliops-v52';
+const CACHE_NAME = 'heliops-v53';
 
 /* Files to pre-cache on install (assets only — HTML is network-first) */
 const PRECACHE = [

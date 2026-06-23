@@ -134,6 +134,7 @@ input[type=text],input[type=number],input[type=date],input[type=email],input[typ
   touch-action:manipulation;}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7080' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 13px center;padding-right:34px;}
+select.has-value{font-weight:700;color:var(--navy);}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,114,12,.12);}
 input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:default;border-style:dashed;}
@@ -165,14 +166,20 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
 .preset-chip:active{background:var(--navy);color:#fff;border-color:var(--navy);}
 
 /* Job lines */
-.lines-hdr{display:grid;grid-template-columns:1fr 96px 34px;gap:6px;
+.lines-hdr{display:grid;grid-template-columns:110px 1fr 80px 34px;gap:6px;
   padding:7px 10px;background:var(--navy);color:#fff;
   border-radius:10px 10px 0 0;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
-.job-line{display:grid;grid-template-columns:1fr 96px 34px;
+.job-line{display:grid;grid-template-columns:110px 1fr 80px 34px;
   gap:6px;padding:7px 8px;border-bottom:1px solid var(--line);align-items:center;}
 .job-line:last-child{border-bottom:none;}
 .job-line:nth-child(even){background:#FAFAF8;}
 .job-line input{min-height:42px;font-size:15px;}
+.job-line .line-date{font-size:13px;padding:10px 8px;}
+@media(max-width:480px){
+  .lines-hdr,.job-line{grid-template-columns:95px 1fr 70px 30px;}
+  .job-line .line-date{font-size:12px;padding:10px 5px;}
+}
+select option{font-weight:700;}
 .line-del{background:none;border:1px solid var(--line);color:var(--mut);border-radius:7px;
   width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
 .line-del:active{background:var(--red-bg);color:var(--red);}
@@ -484,12 +491,13 @@ input[readonly]{background:#F2F0EC;color:var(--navy);font-weight:700;cursor:defa
 
     <div class="card" style="padding:0;overflow:hidden;">
       <div class="lines-hdr">
+        <div>Date</div>
         <div>Description</div>
         <div style="text-align:center;" id="col-hrs-head">Hours</div>
         <div></div>
       </div>
       <div id="job-lines"></div>
-      <button id="add-line-btn" onclick="addLine()">＋ Add line</button>
+      <button id="add-line-btn" onclick="addLine()">＋ Add job description</button>
     </div>
     <div class="err" id="err-lines" style="margin:4px 0 10px 2px;">At least one line with hours &gt; 0 required</div>
 
@@ -875,20 +883,33 @@ async function loadPilotsAndFleet() {
   const pilots   = await getPilots();
   const aircraft = await getAircraft();
 
-  // Populate all pilot selects
+  // Sort pilots: most recently used first
+  const recentPilots = await jKvGet('recentPilots', []);
+  const sortedPilots = [...pilots].sort((a, b) => {
+    const ai = recentPilots.indexOf(a);
+    const bi = recentPilots.indexOf(b);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  // Populate all pilot selects (use name as value for stability)
   ['f-pilot','f-pilot2'].forEach((id, i) => {
     const sel = document.getElementById(id);
     if (!sel) return;
+    const prev = sel.value; // preserve current selection
     sel.innerHTML = `<option value="">${i===0?'Select pilot…':'Select pilot…'}</option>`;
-    if (!pilots.length) {
+    if (!sortedPilots.length) {
       sel.innerHTML = '<option value="">No pilots — tap ⚙️ to add</option>';
     } else {
-      pilots.forEach((name, idx) => {
+      sortedPilots.forEach(name => {
         const opt = document.createElement('option');
-        opt.value = idx; opt.textContent = name;
+        opt.value = name; opt.textContent = name;
         sel.appendChild(opt);
       });
     }
+    if (prev) sel.value = prev; // restore if still valid
   });
 
   // Populate all aircraft selects
@@ -924,7 +945,22 @@ function toggleDual() {
 }
 
 /* ── Preset chips ────────────────────────────────── */
-function addPreset(desc) {
+async function addPreset(rawDesc) {
+  let desc = rawDesc;
+  // Auto-populate Mustering with selected helicopter type and rego
+  if (rawDesc === 'Mustering') {
+    const acSel = document.getElementById('f-aircraft');
+    if (acSel && acSel.value !== '') {
+      const aircraft = await getAircraft();
+      const ac = aircraft[parseInt(acSel.value)];
+      if (ac) {
+        const parts = [];
+        if (ac.type) parts.push(ac.type);
+        if (ac.reg) parts.push(ac.reg);
+        if (parts.length) desc = 'Mustering in the ' + parts.join(' ');
+      }
+    }
+  }
   // Fill the last empty description, or add a new line
   const lines = document.querySelectorAll('#job-lines .job-line');
   for (const line of lines) {
@@ -940,13 +976,14 @@ function addPreset(desc) {
 }
 
 /* ── Job lines ───────────────────────────────────── */
-function addLine(presetDesc) {
+function addLine(presetDesc, presetDate) {
   lineIdx++;
   const id = lineIdx;
   const div = document.createElement('div');
   div.className = 'job-line';
   div.id = 'line-' + id;
   div.innerHTML = `
+    <input type="date" class="line-date" value="${esc(presetDate||todayISO())}">
     <input type="text" class="line-desc" placeholder="Description…" value="${esc(presetDesc||'')}">
     <input type="number" class="line-hrs" min="0" step="0.1" placeholder="0.0" oninput="recalcTotals()">
     <button class="line-del" onclick="removeLine(${id})" title="Remove">×</button>
@@ -1115,22 +1152,20 @@ function validateFinal() {
 
 /* ── Build record ────────────────────────────────── */
 async function buildRec(status) {
-  const pilots   = await getPilots();
   const aircraft = await getAircraft();
-  const pilotIdx     = parseInt(document.getElementById('f-pilot').value);
+  const pilotName    = document.getElementById('f-pilot').value || '';
   const aircraftIdx  = parseInt(document.getElementById('f-aircraft').value);
   const isDual       = document.getElementById('f-dual').checked;
-  const pilot2Idx    = parseInt(document.getElementById('f-pilot2').value);
+  const pilot2Name   = isDual ? (document.getElementById('f-pilot2').value || '') : '';
   const aircraft2Idx = parseInt(document.getElementById('f-aircraft2').value);
-  const pilotName    = pilots[pilotIdx]      || '';
   const aircraftObj  = aircraft[aircraftIdx] || {};
-  const pilot2Name   = isDual ? (pilots[pilot2Idx]      || '') : '';
   const aircraft2Obj = isDual ? (aircraft[aircraft2Idx] || {}) : {};
   const lines = [];
   document.querySelectorAll('#job-lines .job-line').forEach(l => {
+    const date  = l.querySelector('.line-date')?.value || '';
     const desc  = (l.querySelector('.line-desc')?.value||'').trim();
     const hours = parseFloat(l.querySelector('.line-hrs')?.value)||0;
-    if (desc||hours) lines.push({ desc, hours });
+    if (desc||hours) lines.push({ date, desc, hours });
   });
   const totalHours = lines.reduce((s,l) => s+l.hours, 0);
   const jobNo = document.getElementById('f-jobno').value.trim() || (await peekNextJobNo());
@@ -1167,6 +1202,13 @@ async function submitJob(status) {
 
   const rec = await buildRec(status);
   rec.jobNo = jobNo;
+
+  // Track most recently used pilot (so they appear at the top next time)
+  if (rec.pilotName) {
+    let recentPilots = await jKvGet('recentPilots', []);
+    recentPilots = [rec.pilotName, ...recentPilots.filter(n => n !== rec.pilotName)].slice(0, 20);
+    await jKvSet('recentPilots', recentPilots);
+  }
 
   // If there's an existing draft, update it; otherwise insert new
   let savedId;
@@ -1299,9 +1341,10 @@ async function renderDetail(id) {
   if (!job) return;
   const hireMap = {wet:'Wet Hire',dry:'Dry Hire'};
   const linesHTML = (job.lines||[]).map(l=>`
-    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;">
+    <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;gap:10px;">
+      ${l.date?`<div style="color:var(--mut);font-size:12px;font-weight:600;white-space:nowrap;flex:none;">${fmtDate(l.date)}</div>`:''}
       <div style="flex:1;">${esc(l.desc)}</div>
-      <div style="font-weight:700;color:var(--navy);padding-left:12px;">${(l.hours||0).toFixed(1)} hrs</div>
+      <div style="font-weight:700;color:var(--navy);padding-left:12px;white-space:nowrap;">${(l.hours||0).toFixed(1)} hrs</div>
     </div>
   `).join('');
   const dual2HTML = job.isDual ? `
@@ -1348,11 +1391,10 @@ async function editJob() {
   document.getElementById('f-client').value = job.client||'';
   document.getElementById('f-notes').value  = job.notes||'';
   await loadPilotsAndFleet();
-  const pilots   = await getPilots();
   const aircraft = await getAircraft();
-  const pi = pilots.findIndex(n => n === job.pilotName);
+  // Pilot selects now use name as value
+  document.getElementById('f-pilot').value = job.pilotName || '';
   const ai = aircraft.findIndex(a => a.reg === job.aircraftReg);
-  if (pi>=0) document.getElementById('f-pilot').value=pi;
   if (ai>=0) document.getElementById('f-aircraft').value=ai;
   setHire(job.hireType||'wet');
   // Restore dual operation
@@ -1360,17 +1402,20 @@ async function editJob() {
   document.getElementById('f-dual').checked = wasDual;
   document.getElementById('dual-fields').classList.toggle('hidden', !wasDual);
   if (wasDual) {
-    const p2i  = pilots.findIndex(n => n === job.pilot2Name);
-    const a2i  = aircraft.findIndex(a => a.reg === job.aircraft2Reg);
-    if (p2i>=0)  document.getElementById('f-pilot2').value=p2i;
-    if (a2i>=0)  document.getElementById('f-aircraft2').value=a2i;
+    document.getElementById('f-pilot2').value = job.pilot2Name || '';
+    const a2i = aircraft.findIndex(a => a.reg === job.aircraft2Reg);
+    if (a2i>=0) document.getElementById('f-aircraft2').value=a2i;
   }
   document.getElementById('job-lines').innerHTML=''; lineIdx=0;
   (job.lines||[]).forEach(l => {
     addLine();
     const all = document.querySelectorAll('#job-lines .job-line');
     const last = all[all.length-1];
-    if (last) { last.querySelector('.line-desc').value=l.desc||''; last.querySelector('.line-hrs').value=l.hours||''; }
+    if (last) {
+      if (last.querySelector('.line-date')) last.querySelector('.line-date').value = l.date || todayISO();
+      last.querySelector('.line-desc').value = l.desc||'';
+      last.querySelector('.line-hrs').value = l.hours||'';
+    }
   });
   recalcTotals();
   // Show confirm screen was closed; go back to new job tab
@@ -1404,12 +1449,13 @@ function buildPrint(job) {
   const hireMap={wet:'Wet Hire',dry:'Dry Hire',dual:'Dual'};
   const rows=(job.lines||[]).map(l=>`
     <tr>
+      <td style="border:1px solid #000;padding:6px 8px;white-space:nowrap;font-size:9pt;">${l.date?fmtDate(l.date):''}</td>
       <td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td>
       <td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td>
     </tr>
   `).join('');
   const pad=Math.max(0,5-(job.lines?.length||0));
-  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
+  const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
   document.getElementById('screen-print').innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:11pt;">
       <tr>
@@ -1436,7 +1482,8 @@ function buildPrint(job) {
         <td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>2ND AIRCRAFT:</b> ${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</td>
       </tr>`:''}
       <tr style="background:#eee;">
-        <th style="border:1px solid #000;padding:6px 8px;text-align:left;width:70%;">DESCRIPTION</th>
+        <th style="border:1px solid #000;padding:6px 8px;text-align:left;width:100px;">DATE</th>
+        <th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th>
         <th colspan="2" style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th>
       </tr>
       ${rows}${padRows}
@@ -1762,6 +1809,21 @@ async function boot() {
   await updateSyncBadge();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 }
+
+/* ── Bold select on pick ─────────────────────────── */
+function updateSelectBold(sel) {
+  sel.classList.toggle('has-value', !!sel.value);
+}
+document.addEventListener('change', e => {
+  if (e.target.tagName === 'SELECT') updateSelectBold(e.target);
+});
+// Also apply on load after pilots/aircraft are populated
+const _origLoadPilotsAndFleet = loadPilotsAndFleet;
+async function loadPilotsAndFleetAndBold() {
+  await _origLoadPilotsAndFleet();
+  document.querySelectorAll('select').forEach(updateSelectBold);
+}
+loadPilotsAndFleet = loadPilotsAndFleetAndBold;
 
 window.addEventListener('resize', () => { if(sigCanvas) resizeSig(); });
 boot().catch(console.error);

@@ -23,7 +23,7 @@
   --bg:#EDEBE8; --card:#FFFFFF;
   --green:#16753A; --green-bg:#E8F5EE; --green-dk:#125C2E;
   --red:#BC2018; --red-bg:#FCECEA;
-  --blue:#1566C0; --blue-bg:#E8F2FC;
+  --blue:#1566C0; --blue-bg:#E8F2FC; --fg:var(--ink);
   --or-t:#964808; --or-bg:#FEF2E6;
   --yl:#786000; --yl-bg:#FAF4D6;
   --r:14px; --r-lg:18px;
@@ -60,7 +60,7 @@ a{touch-action:manipulation;}
   background:linear-gradient(135deg,var(--orange),var(--orange-dk));
   color:#fff;font-weight:700;border-radius:8px;padding:5px 13px;
   font-size:13px;letter-spacing:.6px;margin-left:4px;
-  box-shadow:0 2px 8px rgba(232,114,12,.4);
+  box-shadow:0 2px 8px color-mix(in srgb, var(--orange) 40%, transparent);
 }
 #topbar .spacer{flex:1;}
 @media(max-width:520px){#topbar .brandtxt{display:none;}}
@@ -116,7 +116,7 @@ h1.page{font-size:20px;font-weight:800;letter-spacing:-.3px;margin:4px 0 16px;co
 }
 .btn.primary:active{filter:brightness(.85);}
 .btn.amber{
-  background:linear-gradient(135deg,#F07C14,var(--orange-dk));
+  background:linear-gradient(135deg,var(--orange),var(--orange-dk));
   color:#fff;border-color:transparent;
   box-shadow:0 4px 16px rgba(200,90,10,.45);
   font-size:17px;letter-spacing:.3px;
@@ -304,8 +304,8 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 /* ── Signature ───────────────────────────────────────────── */
 .sigwrap{margin-top:8px;}
 .sigwrap canvas{
-  width:100%;height:170px;border:1px dashed #B0B3C0;
-  border-radius:var(--r);background:#fff;touch-action:none;display:block;
+  width:100%;height:170px;border:1px dashed var(--line);
+  border-radius:var(--r);background:var(--card);touch-action:none;display:block;
 }
 .sigwrap.signed canvas{border:1px solid var(--green);}
 .sigbar{display:flex;align-items:center;gap:10px;margin-top:7px;}
@@ -430,6 +430,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
     --red:#D45852; --red-bg:#1E0608;
     --or-bg:#1E1008; --or-t:#D88848;
     --yl:#C0A02E; --yl-bg:#1A1602;
+    --blue:#5B9CE0; --blue-bg:#0D1A2E; --fg:var(--ink);
     --shadow:0 2px 6px rgba(0,0,0,.5),0 4px 16px rgba(0,0,0,.4);
     --shadow-md:0 4px 20px rgba(0,0,0,.6);
     --shadow-lg:0 8px 32px rgba(0,0,0,.7);
@@ -455,6 +456,18 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   .pinpad button{background:#1A1D28;border-color:#242838;color:var(--navy);}
   .wb-result-idle{background:#131620;border-color:#1E2230;}
   select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2370768C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");}
+  /* B1 — alternating job-line stripe */
+  .job-line:nth-child(even){background:var(--card);}
+  /* B2 — sigwrap canvas (background already uses var(--card) in base rule) */
+  /* B3 — autosave pill */
+  .autosave-pill{background:var(--green-bg);color:var(--green-dk);border-color:var(--green);}
+  /* B5 — hire banners */
+  .hire-banner.dry{border-color:var(--or-t);}
+  .hire-banner.dual{border-color:var(--blue);}
+  /* B6 — draft badge */
+  .badge.draft{background:var(--line);color:var(--ink2);}
+  /* B8 — start acinfo note */
+  #start-acinfo{background:var(--card)!important;border-color:var(--line)!important;color:var(--ink)!important;}
 }
 
 /* ── Splash screen ───────────────────────────────────────── */
@@ -496,7 +509,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 
 /* ── Mobile ──────────────────────────────────────────────── */
 @media(max-width:580px){
-  .screen{padding:14px 12px 70px;}
+  .screen{padding:14px 12px 24px;}
   .card{padding:13px;}
   h1.page{font-size:17px;}
   .grid2,.grid3{grid-template-columns:1fr;}
@@ -599,9 +612,9 @@ select.has-value{font-weight:700;color:var(--navy);}
 .client-section-hdr{padding:6px 13px 4px;font-size:10px;font-weight:800;letter-spacing:.6px;
   text-transform:uppercase;color:var(--mut);background:var(--bg);border-bottom:1px solid var(--line);}
 
-/* Signature */
-.sigwrap canvas{width:100%;height:160px;border:1.5px dashed #B0B3C0;
-  border-radius:var(--r);background:#fff;touch-action:none;display:block;}
+/* Signature — job module (160px height, overrides flight-ops 170px above) */
+.sigwrap canvas{width:100%;height:160px;border:1.5px dashed var(--line);
+  border-radius:var(--r);background:var(--card);touch-action:none;display:block;}
 .sigwrap.signed canvas{border:1.5px solid var(--green);}
 .sigbar{display:flex;align-items:center;gap:10px;margin-top:6px;}
 .sigbar .hint{flex:1;color:var(--mut);font-size:13px;}
@@ -674,20 +687,21 @@ select.has-value{font-weight:700;color:var(--navy);}
 /* Modal */
 #modal-bg{position:fixed;inset:0;background:rgba(8,10,28,.65);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-  z-index:100;display:none;align-items:center;justify-content:center;padding:16px;overflow:auto;}
+  z-index:100;display:none;align-items:center;justify-content:center;padding:10px;overflow:auto;}
 #modal-bg.show{display:flex;}
 .modal-box{background:var(--card);border-radius:var(--r-lg);max-width:580px;width:100%;
-  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px;box-shadow:var(--shadow-md);
+  max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px 20px;box-shadow:var(--shadow-md);
   border:1px solid var(--line);position:relative;}
 .modal-box h3{margin:0 0 14px;font-size:17px;font-weight:800;color:var(--navy);}
 .modal-close{position:absolute;top:14px;right:14px;background:var(--line);border:none;
   border-radius:8px;width:30px;height:30px;font-size:17px;cursor:pointer;color:var(--mut);
   display:flex;align-items:center;justify-content:center;}
-.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0;}
-.pinpad button{min-height:56px;font-size:20px;font-weight:700;border-radius:12px;
-  border:1.5px solid var(--line);background:var(--card);cursor:pointer;color:var(--navy);}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px auto;max-width:340px;}
+.pinpad button{min-height:76px;font-size:28px;font-weight:700;border-radius:16px;
+  border:1.5px solid var(--line);background:var(--card);cursor:pointer;color:var(--navy);
+  -webkit-tap-highlight-color:transparent;}
 .pinpad button:active{background:var(--navy);color:#fff;}
-#pin-dots{text-align:center;font-size:26px;letter-spacing:8px;min-height:38px;color:var(--navy);}
+#pin-dots{text-align:center;font-size:34px;letter-spacing:14px;min-height:48px;color:var(--navy);padding-top:4px;}
 .pin-err{color:var(--red);text-align:center;font-size:13px;font-weight:600;min-height:18px;}
 
 /* Detail */
@@ -703,12 +717,7 @@ select.has-value{font-weight:700;color:var(--navy);}
   border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow);margin-bottom:12px;}
 
-/* Toast */
-.toast{position:fixed;left:50%;bottom:88px;transform:translateX(-50%);
-  background:var(--navy-deep);color:#fff;padding:11px 20px;border-radius:var(--r);
-  font-weight:600;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.28);
-  opacity:0;transition:opacity .2s;pointer-events:none;font-size:14px;max-width:92vw;text-align:center;}
-.toast.show{opacity:1;}
+/* Toast — canonical rule is above near .oklabel (bottom:24px) */
 
 /* Settings */
 .set-section{margin-bottom:18px;}
@@ -744,15 +753,8 @@ select.has-value{font-weight:700;color:var(--navy);}
 /* ============================================================
    UNIFIED APP — main tab bar + job module overrides
    ============================================================ */
-#maintabbar {
-  display: none !important;
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 900;
-  display: flex; background: #0D1228;
-  border-top: 1px solid rgba(255,255,255,.13);
-  padding-bottom: env(safe-area-inset-bottom);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
+/* Bottom tab bar — intentionally hidden; navigation is via home-card buttons */
+#maintabbar { display: none !important; }
 #maintabbar button {
   flex: 1; background: none; border: none; color: rgba(255,255,255,.42);
   font-size: 10px; font-weight: 600; letter-spacing: .4px; text-transform: uppercase;
@@ -864,7 +866,7 @@ select.has-value{font-weight:700;color:var(--navy);}
 <body>
 
 <!-- ============ SPLASH ============ -->
-<div id="splash" onclick="App.dismissSplash()">
+<div id="splash" role="button" tabindex="0" aria-label="Dismiss splash screen" onclick="App.dismissSplash()" onkeydown="if(event.key==='Enter'||event.key===' ')App.dismissSplash()">
   <img class="sp-logo" src="logo.png" alt="Outback Helicopter">
   <div class="sp-name">Airwork NT</div>
   <div class="sp-sub">Flight Paperwork</div>
@@ -887,7 +889,7 @@ select.has-value{font-weight:700;color:var(--navy);}
     <img src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
     <div class="hb1">OUTBACK HELICOPTER</div>
     <div class="hb2">Airwork NT — Flight Paperwork</div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px;">v51</div>
+    <div style="font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px;">v52</div>
   </div>
   <div class="home-cards">
     <button class="home-card" onclick="showMainTab('jobs')">
@@ -3981,9 +3983,11 @@ async function jLoadPilotsAndFleet() {
   });
   ['f-aircraft','f-aircraft2'].forEach(id => {
     const sel = document.getElementById(id); if (!sel) return;
+    const prev = sel.value;
     sel.innerHTML = aircraft.length
-      ? `<option value="">Select aircraft…</option>` + aircraft.map((a,idx)=>`<option value="${idx}">${esc(a.reg)}${a.type?' — '+esc(a.type):''}</option>`).join('')
+      ? `<option value="">Select aircraft…</option>` + aircraft.map(a=>`<option value="${esc(a.reg)}">${esc(a.reg)}${a.type?' — '+esc(a.type):''}</option>`).join('')
       : '<option value="">No aircraft — go to Settings to add</option>';
+    if (prev) sel.value = prev;
   });
   document.querySelectorAll('#maintab-jobs select').forEach(sel => {
     jUpdateSelectBold(sel);
@@ -4124,6 +4128,10 @@ function jFieldErr(fid,eid) {
 }
 function jValidateFinal() {
   jClearFieldErrors(); let ok=true;
+  // Re-run step 1 checks in case pilot navigated back and cleared a required field
+  if(!document.getElementById('f-date').value){ jFieldErr('f-date','err-date'); ok=false; }
+  if(!document.getElementById('f-client').value.trim()){ jFieldErr('f-client','err-client'); ok=false; }
+  if(!document.getElementById('f-pilot').value){ jFieldErr('f-pilot','err-pilot'); ok=false; }
   if(!document.getElementById('f-aircraft').value){ jFieldErr('f-aircraft','err-aircraft'); ok=false; }
   if(!jSigPad || jSigPad.empty){ document.getElementById('err-sig').classList.add('show'); ok=false; }
   if(!ok){ const first=document.querySelector('.bad,.err.show'); if(first) first.scrollIntoView({behavior:'smooth',block:'center'}); }
@@ -4147,12 +4155,12 @@ async function jSaveDraft() {
 async function jBuildRec(status) {
   const aircraft=jGetFleet();
   const pilotName=document.getElementById('f-pilot').value||'';
-  const aircraftIdx=parseInt(document.getElementById('f-aircraft').value);
+  const aircraftReg=document.getElementById('f-aircraft').value||'';
   const isDual=document.getElementById('f-dual').checked;
   const pilot2Name=isDual?(document.getElementById('f-pilot2').value||''):'';
-  const aircraft2Idx=parseInt(document.getElementById('f-aircraft2').value);
-  const aircraftObj=aircraft[aircraftIdx]||{};
-  const aircraft2Obj=isDual?(aircraft[aircraft2Idx]||{}):{};
+  const aircraft2Reg2=isDual?(document.getElementById('f-aircraft2').value||''):'';
+  const aircraftObj=aircraft.find(a=>a.reg===aircraftReg)||{};
+  const aircraft2Obj=isDual?(aircraft.find(a=>a.reg===aircraft2Reg2)||{}):{};
   const lines=[];
   document.querySelectorAll('#job-lines .job-line').forEach(l=>{
     const date=(l.querySelector('.line-date')?.value||'');
@@ -4165,9 +4173,9 @@ async function jBuildRec(status) {
   return {
     jobNo, date:document.getElementById('f-date').value,
     client:document.getElementById('f-client').value.trim(),
-    pilotName, aircraftReg:aircraftObj.reg||'', aircraftType:aircraftObj.type||'',
+    pilotName, aircraftReg:aircraftObj.reg||aircraftReg, aircraftType:aircraftObj.type||'',
     hireType:jCurrentHire, isDual, pilot2Name,
-    aircraft2Reg:aircraft2Obj.reg||'', aircraft2Type:aircraft2Obj.type||'',
+    aircraft2Reg:aircraft2Obj.reg||aircraft2Reg2, aircraft2Type:aircraft2Obj.type||'',
     lines, totalHours, notes:document.getElementById('f-notes').value.trim(),
     signatureDataURL:jSigPad ? jSigPad.data() : null,
     status, createdAt:Date.now(),
@@ -4281,18 +4289,16 @@ async function jEditJob() {
   document.getElementById('f-notes').value=job.notes||'';
   await jLoadPilotsAndFleet();
   const aircraft=jGetFleet();
-  // Set pilots by name (select values are now name strings)
+  // Set pilots and aircraft by name/registration (values are now strings, not indices)
   if(job.pilotName) document.getElementById('f-pilot').value=job.pilotName;
-  const ai=aircraft.findIndex(a=>a.reg===job.aircraftReg);
-  if(ai>=0) document.getElementById('f-aircraft').value=ai;
+  if(job.aircraftReg) document.getElementById('f-aircraft').value=job.aircraftReg;
   jSetHire(job.hireType||'wet');
   const wasDual=!!job.isDual;
   document.getElementById('f-dual').checked=wasDual;
   document.getElementById('dual-fields').classList.toggle('hidden',!wasDual);
   if(wasDual){
     if(job.pilot2Name) document.getElementById('f-pilot2').value=job.pilot2Name;
-    const a2i=aircraft.findIndex(a=>a.reg===job.aircraft2Reg);
-    if(a2i>=0) document.getElementById('f-aircraft2').value=a2i;
+    if(job.aircraft2Reg) document.getElementById('f-aircraft2').value=job.aircraft2Reg;
   }
   document.getElementById('job-lines').innerHTML=''; jLineIdx=0;
   (job.lines||[]).forEach(l=>{ jAddLine(l.desc||'', l.date||''); const all=document.querySelectorAll('#job-lines .job-line'),last=all[all.length-1]; if(last){ last.querySelector('.line-hrs').value=l.hours||''; } });
@@ -4455,15 +4461,15 @@ window.addEventListener('popstate', () => {
   if (confirm && confirm.classList.contains('active')) {
     confirm.classList.remove('active'); return;
   }
-  // Navigate back through job stepper steps
+  // Navigate back through job stepper steps (only when Jobs tab is active)
   const jobInner = document.getElementById('maintab-jobs');
-  if (jobInner && !jobInner.classList.contains('hidden') && typeof jCurrentStep !== 'undefined' && jCurrentStep > 1) {
+  if (jobInner && jobInner.classList.contains('mtactive') && typeof jCurrentStep !== 'undefined' && jCurrentStep > 1) {
     jGoStep(jCurrentStep - 1); return;
   }
   // Navigate from Jobs/Log/Settings back to home
   const homeTab = document.getElementById('maintab-home');
   if (homeTab && !homeTab.classList.contains('mtactive')) {
-    showMainTab('safety');
+    showMainTab('home');
   }
 });
 </script>

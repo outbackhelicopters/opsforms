@@ -253,11 +253,19 @@ app.post('/send', async (req, res) => {
     /* ── Passengers block ── */
     const pax = bundle.pax || [];
     const paxInner = pax.length
-      ? pax.map((p, i) =>
-          `<div style="${i === pax.length - 1 ? S.kvLast : S.kv}">` +
-          `<span style="${S.k}">${i + 1}.</span>` +
-          `<span style="${S.v}">${esc(p.name)}${p.weight ? ` <span style="color:#888;">— ${p.weight} kg</span>` : ''}${p.date ? ` <span style="color:#aaa;font-size:11.5px;">· briefed ${esc(p.date)}</span>` : ''}</span></div>`
-        ).join('')
+      ? pax.map((p, i) => {
+          const sigImg = p.sig
+            ? `<div style="margin-top:6px;"><img src="${p.sig}" style="height:46px;border:1px solid #E8EBF2;border-radius:5px;display:block;" alt="Passenger signature"></div>`
+            : `<div style="font-size:11.5px;color:#B91C1C;font-weight:600;margin-top:4px;">❌ No signature recorded</div>`;
+          return `<div style="${i === pax.length - 1 ? S.kvLast : S.kv}">` +
+            `<span style="${S.k}"><b>${i + 1}. ${esc(p.name)}</b></span>` +
+            `<span style="${S.v}">` +
+            (p.weight ? `<span style="color:#555;">${p.weight} kg</span>` : '') +
+            (p.date ? `<span style="color:#aaa;font-size:11.5px;"> &nbsp;·&nbsp; Briefed ${esc(p.date)} ${esc(p.time || '')}</span>` : '') +
+            `<br><span style="font-size:12px;font-weight:700;color:${p.sig ? '#15803D' : '#B91C1C'};">${p.sig ? '✅ Signed' : '❌ Not signed'}</span>` +
+            sigImg +
+            `</span></div>`;
+        }).join('')
       : `<div style="padding:12px 16px;font-size:13px;color:#aaa;font-style:italic;">No passengers carried this flight</div>`;
 
     const submittedTime = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Darwin', hour:'2-digit', minute:'2-digit', hour12:false });
@@ -293,7 +301,9 @@ app.post('/send', async (req, res) => {
         kv('Result',        wbPill) +
         kv('Aircraft (BEW)', (wb.emptyWeight || '—') + ' kg') +
         kv('Pilot',          (wb.kg?.pilot   || 0) + ' kg') +
-        kv('Passenger(s)',   (wb.kg?.pax     || 0) + ' kg') +
+        (wb.kg?.paxList && wb.kg.paxList.length > 1
+          ? wb.kg.paxList.map((w, i) => kv(`Passenger ${i + 1}`, (w || 0) + ' kg')).join('')
+          : kv('Passenger(s)', (wb.kg?.pax || 0) + ' kg')) +
         kv('Baggage',        (wb.kg?.baggage || 0) + ' kg') +
         kv('Fuel',           `${fuelL} L (${fuelKg} kg) <span style="color:#888;font-size:11.5px;">— ${fuelType} @ ${fuelDens} kg/L</span>`) +
         kv('Total weight',   `<strong>${wbResult.total || '—'} kg</strong>`) +
@@ -304,6 +314,20 @@ app.post('/send', async (req, res) => {
     ${acksSection}
 
     ${section('👤', 'Passengers &amp; Safety Briefing', paxInner)}
+
+    ${(() => {
+      const pilotSig   = bundle.sms?.sigs?.pilotSig;
+      const trainerSig = bundle.sms?.sigs?.trainerSig;
+      if (!pilotSig && !trainerSig) return '';
+      let inner = '';
+      if (pilotSig) {
+        inner += `<div style="${S.kv}"><span style="${S.k}">Pilot</span><span style="${S.v}"><div style="font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">${esc(bundle.sms?.values?.pilotName || '')}</div><img src="${pilotSig}" style="height:60px;border:1px solid #E8EBF2;border-radius:6px;display:block;" alt="Pilot signature"></span></div>`;
+      }
+      if (trainerSig) {
+        inner += `<div style="${S.kvLast}"><span style="${S.k}">Trainer / Examiner</span><span style="${S.v}"><div style="font-size:12px;font-weight:600;color:#555;margin-bottom:4px;">${esc(bundle.sms?.values?.trainerName || '')}</div><img src="${trainerSig}" style="height:60px;border:1px solid #E8EBF2;border-radius:6px;display:block;" alt="Trainer signature"></span></div>`;
+      }
+      return section('✍️', 'Signatures', inner);
+    })()}
 
   </div>
 
@@ -552,7 +576,11 @@ async function buildPDF(bundle) {
       if (bundle.wb.kg) {
         const kg = bundle.wb.kg;
         kv('Pilot',   (kg.pilot   || 0) + ' kg');
-        kv('Pax',     (kg.pax     || 0) + ' kg');
+        if (kg.paxList && kg.paxList.length > 1) {
+          kg.paxList.forEach((w, i) => kv('Passenger ' + (i + 1), (w || 0) + ' kg'));
+        } else {
+          kv('Pax',   (kg.pax || 0) + ' kg');
+        }
         kv('Fuel',    (kg.fuel    || 0) + ' kg  (' + (bundle.wb.fuelL || 0) + ' L)');
         kv('Baggage', (kg.baggage || 0) + ' kg');
       }
@@ -607,7 +635,28 @@ async function buildPDF(bundle) {
       });
     }
 
-    /* ── Signatures ── */
+    /* ── Passenger signatures ── */
+    const signedPax = (bundle.pax || []).filter(p => p.sig);
+    if (signedPax.length) {
+      secHead('PASSENGER SIGNATURES');
+      signedPax.forEach(p => {
+        checkY(110);
+        doc.font('Helvetica-Bold').fontSize(9.5).fillColor(NAVY)
+           .text(p.name || '', 50, doc.y, { width: W, lineBreak: false });
+        doc.y += 14;
+        try {
+          const raw = p.sig.replace(/^data:image\/png;base64,/, '');
+          doc.image(Buffer.from(raw, 'base64'), 50, doc.y, { width: 200, height: 65 });
+          doc.y += 72;
+        } catch (_) {}
+        doc.rect(50, doc.y, 200, 0.5).fill('#1C1F28');
+        doc.font('Helvetica').fontSize(8).fillColor(MUT)
+           .text((p.date || '') + (p.time ? ' ' + p.time : ''), 50, doc.y + 4, { width: 200, lineBreak: false });
+        doc.y += 22;
+      });
+    }
+
+    /* ── Pilot & trainer signatures ── */
     const sigDefs = [
       { id: 'pilotSig',   label: 'PILOT SIGNATURE',              nameKey: 'pilotName'   },
       { id: 'trainerSig', label: 'TRAINER / EXAMINER SIGNATURE', nameKey: 'trainerName' },

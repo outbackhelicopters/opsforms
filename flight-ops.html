@@ -1876,6 +1876,27 @@ const FORM_DEFS = [{
           ],
           resp:["Pilot","Ground Crew"], rr:[2,5,7] }
       ]
+    },
+    { step:"Spray Gear Daily Inspection — R44 & JetRanger",
+      hazards:[{
+        hazard:["Spray equipment defect or failure causing chemical leak, system malfunction, or flight control interference"],
+        rl:[3,4,7],
+        lead:"Complete ALL items before each day's spray operations:",
+        controls:[
+          "1. Test Jettison/dump door before flight. Inspect dump door/seal for leaking before spraying. Remove debris from seal surface. Replace gasket if torn or cracked.",
+          "2. Verify hose clamp tightness.",
+          "3. Verify installation hardware is secure for cockpit cyclic control.",
+          "4. Boom camlocks — Check for damage or leaks at this interface.",
+          "5. Pump — Check that installation hardware is secure.",
+          "6. Tank attach hardware — Check for damage, loose hardware, evidence of unusual wear or condition. Replace or secure hardware as required.",
+          "7. Pump motor mount — check that clamps are secure.",
+          "8. Wiring harness — check for chaffing, or loose bundle.",
+          "9. Check engine oil level. Fill with SAE 10W-30 oil.",
+          "10. Flush tank, pump and booms after spraying chemicals each day. Rinse off external surfaces of entire system.",
+          "11. Check the Cable Clamp and Cable Tie supporting the LH and RH pressure lines at the Fwd RH boom support assembly."
+        ],
+        resp:["Pilot"], rr:[2,3,5]
+      }]
     }
   ]
 }];
@@ -1919,6 +1940,15 @@ const CG_R44II = {
   poly:[[2337,726],[2604,726],[2604,953],[2489,1134],[2362,1134],[2337,1043]],
   armMin:2200, armMax:2800, wMin:600, wMax:1300
 };
+
+/* Max passengers by aircraft type */
+function getMaxPax(type) {
+  const t = (type || '').toLowerCase();
+  if (t.includes('r22') || t.includes('cabri')) return 1;
+  if (t.includes('r44')) return 3;
+  if (t.includes('206') || t.includes('jetranger') || t.includes('jet ranger')) return 4;
+  return 3;
+}
 
 /* Point-in-polygon ray-casting (arm=x, kg=y) */
 function cgInPoly(arm, kg, poly) {
@@ -3178,6 +3208,14 @@ const App = {
     const W = ac.wb || {};
     const f = this.flight.wb;
     if (!f.kg) f.kg = { pilot: 0, pax: 0, fuel: 0, baggage: 0 };
+    /* Initialise / resize per-seat list */
+    const maxPax = getMaxPax(this.flight.aircraftType);
+    if (!f.kg.paxList || f.kg.paxList.length !== maxPax) {
+      const old = f.kg.paxList || [];
+      /* If migrating from single-value pax, put the old total in seat 1 */
+      const legacy = (!old.length && f.kg.pax) ? f.kg.pax : 0;
+      f.kg.paxList = Array.from({length: maxPax}, (_, i) => old[i] != null ? old[i] : (i === 0 ? legacy : 0));
+    }
     if (!f.fuelL) f.fuelL = 0;
     if (!f.fuelMode || f.fuelMode === 'kg') f.fuelMode = 'L';
 
@@ -3249,7 +3287,9 @@ const App = {
       '<div class="wbsep"></div>' +
 
       wbRow('pilot',   'Pilot',       kg.pilot   || '', 'kg', 'kg') +
-      wbRow('pax',     'Passenger(s)',kg.pax     || '', 'kg', 'kg') +
+      f.kg.paxList.map((w, i) =>
+        wbRow('pax-' + i, 'Passenger ' + (i + 1), w || '', 'kg', 'kg')
+      ).join('') +
       wbRow('baggage', 'Baggage',     kg.baggage || '', 'kg', 'kg') +
 
       /* Fuel row(s) — always litres, aux-aware */
@@ -3341,7 +3381,16 @@ const App = {
     }
 
     f.kg.pilot   = num(($('wb-pilot')   || {}).value);
-    f.kg.pax     = num(($('wb-pax')     || {}).value);
+    /* Sum individual passenger seats */
+    const _maxPax = getMaxPax(this.flight.aircraftType);
+    if (!f.kg.paxList || f.kg.paxList.length !== _maxPax) f.kg.paxList = Array(_maxPax).fill(0);
+    let _paxTotal = 0;
+    for (let _i = 0; _i < _maxPax; _i++) {
+      const _v = num(($('wb-pax-' + _i) || {}).value);
+      f.kg.paxList[_i] = _v;
+      _paxTotal += _v;
+    }
+    f.kg.pax     = _paxTotal;
     f.kg.baggage = num(($('wb-baggage') || {}).value);
 
     const bew  = W.emptyWeight || 0;

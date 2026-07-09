@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flight Ops — Office</title>
+<style>
+:root{
+  --acc:#18224A; --acc2:#E8750E;
+  --bg:#FBFBFA; --card:#fff; --line:#ECECEA; --text:#1B1C1E; --mut:#8A8D93;
+  --ok:#3C9A5F; --warn:#D99114; --bad:#C64545;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;background:none;border:none;font-size:inherit;color:inherit;}
+button:disabled{opacity:.5;cursor:default;}
+
+/* ---------- AUTH SCREENS ---------- */
+.auth-wrap{display:none;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+.auth-card{width:100%;max-width:340px;}
+.auth-co{font-size:20px;font-weight:800;color:var(--acc);letter-spacing:-.2px;}
+.auth-tag{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;margin:4px 0 32px;}
+.lbl{display:block;font-size:11px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 6px;}
+.auth-card input{width:100%;padding:11px 0;border:none;border-bottom:1.5px solid var(--line);font-size:15px;outline:none;background:none;}
+.auth-card input:focus{border-color:var(--acc);}
+.btn-auth{background:var(--acc);color:#fff;border-radius:6px;width:100%;padding:13px;font-size:14px;font-weight:600;margin-top:30px;}
+.auth-err{font-size:12.5px;color:var(--bad);margin-top:14px;min-height:18px;}
+.auth-note{font-size:12px;color:var(--mut);margin-top:14px;line-height:1.6;}
+
+/* ---------- SHELL ---------- */
+#app-view{display:none;}
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:200px;background:var(--card);border-right:1px solid var(--line);flex-shrink:0;display:flex;flex-direction:column;padding:26px 0 18px;position:sticky;top:0;height:100vh;}
+.sb-co{padding:0 22px 26px;font-weight:800;font-size:14px;color:var(--acc);line-height:1.3;}
+.sb-nav{flex:1;}
+.nav-btn{display:block;width:100%;text-align:left;padding:9px 22px;font-size:13.5px;color:var(--mut);font-weight:500;border-left:2px solid transparent;}
+.nav-btn:hover{color:var(--text);}
+.nav-btn.active{color:var(--acc);font-weight:700;border-left-color:var(--acc2);}
+.sb-user{padding:18px 22px 0;border-top:1px solid var(--line);font-size:12px;color:var(--mut);line-height:1.7;}
+.sb-user .nm{font-weight:600;color:var(--text);}
+.sb-user .out{padding:0;font-size:11.5px;color:var(--mut);text-decoration:underline;margin-top:6px;}
+.content{flex:1;padding:34px 40px 70px;max-width:1080px;}
+.pg-h{display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+.pg-title{font-size:19px;font-weight:800;letter-spacing:-.2px;flex:1;}
+.view{display:none;}
+.view.active{display:block;}
+
+/* ---------- ELEMENTS ---------- */
+.btn{border-radius:6px;padding:8px 14px;font-size:13px;font-weight:600;}
+.btn-p{background:var(--acc);color:#fff;}
+.btn-l{color:var(--acc);border:1px solid var(--line);background:var(--card);}
+.btn-d{color:var(--bad);border:1px solid var(--line);background:var(--card);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:16px;}
+.card-h{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+.card-h h3{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);font-weight:700;flex:1;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);text-align:left;padding:9px 18px;border-bottom:1px solid var(--line);font-weight:600;}
+td{padding:11px 18px;border-bottom:1px solid var(--line);}
+tr:last-child td{border-bottom:none;}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px;}
+.d-ok{background:var(--ok);} .d-warn{background:var(--warn);} .d-bad{background:var(--bad);} .d-mut{background:#C9CBCE;}
+.st{font-size:12.5px;color:var(--mut);}
+.stats{display:flex;gap:36px;margin-bottom:26px;flex-wrap:wrap;}
+.stat .v{font-size:26px;font-weight:800;letter-spacing:-.5px;}
+.stat .k{font-size:11.5px;color:var(--mut);margin-top:1px;}
+input[type=search],input[type=date],input[type=time],input[type=text],input[type=email],input[type=password],select{padding:8px 10px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:#fff;outline:none;font-family:inherit;}
+input:focus,select:focus{border-color:var(--acc);}
+.empty{padding:26px 18px;color:var(--mut);font-size:13px;text-align:center;}
+
+/* ---------- CALENDAR ---------- */
+.cal-nav{display:flex;align-items:center;gap:12px;}
+.cal-nav .wk{font-weight:700;font-size:14px;min-width:160px;text-align:center;}
+.cal-nav button{color:var(--mut);font-size:17px;padding:2px 8px;border-radius:5px;}
+.cal-nav button:hover{background:var(--line);color:var(--text);}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.cal-day{border-right:1px solid var(--line);min-height:320px;padding:10px 8px;}
+.cal-day:last-child{border-right:none;}
+.cal-day.today{background:#FBF7F1;}
+.cal-dh{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:600;}
+.cal-dn{font-size:16px;font-weight:700;margin:2px 0 10px;}
+.cal-day.today .cal-dn{color:var(--acc2);}
+.job{background:#fff;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:6px;padding:8px 9px;margin-bottom:7px;font-size:12px;line-height:1.45;cursor:pointer;}
+.job:hover{border-color:var(--acc);}
+.job .tm{font-weight:700;}
+.job .jt{font-weight:600;margin:1px 0;}
+.job .jm{color:var(--mut);font-size:11.5px;}
+.job .js{margin-top:5px;font-size:11px;color:var(--mut);}
+
+/* ---------- MODAL ---------- */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(20,20,20,.4);z-index:50;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:#fff;border-radius:10px;width:100%;max-width:430px;padding:28px;max-height:90vh;overflow:auto;}
+.modal h3{font-size:16px;font-weight:800;margin-bottom:6px;}
+.modal .sub{font-size:13px;color:var(--mut);margin-bottom:8px;line-height:1.55;}
+.modal input,.modal select{width:100%;}
+.modal select[multiple]{height:96px;}
+.modal-actions{display:flex;gap:10px;margin-top:22px;}
+.modal-actions .btn{flex:1;padding:11px;}
+.m-err{font-size:12.5px;color:var(--bad);margin-top:12px;min-height:16px;}
+.inv-link{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px;margin-top:12px;word-break:break-all;display:none;}
+.fleet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+.ac{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;}
+.ac .cs{font-size:15px;font-weight:800;}
+.ac .ty{font-size:12.5px;color:var(--mut);margin-top:2px;}
+@media(max-width:900px){.cal{grid-template-columns:repeat(2,1fr);}.cal-day{min-height:auto;border-bottom:1px solid var(--line);}.content{padding:20px;}}
+</style>
+</head>
+<body>
+
+<!-- LOADING / LOGIN / BOOTSTRAP / INVITE -->
+<div class="auth-wrap" id="w-loading" style="display:flex"><div class="st">Loading…</div></div>
+
+<div class="auth-wrap" id="w-login">
+  <div class="auth-card">
+    <div class="auth-co" id="brand-login">Flight Ops</div>
+    <div class="auth-tag">Office</div>
+    <label class="lbl">Email</label><input type="email" id="li-email" autocomplete="username">
+    <label class="lbl">Password</label><input type="password" id="li-pw" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-auth" onclick="doLogin()">Sign in</button>
+    <div class="auth-err" id="li-err"></div>
+    <div class="auth-note">Forgotten password? Ask an admin to send you a reset link.</div>
+  </div>
+</div>
+
+<div class="auth-wrap" id="w-boot">
+  <div class="auth-card">
+    <div class="auth-co">Flight Ops</div>
+    <div class="auth-tag">First-time setup</div>
+    <div class="auth-note" style="margin:0 0 6px">No accounts exist yet. Create the first (provider) account.</div>
+    <label class="lbl">Your name</label><input type="text" id="bs-name">
+    <label class="lbl">Email</label><input type="email" id="bs-email">
+    <label class="lbl">Password (8+ characters)</label><input type="password" id="bs-pw" autocomplete="new-password">
+    <button class="btn-auth" onclick="doBootstrap()">Create account</button>
+    <div class="auth-err" id="bs-err"></div>
+  </div>
+</div>
+
+<div class="auth-wrap" id="w-invite">
+  <div class="auth-card">
+    <div class="auth-co">Flight Ops</div>
+    <div class="auth-tag">Set your password</div>
+    <label class="lbl">New password (8+ characters)</label><input type="password" id="iv-pw" autocomplete="new-password">
+    <label class="lbl">Repeat it</label><input type="password" id="iv-pw2" autocomplete="new-password" onkeydown="if(event.key==='Enter')doAccept()">
+    <button class="btn-auth" onclick="doAccept()">Save &amp; sign in</button>
+    <div class="auth-err" id="iv-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-view">
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sb-co" id="brand-side">Flight Ops</div>
+    <div class="sb-nav">
+      <button class="nav-btn active" data-v="dash" onclick="nav(this)">Today</button>
+      <button class="nav-btn" data-v="cal" onclick="nav(this)">Calendar</button>
+      <button class="nav-btn" data-v="paper" onclick="nav(this)">Paperwork</button>
+      <button class="nav-btn" data-v="fleet" onclick="nav(this)">Fleet</button>
+      <button class="nav-btn" data-v="pilots" onclick="nav(this)">Pilots</button>
+      <button class="nav-btn" data-v="clients" onclick="nav(this)">Clients</button>
+      <button class="nav-btn" data-v="settings" id="nav-settings" onclick="nav(this)" style="display:none">Settings</button>
+    </div>
+    <div class="sb-user">
+      <div class="nm" id="u-name"></div>
+      <span id="u-role"></span><br>
+      <button class="out" onclick="doLogout()">Sign out</button>
+    </div>
+  </nav>
+
+  <main class="content">
+
+    <!-- TODAY -->
+    <section class="view active" id="v-dash">
+      <div class="pg-h"><div class="pg-title" id="dash-date">Today</div></div>
+      <div class="stats" id="dash-stats"></div>
+      <div class="card">
+        <div class="card-h"><h3>Today's jobs</h3></div>
+        <div id="dash-jobs"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="view" id="v-cal">
+      <div class="pg-h">
+        <div class="pg-title">Calendar</div>
+        <div class="cal-nav">
+          <button onclick="moveWeek(-1)">‹</button>
+          <span class="wk" id="cal-wk"></span>
+          <button onclick="moveWeek(1)">›</button>
+          <button class="btn btn-l btn-sm" onclick="thisWeek()">Today</button>
+        </div>
+        <button class="btn btn-p" onclick="openJobModal()">New job</button>
+      </div>
+      <div class="cal" id="cal"></div>
+      <p class="st" style="margin-top:14px">Pilots get an SMS one hour before start. Aircraft is chosen by the pilot on the iPad when they do their paperwork.</p>
+    </section>
+
+    <!-- PAPERWORK -->
+    <section class="view" id="v-paper">
+      <div class="pg-h"><div class="pg-title">Paperwork</div>
+        <select id="pw-ac" onchange="renderPaper()"><option value="">All aircraft</option></select>
+        <select id="pw-pilot" onchange="renderPaper()"><option value="">All pilots</option></select>
+        <button class="btn btn-l btn-sm" onclick="loadPaper(true)">Refresh</button>
+      </div>
+      <div class="card"><div id="paper-list"><div class="empty">Loading…</div></div></div>
+    </section>
+
+    <!-- FLEET -->
+    <section class="view" id="v-fleet">
+      <div class="pg-h"><div class="pg-title">Fleet</div></div>
+      <div class="fleet-grid" id="fleet-grid"></div>
+      <p class="st" style="margin-top:14px">Aircraft list comes from the shared config. Editing and W&amp;B sign-off arrive in the next phase.</p>
+    </section>
+
+    <!-- PILOTS -->
+    <section class="view" id="v-pilots">
+      <div class="pg-h"><div class="pg-title">Pilots</div></div>
+      <div class="card"><div id="pilot-list"></div></div>
+      <p class="st">Phone numbers feed the SMS reminders. Editing arrives in the next phase — for now update config.json.</p>
+    </section>
+
+    <!-- CLIENTS -->
+    <section class="view" id="v-clients">
+      <div class="pg-h"><div class="pg-title">Clients</div>
+        <input type="search" id="cl-search" placeholder="Search clients…" oninput="renderClients()" style="min-width:240px">
+      </div>
+      <div class="card"><div id="client-list"></div></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="v-settings">
+      <div class="pg-h"><div class="pg-title">Settings</div></div>
+      <div class="card">
+        <div class="card-h"><h3>Users</h3><button class="btn btn-l btn-sm" onclick="openModal('m-invite')">Invite user</button></div>
+        <div id="users-list"><div class="empty">Loading…</div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+</div>
+
+<!-- JOB MODAL (new + edit) -->
+<div class="modal-bg" id="m-job">
+  <div class="modal">
+    <h3 id="mj-title">New job</h3>
+    <div class="sub">The pilot gets an SMS an hour before start and chooses the aircraft when doing their paperwork.</div>
+    <label class="lbl">Job description</label><input type="text" id="mj-desc" placeholder="e.g. Mustering — Willeroo Station">
+    <label class="lbl">Client</label><input type="text" id="mj-client" list="client-dl" placeholder="Start typing…"><datalist id="client-dl"></datalist>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label class="lbl">Date</label><input type="date" id="mj-date"></div>
+      <div style="flex:1"><label class="lbl">Start</label><input type="time" id="mj-time"></div>
+    </div>
+    <label class="lbl">Pilot(s) — Ctrl/Cmd-click for more than one</label>
+    <select id="mj-pilots" multiple></select>
+    <div class="m-err" id="mj-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-d" id="mj-cancel-job" style="display:none" onclick="cancelJob()">Cancel job</button>
+      <button class="btn btn-l" onclick="closeModal('m-job')">Close</button>
+      <button class="btn btn-p" id="mj-save" onclick="saveJob()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- INVITE MODAL -->
+<div class="modal-bg" id="m-invite">
+  <div class="modal">
+    <h3>Invite user</h3>
+    <div class="sub">They'll get an email with a link to set their password.</div>
+    <label class="lbl">Name</label><input type="text" id="in-name">
+    <label class="lbl">Email</label><input type="email" id="in-email">
+    <label class="lbl">Role</label>
+    <select id="in-role">
+      <option value="office">Office — jobs, paperwork, clients</option>
+      <option value="admin">Admin — everything incl. users &amp; W&amp;B sign-off</option>
+    </select>
+    <div class="m-err" id="in-err"></div>
+    <div class="inv-link" id="in-link"></div>
+    <div class="modal-actions">
+      <button class="btn btn-l" onclick="closeModal('m-invite')">Close</button>
+      <button class="btn btn-p" id="in-send" onclick="sendInvite()">Send invite</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ---------- STATE ---------- */
+let ME = null, CFG = { pilots: [], aircraft: [], clients: [] };
+let CAL_JOBS = [], PAPER = [], weekStart = mondayOf(new Date());
+let editingJob = null;
+
+/* ---------- HELPERS ---------- */
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', ...opts });
+  let d = null;
+  try { d = await r.json(); } catch {}
+  if (!r.ok) throw new Error((d && d.error) || `Request failed (${r.status})`);
+  return d;
+}
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function ymd(d){ return d.toISOString().slice(0,10); }
+function localYmd(d){ const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function mondayOf(d){ const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0,0,0,0); return x; }
+function show(id){ ['w-loading','w-login','w-boot','w-invite'].forEach(w => el(w).style.display = w===id ? 'flex':'none'); el('app-view').style.display = id==='app' ? 'block':'none'; if(id==='app') el('w-loading').style.display='none'; }
+function openModal(id){ el(id).classList.add('open'); }
+function closeModal(id){ el(id).classList.remove('open'); }
+function jobPilotNames(j){ return (j.pilots && j.pilots.length ? j.pilots.map(p=>p.name) : (j.pilotName ? [j.pilotName] : [])).join(', '); }
+
+/* ---------- BOOT ---------- */
+(async function boot(){
+  const inviteToken = (location.hash.match(/invite=([a-f0-9]+)/) || [])[1];
+  if (inviteToken) { window._inviteToken = inviteToken; show('w-invite'); return; }
+  try {
+    const st = await api('/api/auth/status');
+    if (!st.bootstrapped) { show('w-boot'); return; }
+    const me = await api('/api/auth/me');
+    enter(me.user);
+  } catch { show('w-login'); }
+})();
+
+async function enter(user){
+  ME = user;
+  el('u-name').textContent = user.name;
+  el('u-role').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  if (user.role === 'admin' || user.role === 'provider') el('nav-settings').style.display = 'block';
+  show('app');
+  try { CFG = await api('/api/config'); } catch (e) { console.error('config load:', e.message); }
+  renderStatic();
+  loadCalendar();
+  loadPaper();
+  if (user.role !== 'office') loadUsers();
+}
+
+/* ---------- AUTH ACTIONS ---------- */
+async function doLogin(){
+  el('li-err').textContent = '';
+  try {
+    const d = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email: el('li-email').value, password: el('li-pw').value }) });
+    enter(d.user);
+  } catch (e) { el('li-err').textContent = e.message; }
+}
+async function doBootstrap(){
+  el('bs-err').textContent = '';
+  try {
+    const d = await api('/api/auth/bootstrap', { method:'POST', body: JSON.stringify({ name: el('bs-name').value, email: el('bs-email').value, password: el('bs-pw').value }) });
+    enter(d.user);
+  } catch (e) { el('bs-err').textContent = e.message; }
+}
+async function doAccept(){
+  el('iv-err').textContent = '';
+  if (el('iv-pw').value !== el('iv-pw2').value) { el('iv-err').textContent = "Passwords don't match"; return; }
+  try {
+    const d = await api('/api/auth/accept-invite', { method:'POST', body: JSON.stringify({ token: window._inviteToken, password: el('iv-pw').value }) });
+    history.replaceState(null, '', location.pathname);
+    enter(d.user);
+  } catch (e) { el('iv-err').textContent = e.message; }
+}
+async function doLogout(){ try { await api('/api/auth/logout', { method:'POST' }); } catch {} location.reload(); }
+
+/* ---------- NAV ---------- */
+function nav(btn){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  el('v-'+btn.dataset.v).classList.add('active');
+}
+
+/* ---------- STATIC LISTS (config-driven) ---------- */
+function renderStatic(){
+  el('fleet-grid').innerHTML = (CFG.aircraft||[]).map(a =>
+    `<div class="ac"><div class="cs">${esc(a.reg)}</div><div class="ty">${esc(a.type)}</div></div>`).join('') || '<div class="empty">No aircraft in config</div>';
+  el('pilot-list').innerHTML = '<table><tr><th>Name</th><th>Phone</th><th>Email</th></tr>' +
+    (CFG.pilots||[]).map(p => `<tr><td>${esc(p.name)}</td><td class="st">${esc(p.phone)||'—'}</td><td class="st">${esc(p.email)||'—'}</td></tr>`).join('') + '</table>';
+  el('mj-pilots').innerHTML = (CFG.pilots||[]).map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  el('client-dl').innerHTML = (CFG.clients||[]).slice(0,2000).map(c => `<option value="${esc(c)}">`).join('');
+  renderClients();
+}
+function renderClients(){
+  const q = (el('cl-search').value||'').toLowerCase();
+  const list = (CFG.clients||[]).filter(c => String(c).toLowerCase().includes(q)).slice(0,60);
+  el('client-list').innerHTML = list.length
+    ? '<table>' + list.map(c => `<tr><td>${esc(c)}</td></tr>`).join('') + '</table>'
+    : '<div class="empty">No matches</div>';
+}
+
+/* ---------- CALENDAR ---------- */
+function thisWeek(){ weekStart = mondayOf(new Date()); loadCalendar(); }
+function moveWeek(n){ weekStart = new Date(weekStart.getTime() + n*7*864e5); loadCalendar(); }
+
+async function loadCalendar(){
+  const from = localYmd(weekStart), to = localYmd(new Date(weekStart.getTime() + 6*864e5));
+  el('cal-wk').textContent = new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'short'}).format(weekStart)
+    + ' – ' + new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'short',year:'numeric'}).format(new Date(weekStart.getTime()+6*864e5));
+  try {
+    const d = await api(`/api/calendar-jobs?from=${from}&to=${to}`);
+    CAL_JOBS = d.jobs || [];
+  } catch (e) { CAL_JOBS = []; console.error(e.message); }
+  renderCal();
+  renderDash();
+}
+function renderCal(){
+  const today = localYmd(new Date());
+  const days = [...Array(7)].map((_,i) => new Date(weekStart.getTime() + i*864e5));
+  el('cal').innerHTML = days.map(d => {
+    const dy = localYmd(d);
+    const jobs = CAL_JOBS.filter(j => j.date === dy);
+    return `<div class="cal-day ${dy===today?'today':''}">
+      <div class="cal-dh">${new Intl.DateTimeFormat('en-AU',{weekday:'short'}).format(d)}</div>
+      <div class="cal-dn">${d.getDate()}</div>
+      ${jobs.map(j => `
+        <div class="job" onclick="openJobModal('${j.id}')">
+          <div class="tm">${esc(j.startTime)||'—'}</div>
+          <div class="jt">${esc(j.description)||'Job'}</div>
+          <div class="jm">${esc(j.client)}</div>
+          <div class="jm">${esc(jobPilotNames(j))}</div>
+          <div class="js"><span class="dot ${j.status==='logged'?'d-ok':'d-mut'}"></span>${j.status==='logged'?'Logged':'Scheduled'}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+/* ---------- TODAY ---------- */
+function renderDash(){
+  const today = localYmd(new Date());
+  el('dash-date').textContent = new Intl.DateTimeFormat('en-AU',{weekday:'long',day:'numeric',month:'long'}).format(new Date());
+  const jobs = CAL_JOBS.filter(j => j.date === today).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
+  const logged = jobs.filter(j=>j.status==='logged').length;
+  el('dash-stats').innerHTML = `
+    <div class="stat"><div class="v">${jobs.length}</div><div class="k">Jobs today</div></div>
+    <div class="stat"><div class="v">${logged}</div><div class="k">Logged</div></div>
+    <div class="stat"><div class="v">${jobs.length - logged}</div><div class="k">Still open</div></div>`;
+  el('dash-jobs').innerHTML = jobs.length
+    ? '<table>' + jobs.map(j => `<tr>
+        <td style="width:70px"><b>${esc(j.startTime)||'—'}</b></td>
+        <td>${esc(j.description)||'Job'}<br><span class="st">${esc(j.client)}${j.client?' · ':''}${esc(jobPilotNames(j))}</span></td>
+        <td style="text-align:right"><span class="dot ${j.status==='logged'?'d-ok':'d-mut'}"></span><span class="st">${j.status==='logged'?'Logged':'Scheduled'}</span></td>
+      </tr>`).join('') + '</table>'
+    : '<div class="empty">No jobs scheduled today</div>';
+}
+
+/* ---------- JOB MODAL ---------- */
+function openJobModal(id){
+  editingJob = id ? CAL_JOBS.find(j => j.id === id) : null;
+  el('mj-title').textContent = editingJob ? 'Edit job' : 'New job';
+  el('mj-desc').value = editingJob ? (editingJob.description||'') : '';
+  el('mj-client').value = editingJob ? (editingJob.client||'') : '';
+  el('mj-date').value = editingJob ? editingJob.date : localYmd(new Date());
+  el('mj-time').value = editingJob ? (editingJob.startTime||'') : '06:30';
+  const names = editingJob ? (editingJob.pilots||[]).map(p=>p.name) : [];
+  [...el('mj-pilots').options].forEach(o => o.selected = names.includes(o.value));
+  el('mj-cancel-job').style.display = editingJob ? 'block' : 'none';
+  el('mj-err').textContent = '';
+  openModal('m-job');
+}
+function selectedPilots(){
+  const names = [...el('mj-pilots').selectedOptions].map(o=>o.value);
+  return names.map(n => { const p = (CFG.pilots||[]).find(x=>x.name===n) || {}; return { name:n, phone:p.phone||'', email:p.email||'' }; });
+}
+async function saveJob(){
+  el('mj-err').textContent = '';
+  const body = { date: el('mj-date').value, startTime: el('mj-time').value,
+    client: el('mj-client').value.trim(), description: el('mj-desc').value.trim(),
+    pilots: selectedPilots(), createdBy: ME ? ME.name : '' };
+  if (!body.date || !body.pilots.length) { el('mj-err').textContent = 'Date and at least one pilot are required'; return; }
+  el('mj-save').disabled = true;
+  try {
+    if (editingJob) await api(`/api/calendar-jobs/${editingJob.id}`, { method:'PATCH', body: JSON.stringify(body) });
+    else await api('/api/calendar-jobs', { method:'POST', body: JSON.stringify(body) });
+    closeModal('m-job');
+    loadCalendar();
+  } catch (e) { el('mj-err').textContent = e.message; }
+  el('mj-save').disabled = false;
+}
+async function cancelJob(){
+  if (!editingJob || !confirm('Cancel this job? Assigned pilots will be texted.')) return;
+  try { await api(`/api/calendar-jobs/${editingJob.id}`, { method:'DELETE' }); closeModal('m-job'); loadCalendar(); }
+  catch (e) { el('mj-err').textContent = e.message; }
+}
+
+/* ---------- PAPERWORK ---------- */
+async function loadPaper(force){
+  try {
+    const d = await api('/api/jobs' + (force ? '?refresh=1' : ''));
+    PAPER = (d.jobs||[]).sort((a,b)=>String(b.submittedAt||b.date||'').localeCompare(String(a.submittedAt||a.date||'')));
+  } catch (e) { el('paper-list').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const acs = [...new Set(PAPER.map(j=>j.aircraftReg).filter(Boolean))].sort();
+  const ps  = [...new Set(PAPER.map(j=>j.pilotName||j.pilot).filter(Boolean))].sort();
+  el('pw-ac').innerHTML = '<option value="">All aircraft</option>' + acs.map(a=>`<option>${esc(a)}</option>`).join('');
+  el('pw-pilot').innerHTML = '<option value="">All pilots</option>' + ps.map(p=>`<option>${esc(p)}</option>`).join('');
+  renderPaper();
+}
+function renderPaper(){
+  const ac = el('pw-ac').value, pl = el('pw-pilot').value;
+  const rows = PAPER.filter(j => (!ac || j.aircraftReg===ac) && (!pl || (j.pilotName||j.pilot)===pl)).slice(0,150);
+  el('paper-list').innerHTML = rows.length
+    ? '<table><tr><th>Flight</th><th>Pilot</th><th>Client</th><th style="text-align:right"></th></tr>' + rows.map(j => `<tr>
+        <td>${esc(j.aircraftReg)||'—'} · ${esc(j.flightDate||j.date)||''}</td>
+        <td class="st">${esc(j.pilotName||j.pilot)||'—'}</td>
+        <td class="st">${esc(j.client)||'—'}</td>
+        <td style="text-align:right">${j.oneDriveUrl ? `<a class="btn btn-l btn-sm" href="${esc(j.oneDriveUrl)}" target="_blank" rel="noopener">PDF</a>` : ''}</td>
+      </tr>`).join('') + '</table>'
+    : '<div class="empty">No paperwork records found</div>';
+}
+
+/* ---------- USERS ---------- */
+async function loadUsers(){
+  let d;
+  try { d = await api('/api/users'); } catch (e) { el('users-list').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const canEdit = t => !(t.role === 'provider' && ME.role !== 'provider') && t.email !== ME.email;
+  el('users-list').innerHTML = '<table><tr><th>User</th><th>Email</th><th>Role</th><th></th></tr>' +
+    d.users.map(u => `<tr ${u.active?'':'style="opacity:.5"'}>
+      <td>${esc(u.name)}${u.email===ME.email?' <span class="st">(you)</span>':''}</td>
+      <td class="st">${esc(u.email)}</td>
+      <td class="st">${u.role === 'provider' ? 'Provider — platform account' : (canEdit(u)
+        ? `<select onchange="setRole('${esc(u.email)}',this.value)">
+             <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
+             <option value="office" ${u.role==='office'?'selected':''}>Office</option></select>`
+        : u.role.charAt(0).toUpperCase()+u.role.slice(1))}</td>
+      <td style="text-align:right;white-space:nowrap">
+        ${canEdit(u) ? `<button class="btn btn-l btn-sm" onclick="resetPw('${esc(u.email)}')">Reset password</button>
+        <button class="btn ${u.active?'btn-d':'btn-l'} btn-sm" onclick="setActive('${esc(u.email)}',${!u.active})">${u.active?'Deactivate':'Reactivate'}</button>` : ''}
+      </td></tr>`).join('') +
+    d.invites.map(i => `<tr style="opacity:.6"><td>${esc(i.name)}</td><td class="st">${esc(i.email)}</td>
+      <td class="st">${esc(i.role)} — ${i.kind==='reset'?'reset':'invite'} pending</td><td></td></tr>`).join('') + '</table>';
+}
+async function setRole(email, role){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ role }) }); } catch (e) { alert(e.message); } loadUsers(); }
+async function setActive(email, active){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ active }) }); } catch (e) { alert(e.message); } loadUsers(); }
+async function resetPw(email){
+  try {
+    const d = await api('/api/users/invite', { method:'POST', body: JSON.stringify({ email, kind:'reset' }) });
+    alert(d.emailed ? 'Reset link emailed.' : 'Email not configured — copy this link and send it to them:\n\n' + d.link);
+    loadUsers();
+  } catch (e) { alert(e.message); }
+}
+async function sendInvite(){
+  el('in-err').textContent = ''; el('in-link').style.display = 'none';
+  el('in-send').disabled = true;
+  try {
+    const d = await api('/api/users/invite', { method:'POST', body: JSON.stringify({ name: el('in-name').value, email: el('in-email').value, role: el('in-role').value }) });
+    if (d.emailed) { closeModal('m-invite'); }
+    else { el('in-link').textContent = 'Email not configured yet — send them this link: ' + d.link; el('in-link').style.display = 'block'; }
+    loadUsers();
+  } catch (e) { el('in-err').textContent = e.message; }
+  el('in-send').disabled = false;
+}
+</script>
+</body>
+</html>

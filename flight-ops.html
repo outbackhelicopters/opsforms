@@ -889,7 +889,7 @@ select.has-value{font-weight:700;color:var(--navy);}
     <img src="logo.png" alt="Outback Helicopter" onerror="this.style.display='none'">
     <div class="hb1">OUTBACK HELICOPTER</div>
     <div class="hb2">Airwork NT — Flight Paperwork</div>
-    <div style="font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px;">v53</div>
+    <div style="font-size:11px;color:var(--mut);margin-top:4px;letter-spacing:.3px;">v54</div>
   </div>
   <div class="home-cards">
     <button class="home-card" onclick="showMainTab('jobs')">
@@ -897,6 +897,14 @@ select.has-value{font-weight:700;color:var(--navy);}
       <div class="hc-text">
         <div class="hc-label">Job Advice Sheet</div>
         <div class="hc-sub">Client jobs, quoting &amp; records</div>
+      </div>
+      <span class="hc-arrow">›</span>
+    </button>
+    <button class="home-card" onclick="showMainTab('calendar')">
+      <span class="hc-icon">📅</span>
+      <div class="hc-text">
+        <div class="hc-label">Job Calendar</div>
+        <div class="hc-sub">Schedule jobs &amp; allocate pilots</div>
       </div>
       <span class="hc-arrow">›</span>
     </button>
@@ -1141,6 +1149,34 @@ select.has-value{font-weight:700;color:var(--navy);}
 
 </div><!-- end maintab-jobs -->
 
+<!-- ============ MAIN TAB: CALENDAR ============ -->
+<div id="maintab-calendar" class="maintab">
+  <div style="padding:10px 16px 0;"><button class="btn ghost small" onclick="showMainTab('home')">‹ Home</button></div>
+
+  <div class="card" style="margin:14px 16px 0;">
+    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Job Calendar</span>
+      <button class="btn ghost small" onclick="calRefresh()">↻</button>
+    </div>
+    <div style="font-size:12px;color:var(--mut);margin:2px 0 12px;line-height:1.5;">
+      Allocate one or more pilots to a job ahead of time — no aircraft needed yet. Each pilot is texted
+      the moment they're added, texted again 1 hour before to complete their SWMS &amp; flight briefing,
+      and gets their own job sheet auto-started under their name at 6pm. They're also texted straight
+      away if the job is rescheduled, reassigned or cancelled.
+    </div>
+    <button class="btn amber" style="width:100%;" onclick="calOpenNewJob()">+ New Calendar Job</button>
+  </div>
+
+  <div class="card" style="margin:14px 16px;">
+    <div class="seg" id="cal-filter-seg">
+      <button class="seg-btn active" data-f="upcoming" onclick="calSetFilter('upcoming')">Upcoming</button>
+      <button class="seg-btn" data-f="today" onclick="calSetFilter('today')">Today</button>
+      <button class="seg-btn" data-f="all" onclick="calSetFilter('all')">All</button>
+    </div>
+  </div>
+
+  <div id="cal-list" style="padding:0 16px 24px;"></div>
+</div><!-- end maintab-calendar -->
 
 <div id="maintab-safety" class="maintab">
 
@@ -4480,6 +4516,11 @@ function showMainTab(tab) {
     App.renderHome();
     App.show('scr-home'); return;
   }
+  if(tab==='calendar'){
+    document.getElementById('maintab-calendar').classList.add('mtactive');
+    calRefresh();
+    window.scrollTo(0,0); return;
+  }
   const mt=document.getElementById('maintab-'+tab);
   if(mt) mt.classList.add('mtactive');
   window.scrollTo(0,0);
@@ -4497,8 +4538,258 @@ async function jBoot() {
   await jUpdateSyncBadge();
 }
 
+/* =================================================================
+   CALENDAR MODULE — schedule a job, allocate a pilot (not aircraft).
+   Data lives server-side (OneDrive-backed via /api/calendar-jobs) so
+   every iPad and every pilot sees the same calendar. The server also
+   texts the pilot a reminder 1 hour before the job (SWMS + flight
+   briefing) and, once daily at 6pm ACST, "logs" the day's jobs and
+   starts a draft job sheet under each pilot's name — pulled into
+   this device's Job Advice → History the next time the app opens.
+   ================================================================= */
+let calJobs = [];
+let calFilter = 'upcoming';
+let _calPilotsCache = null;
+
+async function calGetPilots() {
+  if (_calPilotsCache) return _calPilotsCache;
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    _calPilotsCache = (cfg.pilots || []).map(p =>
+      typeof p === 'string' ? { name: p, phone: '', email: '' } : { name: p.name || '', phone: p.phone || '', email: p.email || '' }
+    ).filter(p => p.name);
+    return _calPilotsCache;
+  } catch { return []; }
+}
+
+function calSetFilter(f) {
+  calFilter = f;
+  document.querySelectorAll('#cal-filter-seg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
+  calRenderList();
+}
+
+async function calRefresh() {
+  const el = document.getElementById('cal-list');
+  if (el) el.innerHTML = '<div class="no-results">Loading…</div>';
+  try {
+    const res = await fetch('/api/calendar-jobs?refresh=1');
+    const data = await res.json();
+    calJobs = data.jobs || [];
+  } catch {
+    calJobs = [];
+    if (el) el.innerHTML = '<div class="no-results">⚠ Could not load calendar — check internet</div>';
+    return;
+  }
+  calRenderList();
+}
+
+function calStatusBadge(job) {
+  if (job.status === 'cancelled') return '<span class="badge failed">Cancelled</span>';
+  if (job.status === 'logged')    return '<span class="badge sent">Logged ✓</span>';
+  if (job.reminderSentAt)         return '<span class="badge queued">Reminder sent</span>';
+  return '<span class="badge draft">Scheduled</span>';
+}
+
+function calRenderList() {
+  const el = document.getElementById('cal-list');
+  if (!el) return;
+  const today = todayISO();
+  let list = [...calJobs];
+  if (calFilter === 'upcoming') list = list.filter(j => j.date >= today && j.status !== 'cancelled');
+  else if (calFilter === 'today') list = list.filter(j => j.date === today);
+  list.sort((a, b) => (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')));
+  if (!list.length) { el.innerHTML = '<div class="no-results">No jobs found</div>'; return; }
+  const groups = {};
+  list.forEach(j => { (groups[j.date] = groups[j.date] || []).push(j); });
+  el.innerHTML = Object.keys(groups).sort().map(date => `
+    <div class="date-group-label">${jFmtDate(date)}</div>
+    ${groups[date].map(j => `
+      <div class="hist-row" onclick="calOpenEdit('${j.id}')">
+        <div class="hr-left">
+          <div class="hr-job">${j.startTime ? esc(j.startTime) + ' — ' : ''}${esc(calPilotNames(j))}</div>
+          <div class="hr-meta">${esc(j.client || 'No client set')}${j.description ? ' · ' + esc(j.description) : ''}</div>
+          <div class="hr-meta" style="margin-top:3px;">${calStatusBadge(j)}</div>
+        </div>
+      </div>
+    `).join('')}
+  `).join('');
+}
+
+function calJobPilots(job) {
+  if (Array.isArray(job.pilots) && job.pilots.length) return job.pilots;
+  if (job.pilotName) return [{ name: job.pilotName, phone: job.pilotPhone || '', email: job.pilotEmail || '' }];
+  return [];
+}
+function calPilotNames(job) {
+  const p = calJobPilots(job);
+  return p.length ? p.map(x => x.name).join(' & ') : 'No pilot set';
+}
+
+async function calOpenNewJob(existing) {
+  const pilots = await calGetPilots();
+  const selectedNames = existing ? calJobPilots(existing).map(p => p.name) : [];
+  const pilotRows = pilots.map(p => `
+    <label style="display:flex;align-items:center;gap:10px;padding:7px 2px;cursor:pointer;">
+      <input type="checkbox" class="cal-pilot-cb" value="${esc(p.name)}" data-phone="${esc(p.phone)}" data-email="${esc(p.email)}" ${selectedNames.includes(p.name) ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--navy);flex:none;">
+      <span style="font-size:14px;">${esc(p.name)}${!p.phone ? ' <span style="color:var(--mut);font-size:11px;">(no mobile)</span>' : ''}</span>
+    </label>
+  `).join('');
+  const isEdit = !!existing;
+  Modal.show(`
+    <button class="modal-close" onclick="Modal.hide()">×</button>
+    <h3>${isEdit ? 'Edit Calendar Job' : 'New Calendar Job'}</h3>
+    <label class="fl">Date <span class="req">*</span></label>
+    <input type="date" id="cal-f-date" value="${existing ? existing.date || '' : ''}">
+    <div class="grid2">
+      <div>
+        <label class="fl">Start Time</label>
+        <input type="time" id="cal-f-start" value="${existing ? existing.startTime || '' : ''}">
+      </div>
+      <div>
+        <label class="fl">End Time (optional)</label>
+        <input type="time" id="cal-f-end" value="${existing ? existing.endTime || '' : ''}">
+      </div>
+    </div>
+    <label class="fl">Pilots <span class="req">*</span></label>
+    <div style="max-height:190px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;">${pilotRows}</div>
+    <label class="fl">Client / Place</label>
+    <input type="text" id="cal-f-client" placeholder="Client name or place…" value="${esc(existing ? existing.client || '' : '')}">
+    <label class="fl">Job Description</label>
+    <input type="text" id="cal-f-desc" placeholder="e.g. Mustering, Survey…" value="${esc(existing ? existing.description || '' : '')}">
+    <label class="fl">Notes</label>
+    <textarea id="cal-f-notes" rows="2" style="width:100%;box-sizing:border-box;">${esc(existing ? existing.notes || '' : '')}</textarea>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      ${isEdit ? `<button class="btn ghost" onclick="calCancelJob('${existing.id}')">Cancel Job</button>` : ''}
+      <button class="btn amber" id="cal-save-btn" style="flex:1;" onclick="calSaveJob(${isEdit ? `'${existing.id}'` : 'null'})">${isEdit ? 'Save Changes' : 'Add to Calendar'}</button>
+    </div>
+  `);
+}
+
+function calOpenEdit(id) {
+  const job = calJobs.find(j => j.id === id);
+  if (job) calOpenNewJob(job);
+}
+
+let _calSaving = false;
+async function calSaveJob(id) {
+  if (_calSaving) return; // guards a double-tap even if the button click lands before the disabled state paints
+  const btn = document.getElementById('cal-save-btn');
+  const checked = Array.from(document.querySelectorAll('.cal-pilot-cb:checked'));
+  const pilots = checked.map(cb => ({ name: cb.value, phone: cb.dataset.phone || '', email: cb.dataset.email || '' }));
+  const date = document.getElementById('cal-f-date').value;
+  if (!date || !pilots.length) { toast('Date and at least one pilot are required'); return; }
+  const noPhone = pilots.filter(p => !p.phone);
+  if (noPhone.length) toast(`⚠ No mobile on file for ${noPhone.map(p => p.name).join(', ')} — they won't get texts`, 3600);
+  const payload = {
+    date,
+    startTime:   document.getElementById('cal-f-start').value,
+    endTime:     document.getElementById('cal-f-end').value,
+    pilots,
+    client:      document.getElementById('cal-f-client').value.trim(),
+    description: document.getElementById('cal-f-desc').value.trim(),
+    notes:       document.getElementById('cal-f-notes').value.trim(),
+    createdBy:   'iPad',
+  };
+  _calSaving = true;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const res = await fetch(id ? `/api/calendar-jobs/${id}` : '/api/calendar-jobs', {
+      method: id ? 'PATCH' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Save failed');
+    Modal.hide();
+    toast(id ? '✅ Job updated' : '✅ Job added to calendar — pilots have been texted');
+    calRefresh();
+  } catch (e) {
+    toast('⚠ Could not save — check internet');
+    if (btn) { btn.disabled = false; btn.textContent = id ? 'Save Changes' : 'Add to Calendar'; }
+  } finally {
+    _calSaving = false;
+  }
+}
+
+/* ── PIN-gate for cancelling a job — reuses the Settings PIN.
+     View/create/edit stay open as before; only cancelling (the
+     most disruptive, hardest to undo action) asks for it. If no
+     PIN has been set on this iPad, it behaves as before. ─────── */
+function calRequirePin(onSuccess) {
+  const pin = App.S && App.S.pin;
+  if (!pin) { onSuccess(); return; }
+  let entered = '';
+  const draw = () => {
+    const el = document.getElementById('cal-pin-dots');
+    if (el) el.textContent = '●'.repeat(entered.length) + '○'.repeat(4 - entered.length);
+  };
+  Modal.show('<h3>Enter PIN to cancel job</h3><div id="cal-pin-dots"></div><div class="pinpad">' +
+    [1,2,3,4,5,6,7,8,9].map(n => `<button onclick="calPinKey(${n})">${n}</button>`).join('') +
+    '<button onclick="calPinKey(-1)">⌫</button><button onclick="calPinKey(0)">0</button><button onclick="Modal.hide()">✕</button></div>');
+  window.calPinKey = (n) => {
+    if (n === -1) entered = entered.slice(0, -1);
+    else if (entered.length < 4) entered += n;
+    draw();
+    if (entered.length === 4) {
+      if (entered === pin) { Modal.hide(); onSuccess(); }
+      else { entered = ''; draw(); toast('Wrong PIN'); }
+    }
+  };
+  draw();
+}
+
+async function calCancelJob(id) {
+  calRequirePin(() => {
+    Modal.show('<h3>Cancel this job?</h3><p>The pilot will not be reminded and no job sheet will be started.</p>' +
+      '<div class="btnrow"><button class="btn ghost" onclick="Modal.hide()">Keep it</button>' +
+      `<button class="btn danger" onclick="calDoCancelJob('${id}')">Cancel Job</button></div>`);
+  });
+}
+async function calDoCancelJob(id) {
+  try {
+    await fetch(`/api/calendar-jobs/${id}`, { method: 'DELETE' });
+    Modal.hide(); toast('Job cancelled'); calRefresh();
+  } catch (e) { toast('⚠ Could not cancel — check internet'); }
+}
+
+/* ── Pull drafts auto-started by the 6pm sweep into this device's
+     Job Advice history, so the pilot can finish and submit them. ─ */
+async function calImportDrafts() {
+  try {
+    const res = await fetch('/api/job-drafts');
+    if (!res.ok) return;
+    const data = await res.json();
+    const drafts = data.drafts || [];
+    for (const d of drafts) {
+      const jobNo = await jPeekNextJobNo(); // informational only — real number assigned when the pilot submits
+      await jAdd({
+        jobNo,
+        date:            d.date || todayISO(),
+        client:          d.client || '',
+        pilotName:       d.pilotName || '',
+        aircraftReg:     '', aircraftType: '',
+        hireType:        d.hireType || 'wet',
+        isDual:          false, pilot2Name: '', aircraft2Reg: '', aircraft2Type: '',
+        lines:           [], totalHours: 0,
+        notes:           d.notes || '',
+        signatureDataURL: null,
+        status:          'draft',
+        createdAt:       Date.now(),
+        submittedAt:     null, syncedAt: null,
+        calendarJobId:   d.calendarJobId || null,
+      });
+    }
+    if (drafts.length) {
+      toast(`📋 ${drafts.length} job${drafts.length > 1 ? 's' : ''} auto-started from the calendar — see Jobs → History`);
+      if (typeof jUpdateSyncBadge === 'function') jUpdateSyncBadge();
+    }
+  } catch (e) { /* offline — silently skip, will retry next app open */ }
+}
+
 App.init();
 jBoot().catch(console.error);
+calImportDrafts().catch(() => {});
 
 /* ── SPA back-button guard ───────────────────────────────────────
    Push a dummy entry so the browser "back" stays inside the app.

@@ -73,6 +73,8 @@ tr:hover td{background:#F8F9FD;}
 .bw{background:#DBEAFE;color:#1D4ED8;}
 .bd{background:#FEF3C7;color:#92400E;}
 .bdu{background:#EDE9FE;color:#6D28D9;}
+.bg{background:#DCFCE7;color:#15803D;}
+.br{background:#FEE2E2;color:#B91C1C;}
 a.pdf-link{color:var(--orange);text-decoration:none;font-size:12px;font-weight:600;}
 a.pdf-link:hover{text-decoration:underline;}
 .no-data{padding:48px;text-align:center;color:var(--mut);font-size:14px;}
@@ -152,6 +154,7 @@ a.pdf-link:hover{text-decoration:underline;}
       <button class="tab-btn"        data-tab="aircraft" onclick="showTab('aircraft')">🚁 By Aircraft</button>
       <button class="tab-btn"        data-tab="client"   onclick="showTab('client')">🏢 By Client</button>
       <button class="tab-btn"        data-tab="jobs"     onclick="showTab('jobs')">📋 All Jobs</button>
+      <button class="tab-btn"        data-tab="calendar" onclick="showTab('calendar')">📅 Calendar</button>
     </div>
     <div id="tab-content" class="card">
       <div class="loading"><span class="spin"></span>Loading records…</div>
@@ -297,6 +300,7 @@ function renderTab(tab) {
   if (tab==='pilot')    renderByPilot();
   else if (tab==='aircraft') renderByAircraft();
   else if (tab==='client')   renderByClient();
+  else if (tab==='calendar') renderCalendar();
   else                       renderAllJobs();
 }
 
@@ -386,6 +390,49 @@ function renderAllJobs() {
       <td class="hrs">${(j.totalHours||0).toFixed(1)}</td>
       <td>${j.oneDriveUrl?`<a class="pdf-link" href="${j.oneDriveUrl}" target="_blank">PDF ↗</a>`:'—'}</td>
     </tr>`).join('')}</tbody></table></div>`);
+}
+
+/* ── Calendar (read-only — office view of the Job Calendar) ─
+   Separate from the Job Advice records above: different shape
+   (date/startTime/pilots[]/status), its own fetch, no PIN needed
+   beyond the reports login already covering this whole page. ─ */
+let CAL_JOBS = [];
+async function renderCalendar(force) {
+  set('<div class="loading"><span class="spin"></span>Loading calendar…</div>');
+  try {
+    if (force || !CAL_JOBS.length) {
+      const r = await fetch('/api/calendar-jobs?all=1' + (force ? '&refresh=1' : ''), {credentials:'include'});
+      const d = await r.json();
+      CAL_JOBS = d.jobs || [];
+    }
+  } catch {
+    set('<div class="no-data">⚠ Could not load the calendar — check your connection.</div>');
+    return;
+  }
+  const jobs = [...CAL_JOBS].sort((a,b)=>(a.date+(a.startTime||'')).localeCompare(b.date+(b.startTime||'')));
+  if (!jobs.length) { noData(); return; }
+  set(`<div class="card-title">📅 Calendar <span class="ct-count">${jobs.length} jobs</span>
+      <button class="btn-refresh" style="margin-left:auto;" onclick="renderCalendar(true)" title="Refresh from server">↺</button></div>
+    <div class="tbl-wrap"><table>
+    <thead><tr><th>Date</th><th>Time</th><th>Pilot(s)</th><th>Client</th><th>Description</th><th>Status</th></tr></thead>
+    <tbody>${jobs.map(j=>`<tr>
+      <td style="white-space:nowrap;">${fmtDate(j.date)}</td>
+      <td>${esc(j.startTime||'—')}</td>
+      <td>${esc(calPilotNames(j))}</td>
+      <td>${esc(j.client||'—')}</td>
+      <td class="small">${esc(j.description||'')}</td>
+      <td>${calStatusBadge(j)}</td>
+    </tr>`).join('')}</tbody></table></div>`);
+}
+function calPilotNames(j) {
+  if (Array.isArray(j.pilots) && j.pilots.length) return j.pilots.map(p=>p.name).join(', ');
+  return j.pilotName || '—';
+}
+function calStatusBadge(j) {
+  if (j.status === 'cancelled') return '<span class="badge br">Cancelled</span>';
+  if (j.status === 'logged')    return '<span class="badge bg">Logged</span>';
+  if ((j.remindedPilots||[]).length) return '<span class="badge bd">Reminder sent</span>';
+  return '<span class="badge bw">Scheduled</span>';
 }
 
 /* ── CSV Export ───────────────────────────────────────── */

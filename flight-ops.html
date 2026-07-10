@@ -672,6 +672,26 @@ select.has-value{font-weight:700;color:var(--navy);}
 .badge.synced{background:var(--blue-bg);color:var(--blue);}
 .no-results{text-align:center;color:var(--mut);padding:40px 20px;font-size:15px;}
 
+/* ── Week calendar grid (Google-Calendar-style) ── */
+.calw-head{display:flex;align-items:center;gap:8px;margin:2px 0 8px;}
+.calw-head .wk{flex:1;text-align:center;font-weight:800;font-size:14px;color:var(--navy);}
+.calw-nav{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 13px;font-size:15px;font-weight:700;color:var(--ink2);}
+.calw-wrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:64vh;-webkit-overflow-scrolling:touch;}
+.calw{display:grid;grid-template-columns:42px repeat(7,minmax(84px,1fr));min-width:640px;}
+.calw-dh{position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1px solid var(--line);text-align:center;padding:7px 2px 5px;}
+.calw-dh .dn{font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);font-weight:700;}
+.calw-dh .dd{font-size:15px;font-weight:800;color:var(--ink);line-height:24px;}
+.calw-dh.today .dd{color:#fff;background:var(--navy);border-radius:50%;display:inline-block;width:24px;height:24px;}
+.calw-timecol .calw-time{height:44px;font-size:9px;color:var(--mut);text-align:right;padding-right:5px;transform:translateY(-5px);}
+.calw-col{position:relative;border-left:1px solid var(--line);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:pan-y pan-x;}
+.calw-slot{height:22px;box-sizing:border-box;pointer-events:none;}
+.calw-slot.hr{border-top:1px solid var(--line);}
+.calw-job{position:absolute;left:2px;right:2px;background:var(--navy);color:#fff;border-radius:6px;padding:3px 6px;font-size:10px;line-height:1.3;overflow:hidden;z-index:2;box-shadow:0 1px 3px rgba(10,14,40,.3);cursor:pointer;}
+.calw-job.logged{background:#2E7D4F;}
+.calw-job .t{font-weight:800;}
+.calw-press{position:absolute;left:2px;right:2px;height:44px;border:2px dashed var(--navy);border-radius:6px;background:rgba(24,34,74,.10);z-index:1;pointer-events:none;}
+.calw-hint{font-size:11.5px;color:var(--mut);text-align:center;margin:8px 0 14px;}
+
 /* Sync */
 .sync-stat{background:var(--navy);color:#fff;border-radius:var(--r-lg);padding:18px;
   text-align:center;margin-bottom:12px;}
@@ -1168,14 +1188,19 @@ select.has-value{font-weight:700;color:var(--navy);}
   </div>
 
   <div class="card" style="margin:14px 16px;">
-    <div class="seg" id="cal-filter-seg">
+    <div class="seg" id="cal-view-seg">
+      <button class="seg-btn active" data-v="week" onclick="calSetView('week')">Week</button>
+      <button class="seg-btn" data-v="list" onclick="calSetView('list')">List</button>
+    </div>
+    <div class="seg" id="cal-filter-seg" style="display:none;">
       <button class="seg-btn active" data-f="upcoming" onclick="calSetFilter('upcoming')">Upcoming</button>
       <button class="seg-btn" data-f="today" onclick="calSetFilter('today')">Today</button>
       <button class="seg-btn" data-f="all" onclick="calSetFilter('all')">All</button>
     </div>
   </div>
 
-  <div id="cal-list" style="padding:0 16px 24px;"></div>
+  <div id="cal-week" style="padding:0 12px 8px;"></div>
+  <div id="cal-list" style="padding:0 16px 24px;display:none;"></div>
 </div><!-- end maintab-calendar -->
 
 <div id="maintab-safety" class="maintab">
@@ -4578,10 +4603,13 @@ async function calRefresh() {
     calJobs = data.jobs || [];
   } catch {
     calJobs = [];
-    if (el) el.innerHTML = '<div class="no-results">⚠ Could not load calendar — check internet</div>';
+    const msg = '<div class="no-results">⚠ Could not load calendar — check internet</div>';
+    if (el) el.innerHTML = msg;
+    const wk = document.getElementById('cal-week');
+    if (wk && calView === 'week') wk.innerHTML = msg;
     return;
   }
-  calRenderList();
+  calRenderActive();
 }
 
 function calStatusBadge(job) {
@@ -4616,6 +4644,112 @@ function calRenderList() {
   `).join('');
 }
 
+/* ── Week grid view — hold a slot to create, tap a job to edit ── */
+let calView = 'week';
+let calWeekStart = calMondayOf(new Date());
+const CALW_H0 = 5, CALW_H1 = 20, CALW_PX = 44;   // 05:00–20:00, 44px per hour
+
+function calMondayOf(d) { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0,0,0,0); return x; }
+function calLocalISO(d) { return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function calMinOf(t) { if (!t) return null; const p = t.split(':'); return (+p[0]) * 60 + (+p[1] || 0); }
+
+function calSetView(v) {
+  calView = v;
+  document.querySelectorAll('#cal-view-seg .seg-btn').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+  document.getElementById('cal-filter-seg').style.display = v === 'list' ? '' : 'none';
+  document.getElementById('cal-list').style.display  = v === 'list' ? '' : 'none';
+  document.getElementById('cal-week').style.display  = v === 'week' ? '' : 'none';
+  calRenderActive();
+}
+function calRenderActive() { if (calView === 'week') calRenderWeek(); else calRenderList(); }
+function calWeekMove(n) { calWeekStart = new Date(calWeekStart.getTime() + n * 7 * 864e5); calRenderWeek(); }
+function calWeekToday() { calWeekStart = calMondayOf(new Date()); calRenderWeek(); }
+
+function calRenderWeek() {
+  const wrap = document.getElementById('cal-week');
+  if (!wrap) return;
+  const days = [...Array(7)].map((_, i) => new Date(calWeekStart.getTime() + i * 864e5));
+  const today = todayISO();
+  const fmt = d => d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+  const hours = []; for (let h = CALW_H0; h < CALW_H1; h++) hours.push(h);
+  wrap.innerHTML = `
+    <div class="calw-head">
+      <button class="calw-nav" onclick="calWeekMove(-1)">‹</button>
+      <span class="wk">${fmt(days[0])} – ${fmt(days[6])}</span>
+      <button class="calw-nav" style="font-size:12px;" onclick="calWeekToday()">Today</button>
+      <button class="calw-nav" onclick="calWeekMove(1)">›</button>
+    </div>
+    <div class="calw-wrap" id="calw-scroll">
+      <div class="calw">
+        <div class="calw-dh"></div>
+        ${days.map(d => { const iso = calLocalISO(d); return `
+          <div class="calw-dh ${iso === today ? 'today' : ''}">
+            <div class="dn">${d.toLocaleDateString('en-AU', { weekday: 'short' })}</div>
+            <div class="dd">${d.getDate()}</div>
+          </div>`; }).join('')}
+        <div class="calw-timecol">${hours.map(h => `<div class="calw-time">${h}:00</div>`).join('')}</div>
+        ${days.map(d => {
+          const iso = calLocalISO(d);
+          const jobs = calJobs.filter(j => j.date === iso && j.status !== 'cancelled');
+          return `<div class="calw-col" data-date="${iso}">
+            ${hours.map(() => `<div class="calw-slot hr"></div><div class="calw-slot"></div>`).join('')}
+            ${jobs.map((j, i) => {
+              const m = calMinOf(j.startTime);
+              const top = m == null ? 2 : Math.max(0, (m - CALW_H0 * 60) / 60 * CALW_PX);
+              const e = calMinOf(j.endTime);
+              const dur = (m != null && e != null && e > m) ? e - m : 60;
+              const hgt = m == null ? 30 : Math.max(26, dur / 60 * CALW_PX - 2);
+              return `<div class="calw-job ${j.status === 'logged' ? 'logged' : ''}" style="top:${top + i * 0}px;height:${hgt}px;"
+                        onclick="event.stopPropagation();calOpenEdit('${j.id}')">
+                        <span class="t">${esc(j.startTime || '')}</span> ${esc(calPilotNames(j))}<br>${esc(j.client || j.description || '')}</div>`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="calw-hint">Hold your finger on a day &amp; time to add a job there — tap a job to edit it</div>`;
+  const sc = document.getElementById('calw-scroll');
+  if (sc) sc.scrollTop = 0.5 * CALW_PX; // open with early morning in view
+  calAttachSlotPress(wrap);
+}
+
+function calAttachSlotPress(root) {
+  root.querySelectorAll('.calw-col').forEach(col => {
+    let timer = null, sx = 0, sy = 0, longFired = false, mouseArm = null, pressEl = null;
+    const timeAt = clientY => {
+      const r = col.getBoundingClientRect();
+      const mins = CALW_H0 * 60 + Math.floor((clientY - r.top) / (CALW_PX / 2)) * 30;
+      const capped = Math.max(CALW_H0 * 60, Math.min((CALW_H1 - 1) * 60 + 30, mins));
+      return { t: pad2(Math.floor(capped / 60)) + ':' + pad2(capped % 60), y: (capped - CALW_H0 * 60) / 60 * CALW_PX };
+    };
+    const showPress = y => { hidePress(); pressEl = document.createElement('div'); pressEl.className = 'calw-press'; pressEl.style.top = y + 'px'; col.appendChild(pressEl); };
+    const hidePress = () => { if (pressEl) { pressEl.remove(); pressEl = null; } };
+    const clearAll = () => { if (timer) { clearTimeout(timer); timer = null; } mouseArm = null; hidePress(); };
+    col.addEventListener('pointerdown', e => {
+      if (e.target.closest('.calw-job')) return;
+      sx = e.clientX; sy = e.clientY; longFired = false;
+      const slot = timeAt(e.clientY), date = col.dataset.date;
+      if (e.pointerType === 'mouse') { mouseArm = { date, slot }; return; }
+      showPress(slot.y);
+      timer = setTimeout(() => {
+        longFired = true; clearAll();
+        if (navigator.vibrate) navigator.vibrate(15);
+        calOpenNewJob(null, { date, startTime: slot.t });
+      }, 400);
+    });
+    col.addEventListener('pointermove', e => {
+      if (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10) clearAll();
+    });
+    col.addEventListener('pointerup', e => {
+      const arm = mouseArm; clearAll();
+      if (arm && !longFired && Math.abs(e.clientX - sx) <= 6 && Math.abs(e.clientY - sy) <= 6)
+        calOpenNewJob(null, { date: arm.date, startTime: arm.slot.t }); // mouse: plain click creates
+    });
+    col.addEventListener('pointercancel', clearAll);
+    col.addEventListener('contextmenu', e => e.preventDefault());
+  });
+}
+
 function calJobPilots(job) {
   if (Array.isArray(job.pilots) && job.pilots.length) return job.pilots;
   if (job.pilotName) return [{ name: job.pilotName, phone: job.pilotPhone || '', email: job.pilotEmail || '' }];
@@ -4626,7 +4760,8 @@ function calPilotNames(job) {
   return p.length ? p.map(x => x.name).join(' & ') : 'No pilot set';
 }
 
-async function calOpenNewJob(existing) {
+async function calOpenNewJob(existing, pre) {
+  pre = pre || {};
   const pilots = await calGetPilots();
   const selectedNames = existing ? calJobPilots(existing).map(p => p.name) : [];
   const pilotRows = pilots.map(p => `
@@ -4640,11 +4775,11 @@ async function calOpenNewJob(existing) {
     <button class="modal-close" onclick="Modal.hide()">×</button>
     <h3>${isEdit ? 'Edit Calendar Job' : 'New Calendar Job'}</h3>
     <label class="fl">Date <span class="req">*</span></label>
-    <input type="date" id="cal-f-date" value="${existing ? existing.date || '' : ''}">
+    <input type="date" id="cal-f-date" value="${existing ? existing.date || '' : pre.date || ''}">
     <div class="grid2">
       <div>
         <label class="fl">Start Time</label>
-        <input type="time" id="cal-f-start" value="${existing ? existing.startTime || '' : ''}">
+        <input type="time" id="cal-f-start" value="${existing ? existing.startTime || '' : pre.startTime || ''}">
       </div>
       <div>
         <label class="fl">End Time (optional)</label>

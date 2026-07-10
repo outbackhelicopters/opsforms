@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Flight Ops — Office</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <style>
 :root{
   --acc:#18224A; --acc2:#E8750E;
@@ -104,6 +107,34 @@ input:focus,select:focus{border-color:var(--acc);}
 .ac .cs{font-size:15px;font-weight:800;}
 .ac .ty{font-size:12.5px;color:var(--mut);margin-top:2px;}
 @media(max-width:900px){.cal{grid-template-columns:repeat(2,1fr);}.cal-day{min-height:auto;border-bottom:1px solid var(--line);}.content{padding:20px;}}
+
+/* ---------- CANCELLED JOBS ---------- */
+.job.cancelled{opacity:.45;}
+.job.cancelled .jt{text-decoration:line-through;}
+
+/* ---------- TOAST ---------- */
+.toastbox{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:8px;font-size:13px;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80vw;}
+.toastbox.show{opacity:1;}
+
+/* ---------- ACCESSIBILITY ---------- */
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc2);outline-offset:1px;}
+
+/* ---------- DARK MODE ---------- */
+@media(prefers-color-scheme:dark){
+  :root{
+    --acc:#8CA0DC; --acc2:#E8890E;
+    --bg:#101114; --card:#17181C; --line:#26282E; --text:#E4E5EA; --mut:#8A8D96;
+    --ok:#4CB472; --warn:#E0A22C; --bad:#D96A63;
+  }
+  input,select,textarea{background:#1C1E23;color:var(--text);border-color:#2A2C33;}
+  .login-card input{background:none;}
+  .btn-l,.btn-d{background:#1C1E23;}
+  .btn-p{color:#0F1013;}
+  .cal-day.today{background:#1E1913;}
+  .job{background:#1C1E23;}
+  .toastbox{background:#E4E5EA;color:#101114;}
+  th{background:#131418;}
+}
 </style>
 </head>
 <body>
@@ -113,6 +144,7 @@ input:focus,select:focus{border-color:var(--acc);}
 
 <div class="auth-wrap" id="w-login">
   <div class="auth-card">
+    <img src="logo.png" alt="" style="width:56px;height:56px;border-radius:12px;margin-bottom:14px;">
     <div class="auth-co" id="brand-login">Flight Ops</div>
     <div class="auth-tag">Office</div>
     <label class="lbl">Email</label><input type="email" id="li-email" autocomplete="username">
@@ -151,7 +183,7 @@ input:focus,select:focus{border-color:var(--acc);}
 <div id="app-view">
 <div class="shell">
   <nav class="sidebar">
-    <div class="sb-co" id="brand-side">Flight Ops</div>
+    <div class="sb-co" id="brand-side" style="display:flex;align-items:center;gap:9px;"><img src="logo.png" alt="" style="width:26px;height:26px;border-radius:6px;flex:none;">Flight Ops</div>
     <div class="sb-nav">
       <button class="nav-btn active" data-v="dash" onclick="nav(this)">Today</button>
       <button class="nav-btn" data-v="cal" onclick="nav(this)">Calendar</button>
@@ -185,15 +217,16 @@ input:focus,select:focus{border-color:var(--acc);}
       <div class="pg-h">
         <div class="pg-title">Calendar</div>
         <div class="cal-nav">
-          <button onclick="moveWeek(-1)">‹</button>
+          <button onclick="moveWeek(-1)" aria-label="Previous week">‹</button>
           <span class="wk" id="cal-wk"></span>
-          <button onclick="moveWeek(1)">›</button>
+          <button onclick="moveWeek(1)" aria-label="Next week">›</button>
           <button class="btn btn-l btn-sm" onclick="thisWeek()">Today</button>
         </div>
+        <label class="st" style="display:flex;align-items:center;gap:5px;"><input type="checkbox" id="cal-showcancel" onchange="loadCalendar()">Cancelled</label>
         <button class="btn btn-p" onclick="openJobModal()">New job</button>
       </div>
       <div class="cal" id="cal"></div>
-      <p class="st" style="margin-top:14px">Pilots get an SMS one hour before start. Aircraft is chosen by the pilot on the iPad when they do their paperwork.</p>
+      <p class="st" style="margin-top:14px">Click an empty day to add a job there. Pilots get an SMS one hour before start — the aircraft is chosen by the pilot on the iPad when they do their paperwork.</p>
     </section>
 
     <!-- PAPERWORK -->
@@ -201,9 +234,12 @@ input:focus,select:focus{border-color:var(--acc);}
       <div class="pg-h"><div class="pg-title">Paperwork</div>
         <select id="pw-ac" onchange="renderPaper()"><option value="">All aircraft</option></select>
         <select id="pw-pilot" onchange="renderPaper()"><option value="">All pilots</option></select>
+        <input type="date" id="pw-from" onchange="renderPaper()" aria-label="From date">
+        <input type="date" id="pw-to" onchange="renderPaper()" aria-label="To date">
         <button class="btn btn-l btn-sm" onclick="loadPaper(true)">Refresh</button>
       </div>
       <div class="card"><div id="paper-list"><div class="empty">Loading…</div></div></div>
+      <p class="st" id="pw-count"></p>
     </section>
 
     <!-- FLEET -->
@@ -226,13 +262,14 @@ input:focus,select:focus{border-color:var(--acc);}
         <input type="search" id="cl-search" placeholder="Search clients…" oninput="renderClients()" style="min-width:240px">
       </div>
       <div class="card"><div id="client-list"></div></div>
+      <p class="st" id="client-count"></p>
     </section>
 
     <!-- SETTINGS -->
     <section class="view" id="v-settings">
       <div class="pg-h"><div class="pg-title">Settings</div></div>
       <div class="card">
-        <div class="card-h"><h3>Users</h3><button class="btn btn-l btn-sm" onclick="openModal('m-invite')">Invite user</button></div>
+        <div class="card-h"><h3>Users</h3><button class="btn btn-l btn-sm" onclick="openInvite()">Invite user</button></div>
         <div id="users-list"><div class="empty">Loading…</div></div>
       </div>
     </section>
@@ -251,9 +288,11 @@ input:focus,select:focus{border-color:var(--acc);}
     <div style="display:flex;gap:10px">
       <div style="flex:1"><label class="lbl">Date</label><input type="date" id="mj-date"></div>
       <div style="flex:1"><label class="lbl">Start</label><input type="time" id="mj-time"></div>
+      <div style="flex:1"><label class="lbl">End (optional)</label><input type="time" id="mj-end"></div>
     </div>
     <label class="lbl">Pilot(s) — Ctrl/Cmd-click for more than one</label>
     <select id="mj-pilots" multiple></select>
+    <label class="lbl">Notes</label><input type="text" id="mj-notes" placeholder="Optional notes for the job sheet…">
     <div class="m-err" id="mj-err"></div>
     <div class="modal-actions">
       <button class="btn btn-d" id="mj-cancel-job" style="display:none" onclick="cancelJob()">Cancel job</button>
@@ -284,6 +323,8 @@ input:focus,select:focus{border-color:var(--acc);}
   </div>
 </div>
 
+<div class="toastbox" id="toastbox" role="status"></div>
+
 <script>
 'use strict';
 /* ---------- STATE ---------- */
@@ -296,12 +337,23 @@ async function api(path, opts = {}) {
   const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', ...opts });
   let d = null;
   try { d = await r.json(); } catch {}
+  if (r.status === 401 && !path.startsWith('/api/auth/')) { sessionExpired(); throw new Error('Signed out'); }
   if (!r.ok) throw new Error((d && d.error) || `Request failed (${r.status})`);
   return d;
 }
+function sessionExpired() {
+  if (!ME) return;
+  ME = null;
+  el('li-err').textContent = 'Session expired — sign in again';
+  show('w-login');
+}
+function toast(m) {
+  const t = el('toastbox');
+  t.textContent = m; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3200);
+}
 function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function ymd(d){ return d.toISOString().slice(0,10); }
 function localYmd(d){ const p = n => String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 function mondayOf(d){ const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); x.setHours(0,0,0,0); return x; }
 function show(id){ ['w-loading','w-login','w-boot','w-invite'].forEach(w => el(w).style.display = w===id ? 'flex':'none'); el('app-view').style.display = id==='app' ? 'block':'none'; if(id==='app') el('w-loading').style.display='none'; }
@@ -380,10 +432,14 @@ function renderStatic(){
 }
 function renderClients(){
   const q = (el('cl-search').value||'').toLowerCase();
-  const list = (CFG.clients||[]).filter(c => String(c).toLowerCase().includes(q)).slice(0,60);
+  const hits = (CFG.clients||[]).filter(c => String(c).toLowerCase().includes(q));
+  const list = hits.slice(0,60);
   el('client-list').innerHTML = list.length
     ? '<table>' + list.map(c => `<tr><td>${esc(c)}</td></tr>`).join('') + '</table>'
     : '<div class="empty">No matches</div>';
+  el('client-count').textContent = hits.length > list.length
+    ? `Showing ${list.length} of ${hits.length} — keep typing to narrow it down`
+    : (q ? `${hits.length} match${hits.length===1?'':'es'}` : `${hits.length} clients on file`);
 }
 
 /* ---------- CALENDAR ---------- */
@@ -395,7 +451,8 @@ async function loadCalendar(){
   el('cal-wk').textContent = new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'short'}).format(weekStart)
     + ' – ' + new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'short',year:'numeric'}).format(new Date(weekStart.getTime()+6*864e5));
   try {
-    const d = await api(`/api/calendar-jobs?from=${from}&to=${to}`);
+    const all = el('cal-showcancel') && el('cal-showcancel').checked ? '&all=1' : '';
+    const d = await api(`/api/calendar-jobs?from=${from}&to=${to}${all}`);
     CAL_JOBS = d.jobs || [];
   } catch (e) { CAL_JOBS = []; console.error(e.message); }
   renderCal();
@@ -407,16 +464,16 @@ function renderCal(){
   el('cal').innerHTML = days.map(d => {
     const dy = localYmd(d);
     const jobs = CAL_JOBS.filter(j => j.date === dy);
-    return `<div class="cal-day ${dy===today?'today':''}">
+    return `<div class="cal-day ${dy===today?'today':''}" onclick="dayClick(event,'${dy}')">
       <div class="cal-dh">${new Intl.DateTimeFormat('en-AU',{weekday:'short'}).format(d)}</div>
       <div class="cal-dn">${d.getDate()}</div>
       ${jobs.map(j => `
-        <div class="job" onclick="openJobModal('${j.id}')">
+        <div class="job ${j.status==='cancelled'?'cancelled':''}" onclick="event.stopPropagation();openJobModal('${j.id}')">
           <div class="tm">${esc(j.startTime)||'—'}</div>
           <div class="jt">${esc(j.description)||'Job'}</div>
           <div class="jm">${esc(j.client)}</div>
           <div class="jm">${esc(jobPilotNames(j))}</div>
-          <div class="js"><span class="dot ${j.status==='logged'?'d-ok':'d-mut'}"></span>${j.status==='logged'?'Logged':'Scheduled'}</div>
+          <div class="js"><span class="dot ${j.status==='logged'?'d-ok':j.status==='cancelled'?'d-bad':'d-mut'}"></span>${j.status==='logged'?'Logged':j.status==='cancelled'?'Cancelled':'Scheduled'}</div>
         </div>`).join('')}
     </div>`;
   }).join('');
@@ -431,7 +488,7 @@ function renderDash(){
   el('dash-stats').innerHTML = `
     <div class="stat"><div class="v">${jobs.length}</div><div class="k">Jobs today</div></div>
     <div class="stat"><div class="v">${logged}</div><div class="k">Logged</div></div>
-    <div class="stat"><div class="v">${jobs.length - logged}</div><div class="k">Still open</div></div>`;
+    <div class="stat"><div class="v">${jobs.length - logged}</div><div class="k">Still to log</div></div>`;
   el('dash-jobs').innerHTML = jobs.length
     ? '<table>' + jobs.map(j => `<tr>
         <td style="width:70px"><b>${esc(j.startTime)||'—'}</b></td>
@@ -442,18 +499,28 @@ function renderDash(){
 }
 
 /* ---------- JOB MODAL ---------- */
-function openJobModal(id){
+function dayClick(e, date){
+  if (e.target.closest('.job')) return;
+  openJobModal(null, { date });
+}
+function openJobModal(id, pre){
+  pre = pre || {};
   editingJob = id ? CAL_JOBS.find(j => j.id === id) : null;
   el('mj-title').textContent = editingJob ? 'Edit job' : 'New job';
   el('mj-desc').value = editingJob ? (editingJob.description||'') : '';
   el('mj-client').value = editingJob ? (editingJob.client||'') : '';
-  el('mj-date').value = editingJob ? editingJob.date : localYmd(new Date());
-  el('mj-time').value = editingJob ? (editingJob.startTime||'') : '06:30';
+  el('mj-date').value = editingJob ? editingJob.date : (pre.date || localYmd(new Date()));
+  el('mj-time').value = editingJob ? (editingJob.startTime||'') : (pre.startTime || '06:30');
+  el('mj-end').value = editingJob ? (editingJob.endTime||'') : '';
+  el('mj-notes').value = editingJob ? (editingJob.notes||'') : '';
   const names = editingJob ? (editingJob.pilots||[]).map(p=>p.name) : [];
   [...el('mj-pilots').options].forEach(o => o.selected = names.includes(o.value));
-  el('mj-cancel-job').style.display = editingJob ? 'block' : 'none';
+  const cbtn = el('mj-cancel-job');
+  cbtn.style.display = (editingJob && editingJob.status !== 'cancelled') ? 'block' : 'none';
+  cbtn.dataset.arm = ''; cbtn.textContent = 'Cancel job';
   el('mj-err').textContent = '';
   openModal('m-job');
+  setTimeout(() => el('mj-desc').focus(), 60);
 }
 function selectedPilots(){
   const names = [...el('mj-pilots').selectedOptions].map(o=>o.value);
@@ -461,8 +528,9 @@ function selectedPilots(){
 }
 async function saveJob(){
   el('mj-err').textContent = '';
-  const body = { date: el('mj-date').value, startTime: el('mj-time').value,
+  const body = { date: el('mj-date').value, startTime: el('mj-time').value, endTime: el('mj-end').value,
     client: el('mj-client').value.trim(), description: el('mj-desc').value.trim(),
+    notes: el('mj-notes').value.trim(),
     pilots: selectedPilots(), createdBy: ME ? ME.name : '' };
   if (!body.date || !body.pilots.length) { el('mj-err').textContent = 'Date and at least one pilot are required'; return; }
   el('mj-save').disabled = true;
@@ -475,9 +543,13 @@ async function saveJob(){
   el('mj-save').disabled = false;
 }
 async function cancelJob(){
-  if (!editingJob || !confirm('Cancel this job? Assigned pilots will be texted.')) return;
-  try { await api(`/api/calendar-jobs/${editingJob.id}`, { method:'DELETE' }); closeModal('m-job'); loadCalendar(); }
-  catch (e) { el('mj-err').textContent = e.message; }
+  if (!editingJob) return;
+  const btn = el('mj-cancel-job');
+  if (btn.dataset.arm !== '1') { btn.dataset.arm = '1'; btn.textContent = 'Really cancel? Pilots get texted'; return; }
+  try {
+    await api(`/api/calendar-jobs/${editingJob.id}`, { method:'DELETE' });
+    closeModal('m-job'); toast('Job cancelled — pilots have been notified'); loadCalendar();
+  } catch (e) { el('mj-err').textContent = e.message; }
 }
 
 /* ---------- PAPERWORK ---------- */
@@ -494,7 +566,13 @@ async function loadPaper(force){
 }
 function renderPaper(){
   const ac = el('pw-ac').value, pl = el('pw-pilot').value;
-  const rows = PAPER.filter(j => (!ac || j.aircraftReg===ac) && (!pl || (j.pilotName||j.pilot)===pl)).slice(0,150);
+  const df = el('pw-from').value, dt = el('pw-to').value;
+  const all = PAPER.filter(j => {
+    const d = j.flightDate || j.date || '';
+    return (!ac || j.aircraftReg===ac) && (!pl || (j.pilotName||j.pilot)===pl) && (!df || d >= df) && (!dt || d <= dt);
+  });
+  const rows = all.slice(0,150);
+  el('pw-count').textContent = all.length ? `Showing ${rows.length} of ${all.length} bundles` : '';
   el('paper-list').innerHTML = rows.length
     ? '<table><tr><th>Flight</th><th>Pilot</th><th>Client</th><th style="text-align:right"></th></tr>' + rows.map(j => `<tr>
         <td>${esc(j.aircraftReg)||'—'} · ${esc(j.flightDate||j.date)||''}</td>
@@ -510,7 +588,7 @@ async function loadUsers(){
   let d;
   try { d = await api('/api/users'); } catch (e) { el('users-list').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   const canEdit = t => !(t.role === 'provider' && ME.role !== 'provider') && t.email !== ME.email;
-  el('users-list').innerHTML = '<table><tr><th>User</th><th>Email</th><th>Role</th><th></th></tr>' +
+  el('users-list').innerHTML = '<table><tr><th>User</th><th>Email</th><th>Role</th><th>Last sign-in</th><th></th></tr>' +
     d.users.map(u => `<tr ${u.active?'':'style="opacity:.5"'}>
       <td>${esc(u.name)}${u.email===ME.email?' <span class="st">(you)</span>':''}</td>
       <td class="st">${esc(u.email)}</td>
@@ -519,28 +597,38 @@ async function loadUsers(){
              <option value="admin" ${u.role==='admin'?'selected':''}>Admin</option>
              <option value="office" ${u.role==='office'?'selected':''}>Office</option></select>`
         : u.role.charAt(0).toUpperCase()+u.role.slice(1))}</td>
+      <td class="st">${u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('en-AU',{day:'numeric',month:'short'}) : '—'}</td>
       <td style="text-align:right;white-space:nowrap">
         ${canEdit(u) ? `<button class="btn btn-l btn-sm" onclick="resetPw('${esc(u.email)}')">Reset password</button>
         <button class="btn ${u.active?'btn-d':'btn-l'} btn-sm" onclick="setActive('${esc(u.email)}',${!u.active})">${u.active?'Deactivate':'Reactivate'}</button>` : ''}
       </td></tr>`).join('') +
     d.invites.map(i => `<tr style="opacity:.6"><td>${esc(i.name)}</td><td class="st">${esc(i.email)}</td>
-      <td class="st">${esc(i.role)} — ${i.kind==='reset'?'reset':'invite'} pending</td><td></td></tr>`).join('') + '</table>';
+      <td class="st">${esc(i.role)} — ${i.kind==='reset'?'reset':'invite'} pending</td>
+      <td class="st">expires in ${Math.max(1, Math.ceil((i.exp - Date.now())/864e5))}d</td><td></td></tr>`).join('') + '</table>';
 }
-async function setRole(email, role){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ role }) }); } catch (e) { alert(e.message); } loadUsers(); }
-async function setActive(email, active){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ active }) }); } catch (e) { alert(e.message); } loadUsers(); }
+async function setRole(email, role){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ role }) }); toast('Role updated'); } catch (e) { toast(e.message); } loadUsers(); }
+async function setActive(email, active){ try { await api(`/api/users/${encodeURIComponent(email)}`, { method:'PUT', body: JSON.stringify({ active }) }); toast(active ? 'Account reactivated' : 'Account deactivated'); } catch (e) { toast(e.message); } loadUsers(); }
 async function resetPw(email){
   try {
     const d = await api('/api/users/invite', { method:'POST', body: JSON.stringify({ email, kind:'reset' }) });
-    alert(d.emailed ? 'Reset link emailed.' : 'Email not configured — copy this link and send it to them:\n\n' + d.link);
+    if (d.emailed) toast('Reset link emailed');
+    else prompt('Email not configured — copy this link and send it to them:', d.link);
     loadUsers();
-  } catch (e) { alert(e.message); }
+  } catch (e) { toast(e.message); }
+}
+function openInvite(){
+  el('in-name').value = ''; el('in-email').value = '';
+  el('in-role').value = 'office';
+  el('in-err').textContent = ''; el('in-link').style.display = 'none';
+  openModal('m-invite');
+  setTimeout(() => el('in-name').focus(), 60);
 }
 async function sendInvite(){
   el('in-err').textContent = ''; el('in-link').style.display = 'none';
   el('in-send').disabled = true;
   try {
     const d = await api('/api/users/invite', { method:'POST', body: JSON.stringify({ name: el('in-name').value, email: el('in-email').value, role: el('in-role').value }) });
-    if (d.emailed) { closeModal('m-invite'); }
+    if (d.emailed) { closeModal('m-invite'); toast('Invite emailed to ' + el('in-email').value.trim()); }
     else { el('in-link').textContent = 'Email not configured yet — send them this link: ' + d.link; el('in-link').style.display = 'block'; }
     loadUsers();
   } catch (e) { el('in-err').textContent = e.message; }

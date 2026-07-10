@@ -2,3 +2,4 @@ node_modules/
 api/node_modules/
 api/_users.local.json
 .DS_Store
+_deploy/

@@ -13,20 +13,19 @@ When a pilot taps **Send**, the app automatically:
 
 Make sure you have:
 - Access to your **GitHub account** (where the app code lives)
-- Access to your **Digital Ocean account** (where the app is deployed)
+- Access to your **DigitalOcean account** (where the app is deployed)
 - Access to your **Microsoft 365 admin account** (needed to set up the app registration)
 
 ---
 
-## Part 1 — Push the updated code to GitHub
+## Part 1 — Push updated code to GitHub
 
-1. Open **GitHub Desktop** on your Mac
-2. You'll see changed files listed on the left
-3. In the **Summary** box at the bottom left, type: `Switch to Office 365`
-4. Click **Commit to main**
-5. Click **Push origin** (top right)
+1. Go to **github.com/outbackhelicopters/opsforms**
+2. Click **Add file → Upload files**
+3. Drag in the changed files (or use "choose your files")
+4. Type a short summary of the change and click **Commit changes**
 
-Digital Ocean will start redeploying automatically.
+DigitalOcean starts redeploying automatically — about 2 minutes.
 
 ---
 
@@ -109,7 +108,7 @@ cents per text).
 
 ---
 
-## Part 3 — Add credentials to Digital Ocean
+## Part 3 — Add credentials to DigitalOcean
 
 1. Go to **cloud.digitalocean.com**
 
@@ -138,15 +137,15 @@ cents per text).
    |------------------|----------------------------------------------------------------|
    | `SESSION_SECRET` | Any long random string (40+ characters) — signs the office sign-in sessions |
 
-5. Click **Save** — Digital Ocean will redeploy with the new settings
+5. Click **Save** — DigitalOcean will redeploy with the new settings
 
 ---
 
 ## Part 3b — First sign-in to the office admin app
 
-The office team's desktop app lives at `https://your-app.ondigitalocean.app/admin`.
+The office team's desktop app lives at `https://your-app.ondigitalocean.app/admin.html`.
 
-1. Open `/admin` in a browser. The first time, it shows **First-time setup** —
+1. Open `/admin.html` in a browser. The first time, it shows **First-time setup** —
    create the first account (this becomes the *provider* account: yours).
 2. Go to **Settings → Invite user** to add office staff. Each person gets an
    emailed link to set their own password.
@@ -201,6 +200,22 @@ replaces them — once everyone's on `/admin` you can remove `REPORTS_PASSWORD`.
 
 **Everything still showing old version on the app**
 → On the iPad: Settings → Safari → Clear History and Website Data → reopen the app.
+
+---
+
+## Part 5 — Device token (locks the API to your iPads)
+
+The server endpoints the iPads use (config, sending, calendar) can be locked
+so only your devices and signed-in office users can reach them.
+
+1. Make up a token — any random string of 15+ characters (e.g. from a password generator)
+2. On **each iPad**: Settings (PIN) → Security & data → **Device token** → paste it → Save settings
+3. Only after every iPad has it: DigitalOcean → Apps → your app → Settings →
+   **Environment Variables** → add `DEVICE_TOKEN` = the same string (tick Encrypt) → Save
+
+Order matters: while `DEVICE_TOKEN` is unset on the server nothing is enforced,
+so the iPads keep working while you go around entering it. Enforcement starts
+the moment the variable is saved.
 
 ---
 

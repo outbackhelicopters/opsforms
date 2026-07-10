@@ -1,44 +1,30 @@
-# Digital Ocean App Platform — Outback Helicopter Airwork NT
-# Single Node.js service that serves both the static PWA files and the /api/* endpoints.
-# The Express server uses express.static to serve index.html, flight-ops.html, job-advice.html etc.
-# Routes: ALL traffic (/) goes through this service.
-
+# DigitalOcean App Platform — outbackheli-app
+# NOTE: DigitalOcean holds the live app spec in its dashboard; this file is a
+# reference copy so the topology is visible in the repo. If they drift, the
+# dashboard wins. Current topology:
+#   • static site "opsforms"  — serves the PWA + admin at /   (build copies files to _static)
+#   • web service "opsforms2" — node server.js, receives /api/* (prefix is stripped)
 name: outbackheli-app
-
+region: syd
 services:
-  - name: api
-    source_dir: /
-    github:
-      repo: YOUR_GITHUB_USERNAME/heli-app   # ← update this if using doctl
-      branch: main
-      deploy_on_push: true
-    build_command: cd api && npm install --production
-    run_command: node api/server.js
+  - name: opsforms2
     environment_slug: node-js
-    instance_size_slug: apps-s-1vcpu-0.5gb
-    instance_count: 1
+    github: { repo: outbackhelicopters/opsforms, branch: main, deploy_on_push: true }
+    source_dir: /
+    run_command: node server.js
     http_port: 3000
-    routes:
-      - path: /          # ← CHANGED: was /api — now serves ALL routes including static files
-    envs:
-      - key: SENDER_EMAIL
-        scope: RUN_TIME
-        type: SECRET
-      - key: OPS_EMAIL
-        scope: RUN_TIME
-        type: SECRET
-      - key: MS_TENANT_ID
-        scope: RUN_TIME
-        type: SECRET
-      - key: MS_CLIENT_ID
-        scope: RUN_TIME
-        type: SECRET
-      - key: MS_CLIENT_SECRET
-        scope: RUN_TIME
-        type: SECRET
-      - key: ONEDRIVE_FOLDER
-        scope: RUN_TIME
-        value: Helicopter Paperwork
-
-# Static site component removed — Express now serves static files directly.
-# This avoids the DO static site limitation where newly added files weren't served.
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-1gb
+static_sites:
+  - name: opsforms
+    environment_slug: html
+    github: { repo: outbackhelicopters/opsforms, branch: main, deploy_on_push: true }
+    source_dir: /
+    build_command: mkdir -p _static && cp *.html *.js manifest.json logo.png icon-180.png icon-192.png icon-512.png _static/ 2>/dev/null; exit 0
+ingress:
+  rules:
+    - { component: { name: opsforms },  match: { path: { prefix: / } } }
+    - { component: { name: opsforms2 }, match: { path: { prefix: /api } } }
+# Environment variables (set in dashboard, encrypted):
+#   SENDER_EMAIL, OPS_EMAIL, MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET,
+#   ONEDRIVE_FOLDER, SESSION_SECRET, TWILIO_* (optional), DEVICE_TOKEN (enforcement)

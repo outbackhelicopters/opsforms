@@ -1,5 +1,5 @@
 {
-  "name": "Outback Helicopter Airwork NT — Flight Paperwork",
+  "name": "Outback Helicopter Airwork NT \u2014 Flight Paperwork",
   "short_name": "OHA Flight Ops",
   "description": "Flight ops paperwork, job advice sheets and safety forms for Outback Helicopter Airwork NT.",
   "start_url": "./flight-ops.html",
@@ -10,8 +10,14 @@
   "background_color": "#090B12",
   "icons": [
     {
-      "src": "logo.png",
-      "sizes": "any",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }

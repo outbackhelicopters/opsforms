@@ -8,12 +8,32 @@
    ============================================================ */
 
 const express     = require('express');
-const cors        = require('cors');
 const PDFDocument = require('pdfkit');
 const fs          = require('fs');
 const path        = require('path');
 const crypto      = require('crypto');
 const { ClientSecretCredential } = require('@azure/identity');
+
+/* ── Branding (per-customer) ──────────────────────────────────
+   Pulled from config.json so this app can be cloned for another
+   company by editing config.json only — no code changes. Falls
+   back to Outback's own details if config.json has no branding
+   block yet, so existing behaviour is unchanged. */
+function loadConfigFile() {
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); }
+  catch (e) { console.error('config.json load failed:', e.message); return {}; }
+}
+const APP_CONFIG = loadConfigFile();
+const BRAND = Object.assign({
+  companyName: 'OUTBACK HELICOPTER AIRWORK NT PTY LTD',
+  shortName:   'Outback Helicopter Airwork NT',
+  shortest:    'Outback Helicopter',
+  abn:         '80 137 947 687',
+  acn:         '137 947 687',
+  address:     'PO Box 37819 Winnellie NT 0821',
+  phone:       'Ph: 8941 6811 | Mob: 0427 222 670',
+  location:    'Darwin, NT'
+}, APP_CONFIG.branding || {});
 
 /* ── Reports auth ─────────────────────────────────────────── */
 const REPORTS_PWD    = process.env.REPORTS_PASSWORD || '';
@@ -67,8 +87,25 @@ function acstFull(ts)  { return new Intl.DateTimeFormat('en-AU', { timeZone: ACS
 
 const app = express();
 app.set('trust proxy', true); // DigitalOcean sits in front of this — needed so req.ip is the real caller, not the load balancer
-app.use(cors());
 app.use(express.json({ limit: '20mb' }));
+
+/* ── Device token (iPads) ─────────────────────────────────────
+   When DEVICE_TOKEN is set, the endpoints the iPads use require
+   either that token (x-device-token header) or a signed-in admin
+   session. While DEVICE_TOKEN is unset, requests pass untouched —
+   so the fleet can have the token entered in Settings BEFORE
+   enforcement is switched on in DigitalOcean. */
+async function requireDevice(req, res, next) {
+  const expected = process.env.DEVICE_TOKEN;
+  if (!expected) return next();
+  const got = String(req.headers['x-device-token'] || '');
+  if (got.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected))) return next();
+  if (authApi) {
+    try { if (await authApi.sessionUser(req)) return next(); } catch (e) { console.error('device auth session check:', e.message); }
+  }
+  res.status(401).json({ ok: false, error: 'Device token required — enter it in Settings on this iPad' });
+}
 
 /* ── Rate limiter ──────────────────────────────────────────────
    Calendar writes fan out to SMS, which costs money and can be
@@ -96,7 +133,7 @@ app.use(express.static(path.join(__dirname, '..')));
 
 /* ── Shared config (pilots, aircraft, clients) ────────────── */
 /* Edit /api/config.json in GitHub to update all devices */
-app.get(['/config', '/api/config'], (_req, res) => {
+app.get(['/config', '/api/config'], requireDevice, (_req, res) => {
   res.sendFile(path.join(__dirname, 'config.json'));
 });
 
@@ -377,7 +414,7 @@ async function cancelJobDrafts(token, jobId, pilotName) {
    PATCH  /api/calendar-jobs/:id     edit
    DELETE /api/calendar-jobs/:id     cancel (soft delete)
    ============================================================ */
-app.get(['/calendar-jobs', '/api/calendar-jobs'], async (req, res) => {
+app.get(['/calendar-jobs', '/api/calendar-jobs'], requireDevice, async (req, res) => {
   try {
     const force = req.query.refresh === '1';
     let jobs = await loadCalendarJobs(force);
@@ -392,7 +429,7 @@ app.get(['/calendar-jobs', '/api/calendar-jobs'], async (req, res) => {
   }
 });
 
-app.post(['/calendar-jobs', '/api/calendar-jobs'], rateLimit, async (req, res) => {
+app.post(['/calendar-jobs', '/api/calendar-jobs'], requireDevice, rateLimit, async (req, res) => {
   try {
     const b = req.body || {};
     const pilots = normalizePilots(b.pilots, b);
@@ -427,7 +464,7 @@ app.post(['/calendar-jobs', '/api/calendar-jobs'], rateLimit, async (req, res) =
   }
 });
 
-app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], rateLimit, async (req, res) => {
+app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateLimit, async (req, res) => {
   try {
     const token = await getGraphToken();
     const jobs = await loadCalendarJobs(true);
@@ -496,7 +533,7 @@ app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], rateLimit, async (re
   }
 });
 
-app.delete(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], rateLimit, async (req, res) => {
+app.delete(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateLimit, async (req, res) => {
   try {
     const token = await getGraphToken();
     const jobs = await loadCalendarJobs(true);
@@ -543,7 +580,7 @@ function withDraftsLock(fn) {
 /* ── Pending job-sheet drafts (created by the 6pm daily sweep) ─
    GET /api/job-drafts[?pilot=Name]  — fetch-and-claim pending drafts
    ============================================================ */
-app.get(['/job-drafts', '/api/job-drafts'], rateLimit, async (req, res) => {
+app.get(['/job-drafts', '/api/job-drafts'], requireDevice, rateLimit, async (req, res) => {
   try {
     const pending = await withDraftsLock(async () => {
       const token = await getGraphToken();
@@ -566,7 +603,7 @@ app.get(['/job-drafts', '/api/job-drafts'], rateLimit, async (req, res) => {
 });
 
 /* ── Send bundle ──────────────────────────────────────────── */
-app.post(['/send', '/api/send'], async (req, res) => {
+app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
   const bundle = req.body;
   if (!bundle || !bundle.callsign) return res.status(400).json({ ok: false, error: 'Invalid bundle' });
 
@@ -699,8 +736,8 @@ app.post(['/send', '/api/send'], async (req, res) => {
   <!-- Header -->
   <div style="${S.hdr}">
     <span style="${S.badge}">Flight Paperwork</span>
-    <div style="${S.coName}">Outback Helicopter Airwork NT</div>
-    <div style="${S.coSub}">ABN 80 137 947 687 &nbsp;·&nbsp; Darwin, NT</div>
+    <div style="${S.coName}">${BRAND.shortName}</div>
+    <div style="${S.coSub}">ABN ${BRAND.abn} &nbsp;·&nbsp; ${BRAND.location}</div>
   </div>
 
   <!-- Body -->
@@ -754,7 +791,7 @@ app.post(['/send', '/api/send'], async (req, res) => {
 
   <!-- Footer -->
   <div style="${S.footer}">
-    PDF attached · Sent automatically by the Outback Helicopter flight paperwork app · v42
+    PDF attached · Sent automatically by the ${BRAND.shortest} flight paperwork app
   </div>
 
 </div>
@@ -900,7 +937,7 @@ async function buildPDF(bundle) {
     doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(16)
        .text('OUTBACK HELICOPTER AIRWORK NT', textX, 64, { width: W - (textX - 50) - 16, lineBreak: false });
     doc.font('Helvetica').fontSize(9.5).fillColor('#9AA3C7')
-       .text('Flight Paperwork Bundle — Outback Helicopter Airwork NT Pty Ltd', textX, 85, { width: W - (textX - 50) - 16 });
+       .text(`Flight Paperwork Bundle — ${BRAND.companyName}`, textX, 85, { width: W - (textX - 50) - 16 });
 
     doc.rect(50, 50 + HDR_H, W, 3).fill(ORANGE);
     doc.y = 50 + HDR_H + 3 + 18;
@@ -1106,7 +1143,7 @@ async function buildPDF(bundle) {
       doc.rect(50, 778, W, 0.5).fill('#D1D5DB');
       doc.font('Helvetica').fontSize(7.5).fillColor(MUT)
          .text(
-           `Outback Helicopter Airwork NT Pty Ltd  ·  Page ${i + 1} of ${pages.count}  ·  Generated ${acstFull(Date.now())} ACST`,
+           `${BRAND.companyName}  ·  Page ${i + 1} of ${pages.count}  ·  Generated ${acstFull(Date.now())} ACST`,
            50, 783, { width: W, align: 'center' }
          );
     }
@@ -1308,7 +1345,7 @@ async function sendReminderSMS(job, pilot, minsAway) {
     ? `has already started${job.startTime ? ' (' + job.startTime + ')' : ''}`
     : `starts in about 1 hour${job.startTime ? ' (' + job.startTime + ')' : ''}`;
   const body =
-    `Outback Helicopter: reminder — your job` +
+    `${BRAND.shortest}: reminder — your job` +
     (job.client ? ` for ${job.client}` : '') +
     ` ${urgency}. ` +
     `Please complete your SWMS and flight briefing before you fly.`;
@@ -1335,27 +1372,27 @@ async function notifyJobChanged(oldJob, job, pilot, hadDraft) {
     what = `has been updated — now ${fmtJobWhen(job)}`;
   }
   const draftNote = hadDraft ? ' If you already have a job sheet started for this, double-check the details before you submit it.' : '';
-  const body = `Outback Helicopter: your job${job.client ? ` for ${job.client}` : ''} ${what}.${draftNote} Check the app for details.`;
+  const body = `${BRAND.shortest}: your job${job.client ? ` for ${job.client}` : ''} ${what}.${draftNote} Check the app for details.`;
   try { await sendTwilioSMS(pilot.phone, body); } catch (e) { console.error('Change SMS failed:', job.id, pilot.name, e.message); }
 }
 
 async function notifyJobAssigned(job, pilot) {
   if (!pilot || !pilot.phone) return;
-  const body = `Outback Helicopter: you've been allocated a job${job.client ? ` for ${job.client}` : ''} on ${fmtJobWhen(job)}. Check the app for details.`;
+  const body = `${BRAND.shortest}: you've been allocated a job${job.client ? ` for ${job.client}` : ''} on ${fmtJobWhen(job)}. Check the app for details.`;
   try { await sendTwilioSMS(pilot.phone, body); } catch (e) { console.error('New-assignment SMS failed:', job.id, pilot.name, e.message); }
 }
 
 async function notifyJobRemoved(oldJob, pilot, hadDraft) {
   if (!pilot || !pilot.phone) return;
   const draftNote = hadDraft ? ' If a job sheet was already started for this in the app, please don’t submit it.' : ' No action needed.';
-  const body = `Outback Helicopter: you've been taken off the job on ${fmtJobWhen(oldJob)}${oldJob.client ? ` (${oldJob.client})` : ''}.${draftNote}`;
+  const body = `${BRAND.shortest}: you've been taken off the job on ${fmtJobWhen(oldJob)}${oldJob.client ? ` (${oldJob.client})` : ''}.${draftNote}`;
   try { await sendTwilioSMS(pilot.phone, body); } catch (e) { console.error('Reassignment-removed SMS failed:', oldJob.id, pilot.name, e.message); }
 }
 
 async function notifyJobCancelled(job, pilot, hadDraft) {
   if (!pilot || !pilot.phone) return;
   const draftNote = hadDraft ? ' If a job sheet was already started for this in the app, please don’t submit it.' : ' No action needed.';
-  const body = `Outback Helicopter: your job on ${fmtJobWhen(job)}${job.client ? ` (${job.client})` : ''} has been CANCELLED.${draftNote}`;
+  const body = `${BRAND.shortest}: your job on ${fmtJobWhen(job)}${job.client ? ` (${job.client})` : ''} has been CANCELLED.${draftNote}`;
   try { await sendTwilioSMS(pilot.phone, body); } catch (e) { console.error('Cancellation SMS failed:', job.id, pilot.name, e.message); }
 }
 

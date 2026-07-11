@@ -3,3 +3,5 @@ api/node_modules/
 api/_users.local.json
 .DS_Store
 _deploy/
+api/_branding.local.json
+api/_brand-logo.local.png

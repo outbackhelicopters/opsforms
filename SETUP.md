@@ -145,8 +145,14 @@ cents per text).
 
 The office team's desktop app lives at `https://your-app.ondigitalocean.app/admin.html`.
 
-1. Open `/admin.html` in a browser. The first time, it shows **First-time setup** —
-   create the first account (this becomes the *provider* account: yours).
+1. Open `/admin.html` in a browser. The first time, it runs a **setup wizard**:
+   - **Step 1 — System:** checks the Microsoft connection, OneDrive access,
+     email settings, and shows what's still missing (Twilio and the device
+     token are optional at this stage).
+   - **Step 2 — Company:** company names, header lines, ABN, location, brand
+     colours and logo — this brands the pilot app, this office app, the PDFs,
+     emails and SMS in one go. All editable later in Settings → Branding.
+   - **Step 3 — Account:** create the first account (the *provider* login: yours).
 2. Go to **Settings → Invite user** to add office staff. Each person gets an
    emailed link to set their own password.
    - **Admin** — everything, including users (for the chief pilot / owner)

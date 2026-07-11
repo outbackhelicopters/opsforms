@@ -1396,9 +1396,44 @@ const BRAND = {
   address:     "PO Box 37819 Winnellie NT 0821",
   phone:       "Ph: 8941 6811 | Mob: 0427 222 670"
 };
+/* Brand colours: only touches CSS variables when config supplies colours,
+   so operators without a colour theme keep the stock palette untouched.
+   Shades are derived with color-mix so one primary + one accent is enough. */
+function applyBrandColors() {
+  try {
+    const c = BRAND.colors || {};
+    if (!c.primary && !c.accent) return;
+    const root = document.documentElement.style;
+    const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (c.primary) {
+      const P = c.primary;
+      if (dark) {
+        root.setProperty('--navy', `color-mix(in srgb, ${P} 45%, #C8D2F0)`);
+        root.setProperty('--navy-deep', `color-mix(in srgb, ${P} 35%, black)`);
+        root.setProperty('--navy-mid', `color-mix(in srgb, ${P} 70%, black)`);
+      } else {
+        root.setProperty('--navy', P);
+        root.setProperty('--navy-deep', `color-mix(in srgb, ${P} 55%, black)`);
+        root.setProperty('--navy-mid', `color-mix(in srgb, ${P} 85%, white)`);
+      }
+    }
+    if (c.accent) {
+      root.setProperty('--orange', c.accent);
+      root.setProperty('--orange-dk', `color-mix(in srgb, ${c.accent} 78%, black)`);
+    }
+  } catch (e) { console.error('applyBrandColors failed:', e.message); }
+}
+try {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyBrandColors);
+} catch (_) {}
+
 function applyBranding() {
   try {
     document.title = BRAND.shortName + ' — Flight Paperwork';
+    applyBrandColors();
+    document.querySelectorAll('img.sp-logo, img.logo, .home-brand img').forEach(img => {
+      if (!img.dataset.brandSrc) { img.dataset.brandSrc = '1'; img.src = '/api/brand-logo'; }
+    });
     document.querySelectorAll('img.sp-logo, img.logo, .home-brand img').forEach(img => img.alt = BRAND.logoAlt);
     document.querySelectorAll('.brandtxt .b1').forEach(el => el.textContent = BRAND.brandLine1);
     document.querySelectorAll('.brandtxt .b2').forEach(el => el.textContent = BRAND.brandLine2);
@@ -1411,12 +1446,21 @@ function applyBranding() {
   } catch (e) { console.error('applyBranding failed:', e.message); }
 }
 async function syncBranding() {
+  /* Offline boots use the last branding this device saw */
   try {
-    const res = await fetch('/api/config');
+    const cached = localStorage.getItem('brandCache');
+    if (cached) { Object.assign(BRAND, JSON.parse(cached)); applyBranding(); }
+  } catch (_) {}
+  try {
+    const res = await apiFetch('/api/config');
     if (!res.ok) return;
     const cfg = await res.json();
-    if (cfg.branding) { Object.assign(BRAND, cfg.branding); applyBranding(); }
-  } catch (e) { /* offline at boot — keep hardcoded defaults, will retry next launch */ }
+    if (cfg.branding) {
+      Object.assign(BRAND, cfg.branding);
+      applyBranding();
+      try { localStorage.setItem('brandCache', JSON.stringify(cfg.branding)); } catch (_) {}
+    }
+  } catch (e) { /* offline at boot — cached/default branding stays */ }
 }
 
 /* ================================================================
@@ -2237,7 +2281,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v56'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v57'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.

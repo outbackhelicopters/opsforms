@@ -312,5 +312,5 @@ module.exports = function initAuth(app, deps) {
     } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
   });
 
-  return { sessionUser, requireAuth };
+  return { sessionUser, requireAuth, usersExist: async () => (await loadStore()).users.length > 0 };
 };

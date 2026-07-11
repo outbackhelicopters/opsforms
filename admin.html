@@ -116,6 +116,12 @@ input:focus,select:focus{border-color:var(--acc);}
 .toastbox{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:8px;font-size:13px;z-index:99;opacity:0;transition:opacity .25s;pointer-events:none;max-width:80vw;}
 .toastbox.show{opacity:1;}
 
+/* ---------- SETUP WIZARD ---------- */
+.wiz-steps{display:flex;gap:8px;margin:0 0 22px;}
+.wstep{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);padding:5px 10px;border:1px solid var(--line);border-radius:20px;}
+.wstep.on{color:#fff;background:var(--acc);border-color:var(--acc);}
+.btn-back{background:none;color:var(--mut);border:1px solid var(--line);border-radius:6px;flex:1;padding:13px;font-size:14px;font-weight:600;margin-top:30px;}
+
 /* ---------- ACCESSIBILITY ---------- */
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc2);outline-offset:1px;}
 
@@ -144,7 +150,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 <div class="auth-wrap" id="w-login">
   <div class="auth-card">
-    <img src="logo.png" alt="" style="width:56px;height:56px;border-radius:12px;margin-bottom:14px;">
+    <img src="logo.png" alt="" class="brand-logo" style="width:56px;height:56px;border-radius:12px;margin-bottom:14px;object-fit:contain;">
     <div class="auth-co" id="brand-login">Flight Ops</div>
     <div class="auth-tag">Office</div>
     <label class="lbl">Email</label><input type="email" id="li-email" autocomplete="username">
@@ -156,15 +162,41 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 </div>
 
 <div class="auth-wrap" id="w-boot">
-  <div class="auth-card">
+  <div class="auth-card" style="max-width:540px">
     <div class="auth-co">Flight Ops</div>
     <div class="auth-tag">First-time setup</div>
-    <div class="auth-note" style="margin:0 0 6px">No accounts exist yet. Create the first (provider) account.</div>
-    <label class="lbl">Your name</label><input type="text" id="bs-name">
-    <label class="lbl">Email</label><input type="email" id="bs-email">
-    <label class="lbl">Password (8+ characters)</label><input type="password" id="bs-pw" autocomplete="new-password">
-    <button class="btn-auth" onclick="doBootstrap()">Create account</button>
-    <div class="auth-err" id="bs-err"></div>
+    <div class="wiz-steps">
+      <span class="wstep on" id="ws-1">1 · System</span>
+      <span class="wstep" id="ws-2">2 · Company</span>
+      <span class="wstep" id="ws-3">3 · Account</span>
+    </div>
+
+    <div id="wiz-1">
+      <div class="auth-note" style="margin:0 0 4px">Checking this deployment's plumbing — green means ready.</div>
+      <div id="wiz-checks" class="auth-note">Checking…</div>
+      <button class="btn-auth" onclick="wizGo(2)">Continue</button>
+    </div>
+
+    <div id="wiz-2" style="display:none">
+      <div class="auth-note" style="margin:0 0 4px">This branding appears on the pilot app, this office app, PDFs, emails and SMS. Everything can be changed later in Settings.</div>
+      <div id="wiz-brand-form"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-back" onclick="wizGo(1)">Back</button>
+        <button class="btn-auth" style="flex:2" onclick="wizGo(3)">Continue</button>
+      </div>
+    </div>
+
+    <div id="wiz-3" style="display:none">
+      <div class="auth-note" style="margin:0 0 6px">Create the first account — the provider (platform) login.</div>
+      <label class="lbl">Your name</label><input type="text" id="bs-name">
+      <label class="lbl">Email</label><input type="email" id="bs-email">
+      <label class="lbl">Password (8+ characters)</label><input type="password" id="bs-pw" autocomplete="new-password">
+      <div style="display:flex;gap:10px">
+        <button class="btn-back" onclick="wizGo(2)">Back</button>
+        <button class="btn-auth" style="flex:2" onclick="wizFinish()">Finish setup</button>
+      </div>
+      <div class="auth-err" id="bs-err"></div>
+    </div>
   </div>
 </div>
 
@@ -183,7 +215,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div id="app-view">
 <div class="shell">
   <nav class="sidebar">
-    <div class="sb-co" id="brand-side" style="display:flex;align-items:center;gap:9px;"><img src="logo.png" alt="" style="width:26px;height:26px;border-radius:6px;flex:none;">Flight Ops</div>
+    <div class="sb-co" id="brand-side" style="display:flex;align-items:center;gap:9px;"><img src="logo.png" alt="" class="brand-logo" style="width:26px;height:26px;border-radius:6px;flex:none;object-fit:contain;"><span id="brand-side-txt">Flight Ops</span></div>
     <div class="sb-nav">
       <button class="nav-btn active" data-v="dash" onclick="nav(this)">Today</button>
       <button class="nav-btn" data-v="cal" onclick="nav(this)">Calendar</button>
@@ -268,6 +300,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <!-- SETTINGS -->
     <section class="view" id="v-settings">
       <div class="pg-h"><div class="pg-title">Settings</div></div>
+      <div class="card">
+        <div class="card-h"><h3>Branding</h3><button class="btn btn-p btn-sm" onclick="saveBranding()">Save branding</button></div>
+        <div style="padding:4px 18px 18px" id="brand-form"><div class="empty">Loading…</div></div>
+      </div>
       <div class="card">
         <div class="card-h"><h3>Users</h3><button class="btn btn-l btn-sm" onclick="openInvite()">Invite user</button></div>
         <div id="users-list"><div class="empty">Loading…</div></div>
@@ -363,11 +399,12 @@ function jobPilotNames(j){ return (j.pilots && j.pilots.length ? j.pilots.map(p=
 
 /* ---------- BOOT ---------- */
 (async function boot(){
+  try { const c = localStorage.getItem('adminBrandCache'); if (c) applyBrand(JSON.parse(c), true); } catch (_) {}
   const inviteToken = (location.hash.match(/invite=([a-f0-9]+)/) || [])[1];
   if (inviteToken) { window._inviteToken = inviteToken; show('w-invite'); return; }
   try {
     const st = await api('/api/auth/status');
-    if (!st.bootstrapped) { show('w-boot'); return; }
+    if (!st.bootstrapped) { openWizard(); return; }
     const me = await api('/api/auth/me');
     enter(me.user);
   } catch { show('w-login'); }
@@ -380,6 +417,8 @@ async function enter(user){
   if (user.role === 'admin' || user.role === 'provider') el('nav-settings').style.display = 'block';
   show('app');
   try { CFG = await api('/api/config'); } catch (e) { console.error('config load:', e.message); }
+  applyBrand(CFG.branding);
+  el('brand-form').innerHTML = brandFormHtml('bf', CFG.branding || {});
   renderStatic();
   loadCalendar();
   loadPaper();
@@ -394,10 +433,121 @@ async function doLogin(){
     enter(d.user);
   } catch (e) { el('li-err').textContent = e.message; }
 }
-async function doBootstrap(){
+/* ---------- BRANDING (white-label) ---------- */
+let BRANDING = null;
+function applyBrandColorsAdmin(colors) {
+  if (!colors || (!colors.primary && !colors.accent)) return;
+  const root = document.documentElement.style;
+  const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (colors.primary) root.setProperty('--acc', dark ? `color-mix(in srgb, ${colors.primary} 45%, #C9D4F2)` : colors.primary);
+  if (colors.accent)  root.setProperty('--acc2', colors.accent);
+}
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => BRANDING && applyBrandColorsAdmin(BRANDING.colors)); } catch (_) {}
+
+function applyBrand(b, fromCache) {
+  if (!b) return;
+  BRANDING = b;
+  try {
+    if (b.shortName) {
+      document.title = b.shortName + ' — Office';
+      el('brand-login').textContent = b.shortName;
+      el('brand-side-txt').textContent = b.shortName;
+    }
+    if (!fromCache) document.querySelectorAll('img.brand-logo').forEach(i => { i.src = '/api/brand-logo'; });
+    applyBrandColorsAdmin(b.colors);
+    try { localStorage.setItem('adminBrandCache', JSON.stringify(b)); } catch (_) {}
+  } catch (e) { console.error('applyBrand:', e.message); }
+}
+
+function brandFormHtml(pfx, b) {
+  b = b || {}; const c = b.colors || {};
+  const f = (id, label, val, ph) => `<label class="lbl">${label}</label><input type="text" id="${pfx}-${id}" value="${esc(val || '')}" placeholder="${esc(ph || '')}">`;
+  return `
+    ${f('shortName', 'Company display name', b.shortName, 'e.g. Katherine Heli Services')}
+    ${f('companyName', 'Legal name (printed on PDFs)', b.companyName, 'e.g. KATHERINE HELI SERVICES PTY LTD')}
+    ${f('shortest', 'Short name (used in SMS)', b.shortest, 'e.g. Katherine Heli')}
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">${f('brandLine1', 'Header line 1', b.brandLine1, '')}</div>
+      <div style="flex:1">${f('brandLine2', 'Header line 2', b.brandLine2, '')}</div>
+      <div style="flex:1">${f('brandLine3', 'Header line 3', b.brandLine3, '')}</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1">${f('abn', 'ABN', b.abn, '')}</div>
+      <div style="flex:1">${f('location', 'Location', b.location, 'e.g. Darwin, NT')}</div>
+    </div>
+    <div style="display:flex;gap:24px;align-items:center;margin-top:16px">
+      <label class="lbl" style="margin:0;display:flex;align-items:center;gap:8px">Primary colour
+        <input type="color" id="${pfx}-cp" value="${esc(c.primary || '#18224A')}" style="padding:2px;width:44px;height:30px"></label>
+      <label class="lbl" style="margin:0;display:flex;align-items:center;gap:8px">Accent colour
+        <input type="color" id="${pfx}-ca" value="${esc(c.accent || '#E8750E')}" style="padding:2px;width:44px;height:30px"></label>
+    </div>
+    <label class="lbl">Logo (PNG or JPEG, square works best, under 1.5 MB)</label>
+    <input type="file" id="${pfx}-logo" accept="image/png,image/jpeg" style="border:none;padding:4px 0">`;
+}
+async function collectBrandForm(pfx) {
+  const g = id => { const e = el(pfx + '-' + id); return e ? e.value.trim() : ''; };
+  const body = {
+    shortName: g('shortName'), companyName: g('companyName'), shortest: g('shortest'),
+    brandLine1: g('brandLine1'), brandLine2: g('brandLine2'), brandLine3: g('brandLine3'),
+    abn: g('abn'), location: g('location'),
+    colors: { primary: g('cp'), accent: g('ca') },
+  };
+  const fileEl = el(pfx + '-logo');
+  if (fileEl && fileEl.files && fileEl.files[0]) {
+    body.logoDataUrl = await new Promise((ok, bad) => {
+      const r = new FileReader();
+      r.onload = () => ok(r.result); r.onerror = () => bad(new Error('Could not read the logo file'));
+      r.readAsDataURL(fileEl.files[0]);
+    });
+  }
+  return body;
+}
+async function saveBranding() {
+  try {
+    const body = await collectBrandForm('bf');
+    const d = await api('/api/setup/branding', { method: 'POST', body: JSON.stringify(body) });
+    CFG.branding = d.branding;
+    applyBrand(d.branding);
+    el('brand-form').innerHTML = brandFormHtml('bf', d.branding);
+    toast('Branding saved — the pilot app picks it up on next open');
+  } catch (e) { toast(e.message); }
+}
+
+/* ---------- SETUP WIZARD ---------- */
+function wizGo(n) {
+  [1, 2, 3].forEach(i => { el('wiz-' + i).style.display = i === n ? '' : 'none'; el('ws-' + i).classList.toggle('on', i === n); });
+}
+async function openWizard() {
+  show('w-boot');
+  wizGo(1);
+  let st = null;
+  try { st = await api('/api/setup/status'); } catch (e) {
+    el('wiz-checks').innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`;
+    el('wiz-brand-form').innerHTML = brandFormHtml('wz', {});
+    return;
+  }
+  const rows = [];
+  const row = (state, label, extra) => rows.push(
+    `<div style="display:flex;gap:9px;align-items:baseline;margin:7px 0"><span class="dot d-${state}"></span><span style="color:var(--text)">${label}</span>${extra ? ` <span class="st">${esc(extra)}</span>` : ''}</div>`);
+  const e = st.env;
+  row(e.microsoft ? 'ok' : 'bad', 'Microsoft 365 credentials', e.microsoft ? '' : 'MS_TENANT_ID / MS_CLIENT_ID / MS_CLIENT_SECRET missing');
+  row(st.graphOk ? 'ok' : 'bad', 'Microsoft connection', st.graphOk ? 'working' : (st.graphError || 'failed'));
+  row(st.oneDriveOk ? 'ok' : 'bad', 'OneDrive folder', st.oneDriveOk ? 'writable' : 'not writable yet');
+  row((e.senderEmail && e.opsEmail) ? 'ok' : 'bad', 'Sender & ops email', (e.senderEmail && e.opsEmail) ? 'set' : 'SENDER_EMAIL / OPS_EMAIL missing');
+  row(e.sessionSecret ? 'ok' : 'warn', 'SESSION_SECRET', e.sessionSecret ? 'set' : 'not set — add it for stable sign-ins');
+  row(e.twilio ? 'ok' : 'warn', 'Twilio SMS', e.twilio ? 'configured' : 'not set — reminders off (optional, add later)');
+  row(e.deviceToken ? 'ok' : 'warn', 'Device token', e.deviceToken ? 'enforced' : 'not enforced yet — switch on after the iPads have it');
+  el('wiz-checks').innerHTML = rows.join('');
+  el('wiz-brand-form').innerHTML = brandFormHtml('wz', st.branding || {});
+}
+async function wizFinish() {
   el('bs-err').textContent = '';
   try {
-    const d = await api('/api/auth/bootstrap', { method:'POST', body: JSON.stringify({ name: el('bs-name').value, email: el('bs-email').value, password: el('bs-pw').value }) });
+    const brand = await collectBrandForm('wz');
+    if (!brand.shortName) { el('bs-err').textContent = 'Company display name is required (step 2)'; return; }
+    await api('/api/setup/branding', { method: 'POST', body: JSON.stringify(brand) });
+    const d = await api('/api/auth/bootstrap', { method: 'POST', body: JSON.stringify({ name: el('bs-name').value, email: el('bs-email').value, password: el('bs-pw').value }) });
+    applyBrand(brand);
     enter(d.user);
   } catch (e) { el('bs-err').textContent = e.message; }
 }

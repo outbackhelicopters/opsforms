@@ -134,7 +134,7 @@ app.use(express.static(path.join(__dirname, '..')));
 /* ── Shared config (pilots, aircraft, clients) ────────────── */
 /* Edit /api/config.json in GitHub to update all devices */
 app.get(['/config', '/api/config'], requireDevice, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'config.json'));
+  res.json({ ...APP_CONFIG, branding: { ...BRAND } });
 });
 
 /* ── Health check ─────────────────────────────────────────── */
@@ -258,6 +258,137 @@ async function getOneDriveJson(token, filePath) {
 
 /* ── Admin app: per-user auth (see auth.js) ───────────────── */
 authApi = require('./auth')(app, { getGraphToken, getOneDriveJson, putOneDriveJson, parseCookies, rateLimit });
+
+/* ── Live branding (white-label) ──────────────────────────────
+   Branding is layered, later wins:
+     1. hardcoded defaults (BRAND above)
+     2. config.json "branding" block (merged at boot)
+     3. OneDrive _system/branding.json — editable from the admin
+        setup wizard / Settings with no redeploy.
+   The logo works the same way: repo logo.png is the fallback,
+   an uploaded one lives in OneDrive and is cached in memory. */
+const BRANDING_LOCAL = path.join(__dirname, '_branding.local.json');
+const LOGO_LOCAL     = path.join(__dirname, '_brand-logo.local.png');
+const hasGraphCreds  = () => !!(process.env.MS_TENANT_ID && process.env.MS_CLIENT_ID && process.env.MS_CLIENT_SECRET);
+const BRAND_FOLDER   = () => process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+let _brandLogoBuf = null;
+
+async function loadLiveBranding() {
+  try {
+    let data = null;
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      data = await getOneDriveJson(token, `${BRAND_FOLDER()}/_system/branding.json`);
+    } else if (fs.existsSync(BRANDING_LOCAL)) {
+      data = JSON.parse(fs.readFileSync(BRANDING_LOCAL, 'utf8'));
+    }
+    if (data && typeof data === 'object') Object.assign(BRAND, data);
+  } catch (e) { console.error('branding load failed (using defaults):', e.message); }
+}
+async function loadBrandLogo() {
+  try {
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      const r = await fetch(
+        `https://graph.microsoft.com/v1.0/users/${process.env.OPS_EMAIL}/drive/root:/${encodeURIComponent(BRAND_FOLDER() + '/_system/brand-logo.png')}:/content`,
+        { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) _brandLogoBuf = Buffer.from(await r.arrayBuffer());
+    } else if (fs.existsSync(LOGO_LOCAL)) {
+      _brandLogoBuf = fs.readFileSync(LOGO_LOCAL);
+    }
+  } catch (e) { console.error('brand logo load failed (using repo logo):', e.message); }
+}
+loadLiveBranding();
+loadBrandLogo();
+
+async function saveLiveBranding(patch) {
+  Object.assign(BRAND, patch);
+  const snapshot = { ...BRAND };
+  if (hasGraphCreds()) {
+    const token = await getGraphToken();
+    await putOneDriveJson(token, `${BRAND_FOLDER()}/_system/branding.json`, snapshot);
+  } else {
+    fs.writeFileSync(BRANDING_LOCAL, JSON.stringify(snapshot, null, 2));
+  }
+}
+
+/* Setup endpoints are open until the first account exists, then admin-only */
+async function requireSetupAuth(req, res, next) {
+  try {
+    if (!(await authApi.usersExist())) return next();
+    const u = await authApi.sessionUser(req);
+    if (u && (u.role === 'provider' || u.role === 'admin')) return next();
+  } catch (e) { console.error('setup auth check:', e.message); }
+  res.status(401).json({ ok: false, error: 'Admin sign-in required' });
+}
+
+app.get(['/setup/status', '/api/setup/status'], async (_req, res) => {
+  const out = {
+    env: {
+      microsoft:     hasGraphCreds(),
+      senderEmail:   !!process.env.SENDER_EMAIL,
+      opsEmail:      !!process.env.OPS_EMAIL,
+      sessionSecret: !!process.env.SESSION_SECRET,
+      twilio:        !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
+      deviceToken:   !!process.env.DEVICE_TOKEN,
+    },
+    graphOk: false, oneDriveOk: false, graphError: null,
+  };
+  if (out.env.microsoft) {
+    try {
+      const token = await getGraphToken();
+      out.graphOk = true;
+      try {
+        await putOneDriveJson(token, `${BRAND_FOLDER()}/_system/setup-ping.json`, { ts: new Date().toISOString() });
+        out.oneDriveOk = true;
+      } catch (e) { out.graphError = 'OneDrive write failed: ' + e.message; }
+    } catch (e) { out.graphError = e.message; }
+  }
+  res.json({ ok: true, ...out, branding: { ...BRAND } });
+});
+
+app.post(['/setup/branding', '/api/setup/branding'], rateLimit, requireSetupAuth, async (req, res) => {
+  try {
+    const b = req.body || {};
+    const patch = {};
+    ['companyName','shortName','shortest','brandLine1','brandLine2','brandLine3',
+     'logoAlt','abn','acn','address','phone','location','opsEmail'].forEach(k => {
+      if (typeof b[k] === 'string' && b[k].trim()) patch[k] = b[k].trim();
+    });
+    if (b.colors && typeof b.colors === 'object') {
+      const hex = v => typeof v === 'string' && /^#[0-9a-fA-F]{6}$/.test(v.trim());
+      const colors = {};
+      if (hex(b.colors.primary)) colors.primary = b.colors.primary.trim();
+      if (hex(b.colors.accent))  colors.accent  = b.colors.accent.trim();
+      if (Object.keys(colors).length) patch.colors = { ...(BRAND.colors || {}), ...colors };
+    }
+    if (typeof b.logoDataUrl === 'string' && b.logoDataUrl) {
+      const m = b.logoDataUrl.match(/^data:image\/(png|jpe?g);base64,([A-Za-z0-9+/=]+)$/);
+      if (!m) return res.status(400).json({ ok: false, error: 'Logo must be a PNG or JPEG image' });
+      const buf = Buffer.from(m[2], 'base64');
+      if (buf.length > 1.5 * 1024 * 1024) return res.status(400).json({ ok: false, error: 'Logo too big — keep it under 1.5 MB' });
+      _brandLogoBuf = buf;
+      if (hasGraphCreds()) {
+        const token = await getGraphToken();
+        const r = await fetch(
+          `https://graph.microsoft.com/v1.0/users/${process.env.OPS_EMAIL}/drive/root:/${encodeURIComponent(BRAND_FOLDER() + '/_system/brand-logo.png')}:/content`,
+          { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'image/png' }, body: buf });
+        if (!r.ok) throw new Error(`Logo save failed: ${r.status}`);
+      } else {
+        fs.writeFileSync(LOGO_LOCAL, buf);
+      }
+    }
+    await saveLiveBranding(patch);
+    res.json({ ok: true, branding: { ...BRAND } });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get(['/brand-logo', '/api/brand-logo'], (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=300');
+  if (_brandLogoBuf) return res.type('png').send(_brandLogoBuf);
+  res.sendFile(path.join(__dirname, 'logo.png'), err => { if (err) res.status(404).end(); });
+});
+
 app.get(['/admin', '/api/admin'], (_req, res) => {
   const flat = path.join(__dirname, 'admin.html');           // deployed layout (flat repo)
   res.sendFile(fs.existsSync(flat) ? flat : path.join(__dirname, '..', 'admin.html'));
@@ -929,7 +1060,9 @@ async function buildPDF(bundle) {
 
     const logoPath = path.join(__dirname, 'logo.png');
     let textX = 68;
-    if (fs.existsSync(logoPath)) {
+    if (_brandLogoBuf) {
+      try { doc.image(_brandLogoBuf, 64, 57, { height: 52, width: 52 }); textX = 126; } catch (_) {}
+    } else if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 64, 57, { height: 52, width: 52 });
       textX = 126;
     }

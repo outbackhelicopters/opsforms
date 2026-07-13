@@ -128,8 +128,16 @@ function rateLimit(req, res, next) {
   next();
 }
 
-/* ── Serve static app files (flight-ops.html, sw.js, etc.) ── */
-app.use(express.static(path.join(__dirname, '..')));
+/* ── Serve static app files (flight-ops.html, sw.js, etc.) ──
+   The deployed repo (opsforms) is flat — server.js sits next to
+   flight-ops.html, admin.html etc. Local dev copies of this project
+   sometimes nest the API under api/, one level below those files.
+   Detect which layout is in play the same way the /admin route
+   below already does, instead of assuming one or the other. */
+const STATIC_DIR = fs.existsSync(path.join(__dirname, 'flight-ops.html'))
+  ? __dirname
+  : path.join(__dirname, '..');
+app.use(express.static(STATIC_DIR));
 
 /* ── Shared config (pilots, aircraft, clients) ─────────────────
    Served from OneDrive-backed LIVE_OPS once it's loaded (see the

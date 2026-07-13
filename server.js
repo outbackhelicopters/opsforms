@@ -1236,11 +1236,17 @@ async function buildPDF(bundle) {
 
     /* ── Job Advice: Flight hour lines ── */
     if (Array.isArray(bundle.lines) && bundle.lines.length) {
+      const fmtLineDate = d => {
+        if (!d) return '—';
+        try { return new Date(d + 'T12:00:00').toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }); }
+        catch { return d; }
+      };
       secHead('FLIGHT HOURS');
       const hY = doc.y;
       doc.font('Helvetica-Bold').fontSize(8.5).fillColor(MUT);
-      doc.text('DESCRIPTION', 50, hY, { width: 340, lineBreak: false });
-      doc.text('HOURS',       395, hY, { width: 100, lineBreak: false });
+      doc.text('DATE',        50,  hY, { width: 65,  lineBreak: false });
+      doc.text('DESCRIPTION', 125, hY, { width: 270, lineBreak: false });
+      doc.text('HOURS',       405, hY, { width: 90,  lineBreak: false });
       doc.y = hY + 14;
       doc.rect(50, doc.y, W, 0.5).fill('#D1D5DB'); doc.y += 6;
       bundle.lines.forEach((l, i) => {
@@ -1248,8 +1254,9 @@ async function buildPDF(bundle) {
         const y = doc.y;
         if (i % 2 === 0) { doc.rect(50, y-2, W, 17).fill('#F9FAFB'); }
         doc.font('Helvetica').fontSize(9.5).fillColor('#1C1F28')
-           .text(l.desc || '—', 50, y, { width: 340, lineBreak: false });
-        doc.text((l.hours||0).toFixed(1) + ' hrs', 395, y, { width: 100, lineBreak: false });
+           .text(fmtLineDate(l.date), 50, y, { width: 65, lineBreak: false });
+        doc.text(l.desc || '—', 125, y, { width: 270, lineBreak: false });
+        doc.text((l.hours||0).toFixed(1) + ' hrs', 405, y, { width: 90, lineBreak: false });
         doc.y = y + 17;
       });
       doc.moveDown(0.3);

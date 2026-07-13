@@ -2224,7 +2224,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v57'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v58'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.
@@ -4110,7 +4110,9 @@ function jValidateStep(n) {
 /* ── Form ────────────────────────────────────────────────────── */
 async function jInitForm(keepJobNo=false) {
   document.getElementById('f-date').value = todayISO();
-  if (!keepJobNo) { const n=await jPeekNextJobNo(); const el=document.getElementById('f-jobno'); el.value=jFmtJobNo(n); el.dataset.jobno=n; }
+  // No real number until the pilot actually submits — showing a guessed
+  // one here is exactly what caused numbers to collide across devices.
+  if (!keepJobNo) { const el=document.getElementById('f-jobno'); el.value=jFmtJobNo(0); el.dataset.jobno=0; }
   document.getElementById('f-client').value = '';
   document.getElementById('f-notes').value = '';
   document.getElementById('f-dual').checked = false;
@@ -4127,9 +4129,23 @@ async function jInitForm(keepJobNo=false) {
   jShowStep(1);
   jDraftId = null;
 }
-function jFmtJobNo(n) { return 'A' + String(n||0).padStart(4,'0'); }
-async function jPeekNextJobNo() { const last=await jKvGet('jobCounter',0); return last+1; }
-async function jConsumeJobNo() { const next=await jPeekNextJobNo(); await jKvSet('jobCounter',next); return next; }
+function jFmtJobNo(n) { return n ? ('A' + String(n).padStart(4,'0')) : 'DRAFT'; }
+async function jPeekNextJobNo() { const last=await jKvGet('jobCounter',0); return last+1; } // local-only preview, offline fallback only
+async function jConsumeJobNo() {
+  // Ask the server for the next number so it goes up the same way on every
+  // device. Only falls back to a local guess if there's no connection —
+  // that guess isn't guaranteed unique against other devices.
+  try {
+    const res = await apiFetch('/api/job-number/next', { method: 'POST' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.number) { await jKvSet('jobCounter', data.number); return data.number; }
+    }
+  } catch (e) { /* offline — fall through */ }
+  const next = await jPeekNextJobNo();
+  await jKvSet('jobCounter', next);
+  return next;
+}
 
 function jStartNewJob() {
   document.getElementById('screen-confirm').classList.remove('active');
@@ -4360,7 +4376,7 @@ async function jBuildRec(status) {
     if(desc||hours) lines.push({date,desc,hours});
   });
   const totalHours=lines.reduce((s,l)=>s+l.hours,0);
-  const jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||(await jPeekNextJobNo());
+  const jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||0;
   return {
     jobNo, date:document.getElementById('f-date').value,
     client:document.getElementById('f-client').value.trim(),
@@ -4378,8 +4394,13 @@ async function jBuildRec(status) {
 async function jSubmitJob(status) {
   if(status==='submitted'&&!jValidateFinal()) return;
   jClearFieldErrors();
-  const jobNo=await jConsumeJobNo();
-  const jNoEl=document.getElementById('f-jobno'); jNoEl.value=jFmtJobNo(jobNo); jNoEl.dataset.jobno=jobNo;
+  // Only burn a real, shared job number on final submit — saving as a
+  // draft shouldn't consume one, or the sequence races ahead of actual jobs.
+  let jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||0;
+  if (status==='submitted') {
+    jobNo=await jConsumeJobNo();
+    const jNoEl=document.getElementById('f-jobno'); jNoEl.value=jFmtJobNo(jobNo); jNoEl.dataset.jobno=jobNo;
+  }
   const rec=await jBuildRec(status); rec.jobNo=jobNo;
 
   // Track most recently used pilot so they appear first next time
@@ -4543,6 +4564,7 @@ function jBuildServerBundle(job) {
     isDual:!!job.isDual, pilot2Name:job.pilot2Name||'', aircraft2Reg:job.aircraft2Reg||'', aircraft2Type:job.aircraft2Type||'',
     lines:job.lines||[], totalHours:job.totalHours||0, notes:job.notes||'', jobNo:job.jobNo||0,
     jobNoFormatted:jFmtJobNo(job.jobNo||0),
+    calendarJobId:job.calendarJobId||null,
   };
 }
 async function jSyncJobToServer(job) {
@@ -5012,9 +5034,8 @@ async function calImportDrafts() {
     const data = await res.json();
     const drafts = data.drafts || [];
     for (const d of drafts) {
-      const jobNo = await jPeekNextJobNo(); // informational only — real number assigned when the pilot submits
       await jAdd({
-        jobNo,
+        jobNo: 0, // shows as DRAFT — real number assigned when the pilot actually submits
         date:            d.date || todayISO(),
         client:          d.client || '',
         pilotName:       d.pilotName || '',

@@ -260,6 +260,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <section class="view active" id="v-dash">
       <div class="pg-h"><div class="pg-title" id="dash-date">Today</div></div>
       <div class="stats" id="dash-stats"></div>
+      <div class="card" id="attn-card" style="display:none">
+        <div class="card-h"><h3>Needs attention</h3></div>
+        <div id="dash-attn"></div>
+      </div>
       <div class="card">
         <div class="card-h"><h3>Today's jobs</h3></div>
         <div id="dash-jobs"><div class="empty">Loading…</div></div>
@@ -810,6 +814,30 @@ function renderDash(){
         <td style="text-align:right"><span class="dot ${j.status==='logged'?'d-ok':'d-mut'}"></span><span class="st">${j.status==='logged'?'Logged':'Scheduled'}</span></td>
       </tr>`).join('') + '</table>'
     : '<div class="empty">No jobs scheduled today</div>';
+
+  /* "Needs attention" — jobs whose start time has already passed with no signed
+     paperwork on file. NOTE: this deliberately does NOT use j.status==='logged' —
+     that flag just means the 6pm auto-sweep ran and created a draft job sheet for
+     the pilot, not that paperwork was ever actually completed and sent. The only
+     real signal that paperwork was filed is a matching _records entry, joined on
+     calendarJobId (added so this panel could exist — see PAPER below). */
+  const nowHM = new Intl.DateTimeFormat('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+  const filedIds = new Set(PAPER.map(p => p.calendarJobId).filter(Boolean));
+  const overdue = CAL_JOBS.filter(j => j.status !== 'cancelled'
+      && (j.date < today || (j.date === today && (j.startTime || '00:00') <= nowHM))
+      && !filedIds.has(j.id))
+    .sort((a,b)=>((a.date||'')+(a.startTime||'')).localeCompare((b.date||'')+(b.startTime||'')));
+  const attnCard = el('attn-card');
+  if (overdue.length) {
+    attnCard.style.display = '';
+    el('dash-attn').innerHTML = '<table>' + overdue.slice(0,50).map(j => `<tr>
+        <td style="width:110px">${esc(j.date)}${j.startTime ? ' ' + esc(j.startTime) : ''}</td>
+        <td>${esc(j.description)||'Job'}<br><span class="st">${esc(j.client)}${j.client?' · ':''}${esc(jobPilotNames(j))}</span></td>
+        <td style="text-align:right"><span class="dot d-bad"></span><span class="st">No paperwork on file</span></td>
+      </tr>`).join('') + '</table>';
+  } else {
+    attnCard.style.display = 'none';
+  }
 }
 
 /* ---------- JOB MODAL ---------- */
@@ -877,6 +905,7 @@ async function loadPaper(force){
   el('pw-ac').innerHTML = '<option value="">All aircraft</option>' + acs.map(a=>`<option>${esc(a)}</option>`).join('');
   el('pw-pilot').innerHTML = '<option value="">All pilots</option>' + ps.map(p=>`<option>${esc(p)}</option>`).join('');
   renderPaper();
+  renderDash(); // PAPER just changed — refresh the "needs attention" match, whichever of loadCalendar/loadPaper finished first
 }
 function renderPaper(){
   const ac = el('pw-ac').value, pl = el('pw-pilot').value;

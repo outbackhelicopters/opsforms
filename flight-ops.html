@@ -1214,36 +1214,17 @@ select.has-value{font-weight:700;color:var(--navy);}
 
 <!-- ============ SETUP WIZARD ============ -->
 <div class="screen" id="scr-setup">
-  <h1 class="page">Outback Helicopter Airwork NT — first-time setup</h1>
-  <div class="note"><b>One-off setup for this iPad.</b> This iPad becomes the flight paperwork device for your fleet. Everything below can be changed later in Settings (PIN protected).</div>
+  <h1 class="page">First-time setup</h1>
+  <div class="note"><b>One-off setup for this iPad.</b> This iPad becomes the flight paperwork device for your fleet. Everything below can be changed later in Settings (PIN protected). If your office has already set up pilots and aircraft in the admin app, this screen won't normally appear — it's a fallback for entering them directly on the device.</div>
   <div class="card">
     <h2>Fleet</h2>
     <p class="sub">One helicopter per line: <b>Callsign, Type</b>. Callsign must use Australian VH- prefix with 2–3 alphanumeric characters (e.g. VH-ABC). Each aircraft gets its own W&amp;B data, editable later in Settings.</p>
-    <textarea id="su-fleet" rows="9">VH-FJB, Bell 206B JetRanger
-VH-RYT, Robinson R22 Beta II
-VH-HYG, Robinson R22 Beta II
-VH-RYO, Robinson R22 Beta II
-VH-8OH, Guimbal Cabri G2
-VH-8G2, Guimbal Cabri G2
-VH-FJB, Bell 206B3 JetRanger (increased GW)
-VH-FJB, Bell 206B3 JetRanger (Spray equipped)
-VH-OBA, Robinson R44 Raven I
-VH-OBA, Robinson R44 Raven I (Spray equipped)
-VH-BEG, Robinson R44 Raven II (Bladder tanks)
-VH-IBS, Robinson R44 Raven II (Bladder tanks)
-VH-IBS, Robinson R44 Raven II (Spray equipped)</textarea>
+    <textarea id="su-fleet" rows="9" placeholder="VH-ABC, Robinson R44 Raven II&#10;VH-XYZ, Bell 206B JetRanger"></textarea>
   </div>
   <div class="card">
     <h2>Pilot List</h2>
     <p class="sub">One name per line. Pilots pick their name from the dropdown on every form.</p>
-    <textarea id="su-crew" rows="9">Brodie Zammit
-Christopher Howard
-Danny Clarris
-Jack Ward
-Nicholas Murphy
-Nicolas Muldoon
-Paul Blore
-Thomas B Harrower</textarea>
+    <textarea id="su-crew" rows="9" placeholder="Jane Smith&#10;John Citizen"></textarea>
   </div>
   <div class="card">
     <h2>Sending (can stay as placeholders)</h2>
@@ -2061,39 +2042,12 @@ const FORM_DEFS = [{
    Weights in kg. Arms in mm from datum per AFM.
    Aircraft without iBal data are flagged verified:false.
    ================================================================ */
-/* ── CG envelope polygons extracted from iBal PDFs ───────────── */
-/* All arms in mm from datum, weights in kg. Polygon vertices listed
-   clockwise starting from lower-left (Fwd, MinTOW). */
-const CG_R22 = {
-  pilotArm:1981, paxArm:1981, fuelArm:2700, baggageArm:2515,
-  poly:[[2426,417],[2591,417],[2591,533],[2540,621],[2451,621],[2426,578]],
-  armMin:2350, armMax:2750, wMin:350, wMax:700
-};
-const CG_CABRI = {
-  pilotArm:1300, paxArm:1300, fuelArm:1833, baggageArm:1854,
-  poly:[[1850,471],[2120,471],[1915,550],[1915,700],[1850,700]],
-  armMin:1750, armMax:2300, wMin:400, wMax:750
-};
-const CG_BELL206 = {
-  pilotArm:1651, paxArm:2147, fuelArm:2797, baggageArm:3759,
-  poly:[[2692,907],[2901,907],[2901,1100],[2835,1452],[2814,1520],[2715,1520],[2692,1452]],
-  armMin:2600, armMax:3050, wMin:800, wMax:1600
-};
-const CG_BELL206S = {
-  pilotArm:1651, paxArm:2147, fuelArm:2797, baggageArm:3759,
-  poly:[[2692,907],[2901,907],[2901,1100],[2835,1452],[2692,1452]],
-  armMin:2600, armMax:3100, wMin:700, wMax:1500
-};
-const CG_R44I = {
-  pilotArm:1257, paxArm:1638, fuelArm:2642, baggageArm:1118,
-  poly:[[2337,703],[2604,703],[2604,907],[2489,1089],[2362,1089],[2337,998]],
-  armMin:2200, armMax:2800, wMin:600, wMax:1200
-};
-const CG_R44II = {
-  pilotArm:1257, paxArm:1638, fuelArm:2642, baggageArm:1118,
-  poly:[[2337,726],[2604,726],[2604,953],[2489,1134],[2362,1134],[2337,1043]],
-  armMin:2200, armMax:2800, wMin:600, wMax:1300
-};
+/* CG envelope polygons are customer- and aircraft-specific (each one
+   comes from that individual aircraft's own weighing/iBal report), so
+   none are hardcoded here. A verified aircraft's cgEnv is entered
+   against its own POH/weighing data via Settings → Fleet (or the
+   admin app, once that editor lands); until then W&B falls back to
+   a weight-only dispatch check, which the app already supports. */
 
 /* Max passengers by aircraft type */
 function getMaxPax(type) {
@@ -2188,49 +2142,38 @@ function makeWb(bew, bewArm, bewLat, mtow, fuelDensity, source, verified, cgData
 }
 function makeDummyWb() { return makeWb(0, 0, 0, 0, 0.720, '', false); }
 
+/* Converts this customer's server-side aircraft config (entered via
+   the admin setup wizard, stored in their own OneDrive) into the
+   shape the on-device W&B calculator uses. Always unverified and
+   without a CG envelope — POH-specific graphical CG limits are
+   customer- and aircraft-specific and are entered later once checked
+   against that aircraft's own weighing/POH data; until then the
+   app's existing weight-only dispatch check applies. */
+function wbFromServerAircraft(w) {
+  w = w || {};
+  const wb = makeWb(
+    +w.emptyWeight || 0, +w.emptyLongArm || 0, +w.emptyLatArm || 0,
+    +w.mtow || 0, +w.fuelDensity || 0.720, w.source || '', false, null
+  );
+  wb.accessories = Array.isArray(w.accessories) ? w.accessories : [];
+  return wb;
+}
+
+/* No pilots, aircraft or W&B numbers are hardcoded here — this is a
+   generic empty shell. A brand new device seeds itself from this
+   customer's own server config (/api/config, set up via the admin
+   wizard) the very first time it boots — see App.seedFromServerConfig()
+   below. configured stays false until real pilots + aircraft exist,
+   either from that seed or from the on-device first-time setup screen,
+   so a fresh iPad never silently inherits another customer's fleet. */
 const DEFAULT_SETTINGS = {
-  configured: true,
+  configured: false,
   pin: "1234",
   deviceToken: "",
-  opsEmail: "pilots@outbackhelicopters.com.au",
+  opsEmail: "",
   driveFolder: "Helicopter Paperwork",
-  crew: [
-    { name: "Brodie Zammit" },
-    { name: "Christopher Howard" },
-    { name: "Danny Clarris" },
-    { name: "Jack Ward" },
-    { name: "Nicholas Murphy" },
-    { name: "Nicolas Muldoon" },
-    { name: "Paul Blore" },
-    { name: "Thomas B Harrower" }
-  ],
-  fleet: [
-    /* iBal-verified aircraft ------------------------------------ */
-    { id:"a2", callsign:"VH-RYT", type:"Robinson R22 Beta II",
-      wb: makeWb(411.0, 2650.0, -22.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
-    { id:"a3", callsign:"VH-HYG", type:"Robinson R22 Beta II",
-      wb: makeWb(420.0, 2666.0,   0.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
-    { id:"a4", callsign:"VH-RYO", type:"Robinson R22 Beta II",
-      wb: makeWb(405.0, 2644.0,  -1.0, 621.4, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R22) },
-    { id:"a5", callsign:"VH-8OH", type:"Guimbal Cabri G2",
-      wb: makeWb(428.1, 2226.5, -15.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_CABRI) },
-    { id:"a6", callsign:"VH-8G2", type:"Guimbal Cabri G2",
-      wb: makeWb(431.0, 2211.0, -12.0, 700.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_CABRI) },
-    { id:"a1",  callsign:"VH-FJB", type:"Bell 206B3 JetRanger (increased GW)",
-      wb: makeWb(873.0, 2958.0,  -1.0, 1519.5, 0.800, 'iBal Solution 14 Jun 2026', true, CG_BELL206) },
-    { id:"a1s", callsign:"VH-FJB", type:"Bell 206B3 JetRanger (Spray equipped)",
-      wb: makeWb(797.0, 2992.0,  -1.0, 1451.5, 0.800, 'iBal Solution 14 Jun 2026', true, CG_BELL206S) },
-    { id:"a7",  callsign:"VH-OBA", type:"Robinson R44 Raven I",
-      wb: makeWb(680.0, 2706.0,  0.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44I) },
-    { id:"a7s", callsign:"VH-OBA", type:"Robinson R44 Raven I (Spray equipped)",
-      wb: makeWb(747.0, 2649.0, 94.0, 1088.6, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44I) },
-    { id:"a8",  callsign:"VH-BEG", type:"Robinson R44 Raven II (Bladder tanks)",
-      wb: makeWb(693.0, 2718.0, -4.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) },
-    { id:"a9",  callsign:"VH-IBS", type:"Robinson R44 Raven II (Bladder tanks)",
-      wb: makeWb(711.1, 2712.0,  -6.8, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) },
-    { id:"a9s", callsign:"VH-IBS", type:"Robinson R44 Raven II (Spray equipped)",
-      wb: makeWb(778.0, 2658.0,  -5.0, 1134.0, 0.720, 'iBal Solution 14 Jun 2026', true, CG_R44II) }
-  ]
+  crew: [],
+  fleet: []
 };
 
 /* ================================================================
@@ -2418,32 +2361,27 @@ const App = {
     syncBranding(); // fire-and-forget: patches company name/logo once config.json responds, offline-safe
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     try { if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js'); } catch (e) {}
-    this.S = (await DB.get('kv', 'settings')) || JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+    const existing = await DB.get('kv', 'settings');
+    if (existing) {
+      this.S = existing;
+    } else {
+      // Brand new device, nothing stored yet — start from the empty
+      // shell and try to pull this customer's own pilots/fleet/W&B
+      // from their server config (set up via the admin wizard) so
+      // nobody ever inherits another customer's data. Offline-safe:
+      // falls back to the on-device first-time setup screen if it
+      // can't reach the server yet.
+      this.S = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+      await this.seedFromServerConfig();
+    }
     this.flights = (await DB.all('flights')) || [];
     this.flights.sort((a, b) => b.createdAt - a.createdAt);
-    if (!this.S.fleet) {   // migrate pre-fleet settings
+    if (!this.S.fleet) {   // migrate pre-fleet settings (old single-aircraft devices)
       this.S.fleet = [{ id: 'a1', callsign: this.S.callsign || 'VH-DMY',
-        type: this.S.aircraftType || 'Robinson R44 Raven II', wb: this.S.wb || makeDummyWb() }];
+        type: this.S.aircraftType || 'Type not set', wb: this.S.wb || makeDummyWb() }];
       delete this.S.callsign; delete this.S.aircraftType; delete this.S.wb;
       if (this.S.configured) await DB.put('kv', this.S, 'settings');
     }
-    /* Patch stale cached data — update aircraft types/W&B from DEFAULT_SETTINGS */
-    let _settingsDirty = false;
-    if (Array.isArray(this.S.fleet)) {
-      DEFAULT_SETTINGS.fleet.forEach(def => {
-        const ac = this.S.fleet.find(a => a.callsign === def.callsign && a.id === def.id);
-        if (ac && (ac.type !== def.type || !ac.wb || !ac.wb.verified)) {
-          ac.type = def.type; ac.wb = def.wb; _settingsDirty = true;
-        }
-      });
-    }
-    /* Replace dummy/old pilot list with current list */
-    const _knownNames = new Set(DEFAULT_SETTINGS.crew.map(c => c.name));
-    if (Array.isArray(this.S.crew) && this.S.crew.some(c => (c.name||c).includes('Dundee') || (c.name||c).includes('Irwin') ||
-        ((c.name||c).includes('Angus') || (c.name||c).includes('Lachlan') || (c.name||c).includes('Samuel') || (c.name||c).includes('Anton') || (c.name||c).includes('Annie') || (c.name||c).includes('Belinda') || (c.name||c).includes('Joanna') || (c.name||c).includes('John Blore')))) {
-      this.S.crew = DEFAULT_SETTINGS.crew; _settingsDirty = true;
-    }
-    if (_settingsDirty && this.S.configured) await DB.put('kv', this.S, 'settings');
     window.addEventListener('online',  () => { this.updatePill(); this.trySync(); });
     window.addEventListener('offline', () => this.updatePill());
     this.setChip(this.fleetChip());
@@ -2453,6 +2391,33 @@ const App = {
     this.updatePill();
     // Auto-dismiss splash after 2.2s
     this._splashTimer = setTimeout(() => this.dismissSplash(), 2200);
+  },
+  /* Pulls pilots + aircraft (with W&B) from this deployment's own
+     /api/config — set up by that customer's admin through the setup
+     wizard — and uses it to configure a brand new device automatically.
+     Only ever called when there's no local settings yet, so an
+     already-configured device (this or any other customer's) is never
+     touched by this. Silently gives up if offline or if the admin
+     hasn't finished the wizard yet; the pilot then sees the on-device
+     first-time setup screen as a fallback. */
+  async seedFromServerConfig() {
+    try {
+      const res = await apiFetch('/api/config');
+      if (!res.ok) return;
+      const cfg = await res.json();
+      const pilots   = Array.isArray(cfg.pilots)   ? cfg.pilots.filter(p => p && p.name)   : [];
+      const aircraft = Array.isArray(cfg.aircraft) ? cfg.aircraft.filter(a => a && a.reg) : [];
+      if (pilots.length)   this.S.crew  = pilots.map(p => ({ name: p.name }));
+      if (aircraft.length) this.S.fleet = aircraft.map((a, i) => ({
+        id: 'srv' + i + '_' + Date.now(), callsign: a.reg,
+        type: a.type || 'Type not set', wb: wbFromServerAircraft(a.wb),
+      }));
+      if (cfg.branding && cfg.branding.opsEmail) this.S.opsEmail = cfg.branding.opsEmail;
+      if (pilots.length && aircraft.length) {
+        this.S.configured = true;
+        await DB.put('kv', this.S, 'settings');
+      }
+    } catch (e) { console.error('server config seed failed — falling back to on-device setup:', e.message); }
   },
   dismissSplash() {
     if (this._splashDismissed) return;

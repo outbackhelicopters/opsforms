@@ -29,7 +29,8 @@ const INVITE_DAYS  = 7;
 const STORE_TTL_MS = 60 * 1000;
 
 module.exports = function initAuth(app, deps) {
-  const { getGraphToken, getOneDriveJson, putOneDriveJson, parseCookies, rateLimit } = deps;
+  const { getGraphToken, getOneDriveJson, putOneDriveJson, parseCookies, rateLimit, BRAND } = deps;
+  const brandName = () => (BRAND && BRAND.shortName) || 'Flight Ops';
 
   const FOLDER     = () => process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   const USERS_PATH = () => `${FOLDER()}/_system/users.json`;
@@ -251,10 +252,15 @@ module.exports = function initAuth(app, deps) {
       const link = `${baseUrl(req)}/admin.html#invite=${entry.token}`;
       let emailed = false;
       try {
-        const what = entry.kind === 'reset' ? 'reset your password' : 'set up your account';
-        await sendPlainMail(em, `Flight Ops — ${entry.kind === 'reset' ? 'password reset' : 'your account'}`,
-          `<p>Hi ${entry.name},</p><p>Use the link below to ${what} (valid ${INVITE_DAYS} days):</p>` +
-          `<p><a href="${link}">${link}</a></p>`);
+        const isReset = entry.kind === 'reset';
+        const subject = isReset ? `${brandName()} — password reset` : `Welcome to ${brandName()}`;
+        const body = isReset
+          ? `<p>Hi ${entry.name},</p><p>Use the link below to reset your password (valid ${INVITE_DAYS} days):</p><p><a href="${link}">${link}</a></p>`
+          : `<p>Hi ${entry.name},</p><p>You've been set up with ${entry.role} access to ${brandName()}'s flight ops system. ` +
+            `Use the link below to set your password and sign in (valid ${INVITE_DAYS} days).</p>` +
+            (entry.role === 'admin' ? `<p>You'll land straight in a short setup — company details, pilots, aircraft and weight &amp; balance — so bring that info along.</p>` : '') +
+            `<p><a href="${link}">${link}</a></p>`;
+        await sendPlainMail(em, subject, body);
         emailed = true;
       } catch (e) { console.error('invite email failed:', e.message); }
       res.json({ ok: true, emailed, link });

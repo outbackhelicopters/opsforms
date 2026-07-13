@@ -131,10 +131,12 @@ function rateLimit(req, res, next) {
 /* ── Serve static app files (flight-ops.html, sw.js, etc.) ── */
 app.use(express.static(path.join(__dirname, '..')));
 
-/* ── Shared config (pilots, aircraft, clients) ────────────── */
-/* Edit /api/config.json in GitHub to update all devices */
+/* ── Shared config (pilots, aircraft, clients) ─────────────────
+   Served from OneDrive-backed LIVE_OPS once it's loaded (see the
+   "Live operational data" block below) — falls back to the repo's
+   api/config.json only until that first load completes. */
 app.get(['/config', '/api/config'], requireDevice, (_req, res) => {
-  res.json({ ...APP_CONFIG, branding: { ...BRAND } });
+  res.json({ ...APP_CONFIG, ...LIVE_OPS, branding: { ...BRAND } });
 });
 
 /* ── Health check ─────────────────────────────────────────── */
@@ -257,7 +259,7 @@ async function getOneDriveJson(token, filePath) {
 }
 
 /* ── Admin app: per-user auth (see auth.js) ───────────────── */
-authApi = require('./auth')(app, { getGraphToken, getOneDriveJson, putOneDriveJson, parseCookies, rateLimit });
+authApi = require('./auth')(app, { getGraphToken, getOneDriveJson, putOneDriveJson, parseCookies, rateLimit, BRAND });
 
 /* ── Live branding (white-label) ──────────────────────────────
    Branding is layered, later wins:
@@ -311,6 +313,88 @@ async function saveLiveBranding(patch) {
     fs.writeFileSync(BRANDING_LOCAL, JSON.stringify(snapshot, null, 2));
   }
 }
+
+/* ── Live operational data (pilots / aircraft / clients) ───────
+   Same layering as branding above:
+     1. api/config.json in the repo — a seed, read only the very
+        first time a deployment boots against an empty OneDrive.
+     2. OneDrive _system/config.json — the live, per-customer copy.
+   Once OneDrive holds a copy, the repo file is never consulted
+   again for this data. That means every deployment's pilots,
+   aircraft and client list live entirely inside that customer's
+   own OneDrive — fully separate from every other deployment and
+   from the repo itself, and editable with no redeploy. */
+const OPCONFIG_LOCAL = path.join(__dirname, '_opconfig.local.json');
+let LIVE_OPS = {
+  pilots:   Array.isArray(APP_CONFIG.pilots)   ? APP_CONFIG.pilots   : [],
+  aircraft: Array.isArray(APP_CONFIG.aircraft) ? APP_CONFIG.aircraft : [],
+  clients:  Array.isArray(APP_CONFIG.clients)  ? APP_CONFIG.clients  : [],
+};
+async function loadLiveOpsConfig() {
+  try {
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      const opPath = `${BRAND_FOLDER()}/_system/config.json`;
+      const data = await getOneDriveJson(token, opPath);
+      if (data && typeof data === 'object') {
+        LIVE_OPS = {
+          pilots:   Array.isArray(data.pilots)   ? data.pilots   : [],
+          aircraft: Array.isArray(data.aircraft) ? data.aircraft : [],
+          clients:  Array.isArray(data.clients)  ? data.clients  : [],
+        };
+      } else {
+        // First boot for this deployment — seed OneDrive from the repo
+        // copy so nothing breaks, then the repo file stops mattering.
+        await putOneDriveJson(token, opPath, LIVE_OPS);
+      }
+    } else if (fs.existsSync(OPCONFIG_LOCAL)) {
+      const data = JSON.parse(fs.readFileSync(OPCONFIG_LOCAL, 'utf8'));
+      LIVE_OPS = {
+        pilots:   Array.isArray(data.pilots)   ? data.pilots   : LIVE_OPS.pilots,
+        aircraft: Array.isArray(data.aircraft) ? data.aircraft : LIVE_OPS.aircraft,
+        clients:  Array.isArray(data.clients)  ? data.clients  : LIVE_OPS.clients,
+      };
+    }
+  } catch (e) { console.error('live config load failed (using repo config.json):', e.message); }
+}
+/* Aircraft carry a nested W&B block. Numbers only, always saved as
+   unverified — POH sign-off is a deliberate step a customer's own
+   admin/chief pilot takes later (see PLAN-admin-and-commercial.md);
+   nothing entered here or via the setup wizard is ever auto-verified. */
+function numOrZero(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
+function normalizeAircraft(list) {
+  return (Array.isArray(list) ? list : []).map(a => {
+    const wIn = (a && a.wb) || {};
+    const wb = {
+      verified:     false,
+      source:       String(wIn.source || '').trim(),
+      emptyWeight:  numOrZero(wIn.emptyWeight),
+      emptyLongArm: numOrZero(wIn.emptyLongArm),
+      emptyLatArm:  numOrZero(wIn.emptyLatArm),
+      mtow:         numOrZero(wIn.mtow),
+      fuelDensity:  numOrZero(wIn.fuelDensity) || 0.720,
+      cgEnvKey:     String(wIn.cgEnvKey || '').trim(), // matches a built-in CG envelope preset, if any
+      accessories: (Array.isArray(wIn.accessories) ? wIn.accessories : [])
+        .map(x => ({ name: String((x && x.name) || '').trim(), weight: numOrZero(x && x.weight), arm: numOrZero(x && x.arm) }))
+        .filter(x => x.name),
+    };
+    return { reg: String((a && a.reg) || '').trim().toUpperCase(), type: String((a && a.type) || '').trim(), wb };
+  }).filter(a => a.reg);
+}
+async function saveLiveOpsConfig(patch) {
+  if (Array.isArray(patch.pilots))   LIVE_OPS.pilots   = normalizePilots(patch.pilots);
+  if (Array.isArray(patch.aircraft)) LIVE_OPS.aircraft  = normalizeAircraft(patch.aircraft);
+  if (Array.isArray(patch.clients))  LIVE_OPS.clients  = patch.clients
+    .map(c => String(c || '').trim()).filter(Boolean);
+  const snapshot = { ...LIVE_OPS };
+  if (hasGraphCreds()) {
+    const token = await getGraphToken();
+    await putOneDriveJson(token, `${BRAND_FOLDER()}/_system/config.json`, snapshot);
+  } else {
+    fs.writeFileSync(OPCONFIG_LOCAL, JSON.stringify(snapshot, null, 2));
+  }
+}
+loadLiveOpsConfig();
 
 /* Setup endpoints are open until the first account exists, then admin-only */
 async function requireSetupAuth(req, res, next) {
@@ -380,6 +464,21 @@ app.post(['/setup/branding', '/api/setup/branding'], rateLimit, requireSetupAuth
     }
     await saveLiveBranding(patch);
     res.json({ ok: true, branding: { ...BRAND } });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+/* Edit pilots / aircraft / clients — writes straight to this
+   customer's OneDrive, no redeploy, no touching the repo. Send any
+   one or more of pilots/aircraft/clients; anything omitted is left
+   untouched. Same gating as branding: open only until the first
+   account exists, then provider/admin only. */
+app.put(['/setup/config', '/api/setup/config'], rateLimit, requireSetupAuth, async (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!Array.isArray(b.pilots) && !Array.isArray(b.aircraft) && !Array.isArray(b.clients))
+      return res.status(400).json({ ok: false, error: 'Send pilots, aircraft and/or clients as arrays' });
+    await saveLiveOpsConfig(b);
+    res.json({ ok: true, pilots: LIVE_OPS.pilots, aircraft: LIVE_OPS.aircraft, clients: LIVE_OPS.clients });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

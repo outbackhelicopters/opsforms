@@ -168,7 +168,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     <div class="wiz-steps">
       <span class="wstep on" id="ws-1">1 · System</span>
       <span class="wstep" id="ws-2">2 · Company</span>
-      <span class="wstep" id="ws-3">3 · Account</span>
+      <span class="wstep" id="ws-3">3 · Pilots &amp; fleet</span>
+      <span class="wstep" id="ws-4">4 · Account</span>
     </div>
 
     <div id="wiz-1">
@@ -187,12 +188,33 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
     </div>
 
     <div id="wiz-3" style="display:none">
+      <div class="auth-note" style="margin:0 0 4px">Add your pilots and aircraft — none of this is shared with any other operator, and you can add more any time later from Pilots / Fleet.</div>
+      <label class="lbl">Pilots</label>
+      <div id="wiz-pilot-rows"></div>
+      <button type="button" class="btn btn-l btn-sm" onclick="wizAddPilotRow()">+ Add pilot</button>
+
+      <label class="lbl" style="margin-top:18px">Aircraft (optional)</label>
+      <div class="auth-note" style="margin:0 0 8px">Weight &amp; balance figures entered here are saved as <b>unverified</b> — your chief pilot/HOFO still needs to check them against each aircraft's POH before they're used for a real flight. Leave them blank now and fill them in later if you'd rather.</div>
+      <div id="wiz-ac-rows"></div>
+      <button type="button" class="btn btn-l btn-sm" onclick="wizAddAcRow()">+ Add aircraft</button>
+
+      <label class="lbl" style="margin-top:18px">Clients (optional — paste one per line, or add later)</label>
+      <textarea id="wiz-clients" rows="4" placeholder="e.g.&#10;Acme Cattle Co&#10;Smith Station" style="width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;resize:vertical"></textarea>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-back" onclick="wizGo(2)">Back</button>
+        <button class="btn-auth" style="flex:2" onclick="wizStep3Next()">Continue</button>
+      </div>
+      <div class="auth-err" id="wiz3-err"></div>
+    </div>
+
+    <div id="wiz-4" style="display:none">
       <div class="auth-note" style="margin:0 0 6px">Create the first account — the provider (platform) login.</div>
       <label class="lbl">Your name</label><input type="text" id="bs-name">
       <label class="lbl">Email</label><input type="email" id="bs-email">
       <label class="lbl">Password (8+ characters)</label><input type="password" id="bs-pw" autocomplete="new-password">
       <div style="display:flex;gap:10px">
-        <button class="btn-back" onclick="wizGo(2)">Back</button>
+        <button class="btn-back" onclick="wizGo(3)">Back</button>
         <button class="btn-auth" style="flex:2" onclick="wizFinish()">Finish setup</button>
       </div>
       <div class="auth-err" id="bs-err"></div>
@@ -365,6 +387,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 'use strict';
 /* ---------- STATE ---------- */
 let ME = null, CFG = { pilots: [], aircraft: [], clients: [] };
+let _onboardingMode = false; // true while an invited/logged-in admin is filling in first-time company data (as opposed to the pre-login bootstrap wizard)
 let CAL_JOBS = [], PAPER = [], weekStart = mondayOf(new Date());
 let editingJob = null;
 
@@ -415,14 +438,54 @@ async function enter(user){
   el('u-name').textContent = user.name;
   el('u-role').textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
   if (user.role === 'admin' || user.role === 'provider') el('nav-settings').style.display = 'block';
-  show('app');
   try { CFG = await api('/api/config'); } catch (e) { console.error('config load:', e.message); }
   applyBrand(CFG.branding);
+  /* A customer's admin signing in for the first time (typically via an
+     invite email) with no pilots on file yet gets routed into the same
+     Company + Pilots & Fleet wizard the bootstrap flow uses, instead of
+     the empty dashboard — this is the "log in and enter all your own
+     info" setup moment. Providers are never auto-routed here: they claim
+     their account and hand off to the customer's own admin via an invite. */
+  if (user.role === 'admin' && (!CFG.pilots || !CFG.pilots.length)) { openOnboarding(); return; }
+  show('app');
   el('brand-form').innerHTML = brandFormHtml('bf', CFG.branding || {});
   renderStatic();
   loadCalendar();
   loadPaper();
   if (user.role !== 'office') loadUsers();
+}
+function openOnboarding() {
+  _onboardingMode = true;
+  show('w-boot');
+  el('ws-1').style.display = 'none';
+  el('ws-4').style.display = 'none';
+  el('wiz-pilot-rows').innerHTML = ''; el('wiz-ac-rows').innerHTML = '';
+  wizAddPilotRow(); wizAddAcRow();
+  el('wiz-brand-form').innerHTML = brandFormHtml('wz', CFG.branding || {});
+  const cont3 = document.querySelector('#wiz-3 .btn-auth');
+  if (cont3) cont3.textContent = 'Finish setup';
+  wizGo(2);
+}
+async function wizFinishOnboarding() {
+  el('wiz3-err').textContent = '';
+  try {
+    const brand = await collectBrandForm('wz');
+    if (!brand.shortName) { el('wiz3-err').textContent = 'Company display name is required (step 2)'; wizGo(2); return; }
+    const pilots = collectWizPilots();
+    if (!pilots.length) { el('wiz3-err').textContent = 'Add at least one pilot'; return; }
+    const aircraft = collectWizAircraft();
+    const clients = collectWizClients();
+    await api('/api/setup/branding', { method: 'POST', body: JSON.stringify(brand) });
+    await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ pilots, aircraft, clients }) });
+    CFG = { ...CFG, branding: brand, pilots, aircraft, clients };
+    applyBrand(brand);
+    _onboardingMode = false;
+    show('app');
+    el('brand-form').innerHTML = brandFormHtml('bf', brand);
+    renderStatic(); loadCalendar(); loadPaper();
+    if (ME.role !== 'office') loadUsers();
+    toast('Setup complete — welcome aboard');
+  } catch (e) { el('wiz3-err').textContent = e.message; }
 }
 
 /* ---------- AUTH ACTIONS ---------- */
@@ -515,11 +578,100 @@ async function saveBranding() {
 
 /* ---------- SETUP WIZARD ---------- */
 function wizGo(n) {
-  [1, 2, 3].forEach(i => { el('wiz-' + i).style.display = i === n ? '' : 'none'; el('ws-' + i).classList.toggle('on', i === n); });
+  [1, 2, 3, 4].forEach(i => { el('wiz-' + i).style.display = i === n ? '' : 'none'; el('ws-' + i).classList.toggle('on', i === n); });
 }
+
+/* -- Pilots & fleet step: simple add/remove row builders -- */
+function wizRowHtml(cls, fields) {
+  const inputs = fields.map(f => `<input type="${f.type||'text'}" class="${f.cls}" placeholder="${esc(f.ph)}" value="${esc(f.val||'')}" style="flex:${f.flex||1}${f.upper?';text-transform:uppercase':''}">`).join('');
+  return `<div class="${cls}" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">${inputs}<button type="button" class="btn-back" style="margin:0;flex:none;padding:8px 12px" onclick="this.closest('.${cls}').remove()" aria-label="Remove">✕</button></div>`;
+}
+function wizAddPilotRow(p) {
+  p = p || {};
+  el('wiz-pilot-rows').insertAdjacentHTML('beforeend', wizRowHtml('wiz-prow', [
+    { cls: 'wp-name',  ph: 'Name',                  val: p.name,  flex: 2 },
+    { cls: 'wp-phone', ph: 'Phone (any format)',     val: p.phone, flex: 1 },
+    { cls: 'wp-email', ph: 'Email (optional)', type: 'email', val: p.email, flex: 2 },
+  ]));
+}
+/* Aircraft rows are richer: identity + base W&B numbers + a nested,
+   repeatable accessories list (each with its own weight & arm — e.g.
+   spray gear, cargo hook, extra tank). Everything here is optional
+   except registration, and is always saved unverified. */
+function wizAccRowHtml(x) {
+  x = x || {};
+  return `<div class="wiz-accrow" style="display:flex;gap:8px;margin:6px 0;align-items:center">
+    <input type="text" class="wac-name" placeholder="Accessory e.g. Spray gear" value="${esc(x.name||'')}" style="flex:2">
+    <input type="number" step="0.1" class="wac-weight" placeholder="Weight (kg)" value="${esc(x.weight??'')}" style="flex:1">
+    <input type="number" step="0.1" class="wac-arm" placeholder="Arm (mm)" value="${esc(x.arm??'')}" style="flex:1">
+    <button type="button" class="btn-back" style="margin:0;flex:none;padding:6px 10px" onclick="this.closest('.wiz-accrow').remove()" aria-label="Remove accessory">✕</button>
+  </div>`;
+}
+function wizAddAccRow(btn, x) {
+  btn.closest('.wiz-arow').querySelector('.wiz-accs').insertAdjacentHTML('beforeend', wizAccRowHtml(x));
+}
+function wizAddAcRow(a) {
+  a = a || {}; const w = a.wb || {};
+  const num = (id, ph, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="${esc(ph)}" value="${val || val===0 ? esc(val) : ''}" style="flex:1;min-width:120px">`;
+  el('wiz-ac-rows').insertAdjacentHTML('beforeend', `<div class="wiz-arow" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input type="text" class="wa-reg" placeholder="Registration e.g. VH-ABC" value="${esc(a.reg||'')}" style="flex:1;text-transform:uppercase">
+      <input type="text" class="wa-type" placeholder="Type e.g. Robinson R44" value="${esc(a.type||'')}" style="flex:2">
+      <button type="button" class="btn-back" style="margin:0;flex:none;padding:8px 12px" onclick="this.closest('.wiz-arow').remove()" aria-label="Remove aircraft">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+      ${num('wa-bew', 'Empty weight (kg)', w.emptyWeight)}
+      ${num('wa-larm', 'Empty wt. long. arm (mm)', w.emptyLongArm)}
+      ${num('wa-latarm', 'Empty wt. lateral arm (mm)', w.emptyLatArm)}
+      ${num('wa-mtow', 'MTOW (kg)', w.mtow)}
+      ${num('wa-fueld', 'Fuel density (kg/L)', w.fuelDensity || 0.720, '0.001')}
+    </div>
+    <div class="wiz-accs">${(w.accessories||[]).map(wizAccRowHtml).join('')}</div>
+    <button type="button" class="btn btn-l btn-sm" onclick="wizAddAccRow(this)">+ Add accessory</button>
+  </div>`);
+}
+function collectWizPilots() {
+  return [...document.querySelectorAll('#wiz-pilot-rows .wiz-prow')].map(row => ({
+    name: row.querySelector('.wp-name').value.trim(),
+    phone: row.querySelector('.wp-phone').value.trim(),
+    email: row.querySelector('.wp-email').value.trim(),
+  })).filter(p => p.name);
+}
+function collectWizAircraft() {
+  const g = (card, cls) => { const v = parseFloat(card.querySelector(cls).value); return Number.isFinite(v) ? v : 0; };
+  return [...document.querySelectorAll('#wiz-ac-rows .wiz-arow')].map(card => ({
+    reg: card.querySelector('.wa-reg').value.trim().toUpperCase(),
+    type: card.querySelector('.wa-type').value.trim(),
+    wb: {
+      emptyWeight:  g(card, '.wa-bew'),
+      emptyLongArm: g(card, '.wa-larm'),
+      emptyLatArm:  g(card, '.wa-latarm'),
+      mtow:         g(card, '.wa-mtow'),
+      fuelDensity:  g(card, '.wa-fueld') || 0.720,
+      accessories: [...card.querySelectorAll('.wiz-accrow')].map(r => ({
+        name: r.querySelector('.wac-name').value.trim(),
+        weight: parseFloat(r.querySelector('.wac-weight').value) || 0,
+        arm: parseFloat(r.querySelector('.wac-arm').value) || 0,
+      })).filter(x => x.name),
+    },
+  })).filter(a => a.reg);
+}
+function collectWizClients() {
+  return (el('wiz-clients').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+}
+function wizStep3Next() {
+  el('wiz3-err').textContent = '';
+  if (_onboardingMode) { wizFinishOnboarding(); return; }
+  // Provider bootstrap: pilots/fleet are optional here — normally left for
+  // the customer's own admin to fill in via their invite/onboarding step.
+  wizGo(4);
+}
+
 async function openWizard() {
   show('w-boot');
   wizGo(1);
+  el('wiz-pilot-rows').innerHTML = ''; el('wiz-ac-rows').innerHTML = '';
+  wizAddPilotRow(); wizAddAcRow();
   let st = null;
   try { st = await api('/api/setup/status'); } catch (e) {
     el('wiz-checks').innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`;
@@ -544,10 +696,22 @@ async function wizFinish() {
   el('bs-err').textContent = '';
   try {
     const brand = await collectBrandForm('wz');
-    if (!brand.shortName) { el('bs-err').textContent = 'Company display name is required (step 2)'; return; }
+    if (!brand.shortName) { el('bs-err').textContent = 'Company display name is required (step 2)'; wizGo(2); return; }
+    // Pilots/fleet are optional at this step — as the provider claiming the
+    // first (platform) account, you're not expected to know the customer's
+    // pilots yet. Leave step 3 blank and invite their own admin next; signing
+    // in for the first time routes them straight into this same step to
+    // fill it in themselves.
+    const pilots = collectWizPilots();
+    const aircraft = collectWizAircraft();
+    const clients = collectWizClients();
     await api('/api/setup/branding', { method: 'POST', body: JSON.stringify(brand) });
+    if (pilots.length || aircraft.length || clients.length) {
+      await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ pilots, aircraft, clients }) });
+    }
     const d = await api('/api/auth/bootstrap', { method: 'POST', body: JSON.stringify({ name: el('bs-name').value, email: el('bs-email').value, password: el('bs-pw').value }) });
     applyBrand(brand);
+    CFG = { ...CFG, pilots, aircraft, clients };
     enter(d.user);
   } catch (e) { el('bs-err').textContent = e.message; }
 }

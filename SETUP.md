@@ -102,9 +102,24 @@ cents per text).
 
 > ✅ You now have three things saved: Account SID, Auth Token, and a Twilio phone number.
 
-4. Open `api/config.json` in GitHub and fill in the `"phone"` field for every pilot, in
-   international format (e.g. `+61412345678`). Reminders can't be sent to a pilot with a
-   blank phone number.
+4. Pilot phone numbers, aircraft and the client list are no longer edited by changing
+   `api/config.json` in GitHub. The very first time this app boots with real Microsoft 365
+   credentials, it copies whatever is in `api/config.json` into that company's own OneDrive
+   (`_system/config.json`) and uses the OneDrive copy from then on — editable with no
+   redeploy, and never shared with any other company's deployment. Any format is fine for
+   phone numbers (`0412 345 678`, `+61412345678`, etc.) — it's converted automatically.
+   Reminders can't be sent to a pilot with a blank phone number.
+
+   Until the admin app's Pilots/Fleet/Clients editors are built (next phase), updates go
+   through the API directly, e.g. from a terminal:
+   ```
+   curl -X PUT https://your-app-name.ondigitalocean.app/api/setup/config \
+     -H "Content-Type: application/json" \
+     --cookie "adm_sess=<paste from browser dev tools after logging into /admin.html>" \
+     -d '{"pilots":[{"name":"Jane Pilot","phone":"0412345678","email":"jane@example.com"}]}'
+   ```
+   Only signed-in provider/admin accounts (or anyone, before the very first admin account
+   is created) can call this.
 
 ---
 
@@ -201,7 +216,7 @@ replaces them — once everyone's on `/admin` you can remove `REPORTS_PASSWORD`.
 
 **SWMS/briefing reminder text not arriving**
 → Check `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and `TWILIO_FROM_NUMBER` are all set in DO.
-→ Check the pilot has a `"phone"` number filled in on `api/config.json`, in the form `+61...`.
+→ Check the pilot has a phone number on file (Part 2d, step 4) — any format works, it's converted automatically.
 → Trial Twilio accounts can only text numbers you've verified in the Twilio Console — upgrade to a paid account to text any number.
 
 **Everything still showing old version on the app**
@@ -232,3 +247,54 @@ the moment the variable is saved.
 - The moment the iPad gets any connection it sends automatically
 - The top bar shows: **orange** = waiting to send, **green** = all sent
 - You never need to touch any of this again — it runs automatically
+
+---
+
+## Setting up a second customer
+
+This app is built so every customer runs the exact same code, with nothing
+customer-specific meant to live in the repo — see `PLAN-admin-and-commercial.md`
+for the full model. Short version: repeat Parts 1–5 above as a brand new
+DigitalOcean app pointed at the same GitHub repo, with that customer's own
+Microsoft 365 app registration (their data stays in their own tenant) and
+their own Twilio subaccount.
+
+**The onboarding flow, end to end:**
+1. Stand up their DigitalOcean app + Microsoft 365 + Twilio subaccount (Parts 1–3).
+2. Open `/admin.html` yourself once and complete the setup wizard to claim the
+   **provider** account (your team's login — exists on every deployment, see
+   `PLAN-admin-and-commercial.md`). You can skip past pilots/aircraft here —
+   that's the customer's own step next.
+3. Go to Settings → Invite user, enter the customer's actual admin (chief
+   pilot / owner), role **admin**. This sends them a welcome/setup email with
+   a sign-in link — the existing invite system in `auth.js` already does this,
+   nothing new to configure.
+4. They click the link, set a password, and land straight back in the same
+   Company + Pilots & Fleet wizard (branding, logo, pilots, aircraft with
+   full weight & balance and accessories, clients) — because the deployment's
+   config is still empty, signing in routes them there automatically instead
+   of the normal dashboard. They fill in all their own info; nothing from
+   OHANT or any other customer is ever visible to them.
+
+**What's already customer-specific and safe to clone as-is:** pilots,
+aircraft, W&B, clients and branding — all pulled from that customer's own
+OneDrive (empty until their admin fills the wizard in; a brand new iPad
+seeds itself from that same server config the first time it boots, so
+nothing is hardcoded into the pilot app either).
+
+**What still needs a manual per-customer swap, because these are static
+files a browser reads before any app code runs:** `manifest.json`
+(`name`/`short_name`/`description`), `icon-192.png`/`icon-512.png`/`logo.png`,
+and the `apple-mobile-web-app-title` meta tag in `flight-ops.html` and
+`admin.html` — these control the home-screen icon name/artwork on first
+install and can't be set from a config file. Swap them before sending a new
+customer their install link.
+
+⚠️ One thing to do before cloning for a real second customer: `api/config.json`
+in the repo today still holds OHANT's actual pilots, aircraft and 600+
+clients — it's only used as a first-boot seed if a deployment's OneDrive is
+still empty. Once OHANT's own app has redeployed with this change (their real
+data copies into their own OneDrive automatically, nothing lost), replace
+`api/config.json`'s `pilots`/`aircraft`/`clients` with empty arrays before
+deploying anyone else — OHANT is unaffected either way since their OneDrive
+copy is what their app actually reads from that point on.

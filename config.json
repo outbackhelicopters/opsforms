@@ -2,6 +2,22 @@
   "_note": "Edit this file in GitHub and push to update all iPads within ~2 minutes.",
   "_pilotPhoneNote": "REQUIRED: fill in each pilot's mobile number below — any reasonable format is fine (0412 345 678, 412 345 678, +61 412 345 678, 61412345678, with or without spaces/dashes) and it's converted to the correct +61 format automatically. The calendar's SMS reminders and notices can't be sent without it.",
   "_pilotEmailNote": "Emails are auto-generated as firstname.lastname@outbackhelicopters.com.au — verify/correct if used elsewhere (job sheet emails still go through this).",
+  "_brandingNote": "Everything here drives the company name/logo text shown on the app, in emails, on PDFs and in SMS reminders. Change these when cloning this app for a different company — no code edits needed.",
+  "branding": {
+    "companyName": "OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+    "shortName": "Outback Helicopter Airwork NT",
+    "shortest": "Outback Helicopter",
+    "brandLine1": "OUTBACK",
+    "brandLine2": "HELICOPTER",
+    "brandLine3": "AIRWORK NT",
+    "logoAlt": "Outback Helicopter",
+    "abn": "80 137 947 687",
+    "acn": "137 947 687",
+    "location": "Darwin, NT",
+    "address": "PO Box 37819 Winnellie NT 0821",
+    "phone": "Ph: 8941 6811 | Mob: 0427 222 670",
+    "opsEmail": "pilots@outbackhelicopters.com.au"
+  },
   "pilots": [
     { "name": "Angus Watson",         "phone": "", "email": "angus.watson@outbackhelicopters.com.au" },
     { "name": "Annie Blore",          "phone": "", "email": "annie.blore@outbackhelicopters.com.au" },

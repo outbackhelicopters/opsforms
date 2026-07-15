@@ -170,6 +170,12 @@ app.get('/reports', requireReportsAuth, (_req, res) => {
 
 /* ── Jobs API (for reporting dashboard) ───────────────────── */
 app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
+  // Prevent any upstream proxy/CDN from caching this response by URL —
+  // confirmed via testing that identical-URL GETs to this route were being
+  // served a stale cached body even though our own in-memory cache logic
+  // was correct and a query-varied URL (e.g. ?refresh=1&_=timestamp)
+  // reliably returned fresh, correct data every time.
+  res.set('Cache-Control', 'no-store');
   try {
     const forceRefresh = req.query.refresh === '1';
     const now = Date.now();

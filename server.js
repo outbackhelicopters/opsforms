@@ -186,38 +186,40 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
             + `?$select=name,@microsoft.graph.downloadUrl&$top=1000`;
 
+    const _debug = { steps: [] }; // TEMP diagnostic — returned inline in the JSON response, remove after root cause confirmed
     while (url) {
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      console.log('DEBUG-RECORDS url:', url, 'status:', r.status); // TEMP diagnostic — remove after root cause confirmed
-      if (r.status === 404) { console.log('DEBUG-RECORDS 404 body:', await r.text()); break; }
-      if (!r.ok) { console.log('DEBUG-RECORDS non-ok body:', await r.text()); throw new Error(`List records: ${r.status}`); }
+      if (r.status === 404) { _debug.steps.push({ list: '404' }); break; }
+      if (!r.ok) { _debug.steps.push({ list: 'non-ok', status: r.status, body: (await r.text()).slice(0, 300) }); throw new Error(`List records: ${r.status}`); }
       const d = await r.json();
-      console.log('DEBUG-RECORDS value count:', (d.value || []).length, 'names:', (d.value || []).map(x => x.name));
+      _debug.steps.push({ list: 'ok', count: (d.value || []).length, sample: d.value && d.value[0] ? { name: d.value[0].name, hasDownloadUrl: !!d.value[0]['@microsoft.graph.downloadUrl'], keys: Object.keys(d.value[0]) } : null });
       files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
       url = d['@odata.nextLink'] || null;
     }
 
     // Download all records in parallel batches of 20
-    console.log('DEBUG-RECORDS files.length:', files.length, 'sample:', JSON.stringify(files[0])); // TEMP diagnostic
+    _debug.filesLength = files.length;
     const jobs = [];
+    const downloadNotes = [];
     for (let i = 0; i < files.length; i += 20) {
       const batch = files.slice(i, i + 20);
       const results = await Promise.all(batch.map(async f => {
         try {
           const dlUrl = f['@microsoft.graph.downloadUrl'];
-          if (!dlUrl) { console.log('DEBUG-RECORDS missing downloadUrl for', f.name); return null; }
+          if (!dlUrl) { downloadNotes.push({ name: f.name, issue: 'no-download-url' }); return null; }
           const r = await fetch(dlUrl);
-          if (!r.ok) { console.log('DEBUG-RECORDS download non-ok for', f.name, 'status:', r.status); return null; }
+          if (!r.ok) { downloadNotes.push({ name: f.name, issue: 'fetch-not-ok', status: r.status }); return null; }
           return await r.json();
-        } catch (e) { console.log('DEBUG-RECORDS download exception for', f.name, e.message); return null; }
+        } catch (e) { downloadNotes.push({ name: f.name, issue: 'exception', message: e.message }); return null; }
       }));
       jobs.push(...results.filter(Boolean));
     }
-    console.log('DEBUG-RECORDS jobs.length after download:', jobs.length); // TEMP diagnostic
+    _debug.jobsAfterDownload = jobs.length;
+    _debug.downloadNotesSample = downloadNotes.slice(0, 5);
 
     _jobsCache   = jobs;
     _jobsCacheAt = now;
-    res.json({ jobs, total: jobs.length });
+    res.json({ jobs, total: jobs.length, _debug: forceRefresh ? _debug : undefined });
   } catch (err) {
     console.error('Jobs fetch error:', err.message);
     res.status(500).json({ ok:false, error: err.message });

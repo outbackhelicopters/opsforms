@@ -4966,8 +4966,8 @@ async function calOpenNewJob(existing, pre) {
   const pilots = await calGetPilots();
   const selectedNames = existing ? calJobPilots(existing).map(p => p.name) : [];
   const pilotRows = pilots.map(p => `
-    <label style="display:flex;align-items:center;gap:10px;padding:7px 2px;cursor:pointer;">
-      <input type="checkbox" class="cal-pilot-cb" value="${esc(p.name)}" data-phone="${esc(p.phone)}" data-email="${esc(p.email)}" ${selectedNames.includes(p.name) ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--navy);flex:none;">
+    <label class="cal-pilot-row" data-name="${esc(p.name)}" style="display:flex;align-items:center;gap:10px;padding:7px 2px;cursor:pointer;">
+      <input type="checkbox" class="cal-pilot-cb" value="${esc(p.name)}" data-phone="${esc(p.phone)}" data-email="${esc(p.email)}" ${selectedNames.includes(p.name) ? 'checked' : ''} onchange="calSyncPilotChips()" style="width:20px;height:20px;accent-color:var(--navy);flex:none;">
       <span style="font-size:14px;">${esc(p.name)}${!p.phone ? ' <span style="color:var(--mut);font-size:11px;">(no mobile)</span>' : ''}</span>
     </label>
   `).join('');
@@ -4988,7 +4988,10 @@ async function calOpenNewJob(existing, pre) {
       </div>
     </div>
     <label class="fl">Pilots <span class="req">*</span></label>
-    <div style="max-height:190px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;">${pilotRows}</div>
+    <div id="cal-pilot-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+    <input type="text" id="cal-pilot-search" placeholder="Search pilots…" oninput="calFilterPilots(this.value)" autocomplete="off">
+    <div id="cal-pilot-recent" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0;"></div>
+    <div id="cal-pilot-list" style="max-height:190px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:4px 10px;">${pilotRows}</div>
     <label class="fl">Client / Place</label>
     <input type="text" id="cal-f-client" placeholder="Client name or place…" value="${esc(existing ? existing.client || '' : '')}">
     <label class="fl">Job Description</label>
@@ -5000,6 +5003,54 @@ async function calOpenNewJob(existing, pre) {
       <button class="btn amber" id="cal-save-btn" style="flex:1;" onclick="calSaveJob(${isEdit ? `'${existing.id}'` : 'null'})">${isEdit ? 'Save Changes' : 'Add to Calendar'}</button>
     </div>
   `);
+  calSyncPilotChips();
+}
+
+/* ── Fast pilot picking: search-filter the checkbox list, show
+     currently-selected pilots as removable chips above it (so you
+     don't have to scroll to see who's on the job), and surface a
+     "recent" quick-add row of pilots used on other jobs lately. ── */
+function calFilterPilots(term) {
+  term = (term || '').trim().toLowerCase();
+  document.querySelectorAll('#cal-pilot-list .cal-pilot-row').forEach(row => {
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = !term || name.includes(term) ? '' : 'none';
+  });
+}
+function calTogglePilot(name) {
+  const cb = Array.from(document.querySelectorAll('.cal-pilot-cb')).find(x => x.value === name);
+  if (cb) { cb.checked = !cb.checked; calSyncPilotChips(); }
+}
+function calSyncPilotChips() {
+  const checked = Array.from(document.querySelectorAll('.cal-pilot-cb:checked'));
+  const chipWrap = document.getElementById('cal-pilot-chips');
+  if (chipWrap) {
+    chipWrap.innerHTML = checked.length ? checked.map(cb => `
+      <span onclick="calTogglePilot('${esc(cb.value).replace(/'/g, "\\'")}')" style="display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;padding:5px 10px 5px 12px;border-radius:99px;font-size:12.5px;cursor:pointer;white-space:nowrap;">
+        ${esc(cb.value)} <span style="font-weight:800;">×</span>
+      </span>`).join('') : `<span style="color:var(--mut);font-size:12.5px;">No pilots selected — search or tap below to add</span>`;
+  }
+  calRenderRecentChips();
+}
+function calRecentPilotNames(exclude, limit) {
+  const seen = new Set(); const out = [];
+  const sorted = [...calJobs].filter(j => j.status !== 'cancelled').sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  for (const j of sorted) {
+    for (const p of calJobPilots(j)) {
+      if (!p.name || seen.has(p.name) || exclude.includes(p.name)) continue;
+      seen.add(p.name); out.push(p.name);
+      if (out.length >= limit) return out;
+    }
+  }
+  return out;
+}
+function calRenderRecentChips() {
+  const wrap = document.getElementById('cal-pilot-recent');
+  if (!wrap) return;
+  const checked = Array.from(document.querySelectorAll('.cal-pilot-cb:checked')).map(cb => cb.value);
+  const recent = calRecentPilotNames(checked, 5);
+  wrap.innerHTML = recent.length ? `<span style="font-size:11px;color:var(--mut);">Recent:</span>` + recent.map(n => `
+    <span onclick="calTogglePilot('${esc(n).replace(/'/g, "\\'")}')" style="display:inline-flex;align-items:center;padding:5px 10px;border-radius:99px;font-size:12.5px;border:1px solid var(--line);cursor:pointer;white-space:nowrap;">+ ${esc(n)}</span>`).join('') : '';
 }
 
 function calOpenEdit(id) {

@@ -182,44 +182,45 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
     const recPath    = encodeURIComponent(`${folderName}/_records`);
 
+    // NOTE: we deliberately do NOT $select=@microsoft.graph.downloadUrl here.
+    // On OneDrive-for-Business/SharePoint-backed drives, Graph silently omits
+    // that field from /children listings even when explicitly selected — it
+    // only reliably appears on a per-item GET. Confirmed by direct testing:
+    // every listed record here had @odata.etag + name only. So instead we
+    // grab each item's id from the listing and download its content via
+    // /drive/items/{id}/content, which works regardless of drive type.
     let files = [];
     let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
-            + `?$select=name,@microsoft.graph.downloadUrl&$top=1000`;
+            + `?$select=id,name&$top=1000`;
 
-    const _debug = { steps: [] }; // TEMP diagnostic — returned inline in the JSON response, remove after root cause confirmed
     while (url) {
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.status === 404) { _debug.steps.push({ list: '404' }); break; }
-      if (!r.ok) { _debug.steps.push({ list: 'non-ok', status: r.status, body: (await r.text()).slice(0, 300) }); throw new Error(`List records: ${r.status}`); }
+      if (r.status === 404) break;
+      if (!r.ok) throw new Error(`List records: ${r.status}`);
       const d = await r.json();
-      _debug.steps.push({ list: 'ok', count: (d.value || []).length, sample: d.value && d.value[0] ? { name: d.value[0].name, hasDownloadUrl: !!d.value[0]['@microsoft.graph.downloadUrl'], keys: Object.keys(d.value[0]) } : null });
       files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
       url = d['@odata.nextLink'] || null;
     }
 
     // Download all records in parallel batches of 20
-    _debug.filesLength = files.length;
     const jobs = [];
-    const downloadNotes = [];
     for (let i = 0; i < files.length; i += 20) {
       const batch = files.slice(i, i + 20);
       const results = await Promise.all(batch.map(async f => {
         try {
-          const dlUrl = f['@microsoft.graph.downloadUrl'];
-          if (!dlUrl) { downloadNotes.push({ name: f.name, issue: 'no-download-url' }); return null; }
-          const r = await fetch(dlUrl);
-          if (!r.ok) { downloadNotes.push({ name: f.name, issue: 'fetch-not-ok', status: r.status }); return null; }
-          return await r.json();
-        } catch (e) { downloadNotes.push({ name: f.name, issue: 'exception', message: e.message }); return null; }
+          const r = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          return r.ok ? await r.json() : null;
+        } catch { return null; }
       }));
       jobs.push(...results.filter(Boolean));
     }
-    _debug.jobsAfterDownload = jobs.length;
-    _debug.downloadNotesSample = downloadNotes.slice(0, 5);
 
     _jobsCache   = jobs;
     _jobsCacheAt = now;
-    res.json({ jobs, total: jobs.length, _debug: forceRefresh ? _debug : undefined });
+    res.json({ jobs, total: jobs.length });
   } catch (err) {
     console.error('Jobs fetch error:', err.message);
     res.status(500).json({ ok:false, error: err.message });

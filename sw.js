@@ -7,7 +7,7 @@
    Bump CACHE_NAME on every deploy to purge stale asset cache.
    ============================================================ */
 
-const CACHE_NAME = 'heliops-v58';
+const CACHE_NAME = 'heliops-v59';
 
 /* Files to pre-cache on install (assets only — HTML is network-first) */
 const PRECACHE = [
@@ -62,6 +62,17 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   const isHTML = HTML_PATTERNS.some(pattern => pattern.test(url.pathname));
+
+  /* Never cache API calls — they're dynamic server data (job records,
+     calendar, drafts, etc.), not static assets. Caching these with a
+     cache-first strategy meant a single bad/empty response (e.g. a
+     transient upstream failure) could get served back to the pilot
+     forever, silently masking real data. Always hit the network. */
+  const isApi = url.pathname.startsWith('/api/') || url.pathname === '/jobs';
+  if (isApi) {
+    event.respondWith(fetch(req));
+    return;
+  }
 
   if (isHTML) {
     /* Network-first for HTML: pilots always get the latest version online */

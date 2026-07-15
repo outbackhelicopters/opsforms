@@ -198,17 +198,22 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     }
 
     // Download all records in parallel batches of 20
+    console.log('DEBUG-RECORDS files.length:', files.length, 'sample:', JSON.stringify(files[0])); // TEMP diagnostic
     const jobs = [];
     for (let i = 0; i < files.length; i += 20) {
       const batch = files.slice(i, i + 20);
       const results = await Promise.all(batch.map(async f => {
         try {
-          const r = await fetch(f['@microsoft.graph.downloadUrl']);
-          return r.ok ? await r.json() : null;
-        } catch { return null; }
+          const dlUrl = f['@microsoft.graph.downloadUrl'];
+          if (!dlUrl) { console.log('DEBUG-RECORDS missing downloadUrl for', f.name); return null; }
+          const r = await fetch(dlUrl);
+          if (!r.ok) { console.log('DEBUG-RECORDS download non-ok for', f.name, 'status:', r.status); return null; }
+          return await r.json();
+        } catch (e) { console.log('DEBUG-RECORDS download exception for', f.name, e.message); return null; }
       }));
       jobs.push(...results.filter(Boolean));
     }
+    console.log('DEBUG-RECORDS jobs.length after download:', jobs.length); // TEMP diagnostic
 
     _jobsCache   = jobs;
     _jobsCacheAt = now;

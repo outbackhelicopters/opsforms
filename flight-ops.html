@@ -1038,22 +1038,14 @@ select.has-value{font-weight:700;color:var(--navy);}
         <label style="display:flex;align-items:center;gap:14px;cursor:pointer;user-select:none;">
           <input type="checkbox" id="f-dual" onchange="jToggleDual()" style="width:22px;height:22px;accent-color:var(--navy);flex:none;">
           <div>
-            <div style="font-weight:700;font-size:15px;color:var(--navy);">Dual Operation</div>
-            <div style="font-size:12px;color:var(--mut);margin-top:2px;">Two helicopters on one job</div>
+            <div style="font-weight:700;font-size:15px;color:var(--navy);">Multiple Aircraft</div>
+            <div style="font-size:12px;color:var(--mut);margin-top:2px;">More than one helicopter on this job</div>
           </div>
         </label>
         <div id="dual-fields" class="hidden" style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px;">
-          <div class="hire-banner dual" style="margin-bottom:12px;">🚁🚁&nbsp; Both aircraft will appear on this job sheet.</div>
-          <div class="grid2">
-            <div>
-              <label class="fl">2nd Pilot</label>
-              <select id="f-pilot2" onchange="jDebouncedSave()"><option value="">Select pilot…</option></select>
-            </div>
-            <div>
-              <label class="fl">2nd Aircraft</label>
-              <select id="f-aircraft2" onchange="jDebouncedSave()"><option value="">Select aircraft…</option></select>
-            </div>
-          </div>
+          <div class="hire-banner dual" style="margin-bottom:12px;">🚁🚁&nbsp; Every aircraft added here appears on this job sheet.</div>
+          <div id="crew-extra-rows"></div>
+          <button type="button" class="btn ghost small" id="crew-add-btn" onclick="jAddCrewRow()">+ Add pilot &amp; aircraft</button>
         </div>
       </div>
       <button class="btn amber" onclick="jGoStep(2)">Next: Flight Hours →</button>
@@ -2224,7 +2216,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v57'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v58'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.
@@ -4130,6 +4122,14 @@ async function jInitForm(keepJobNo=false) {
   jDraftId = null;
 }
 function jFmtJobNo(n) { return n ? ('A' + String(n).padStart(4,'0')) : 'DRAFT'; }
+/* Returns a job's extra pilots/aircraft as an array, whichever shape the
+   record was saved in — new records have job.crew, older ones (saved before
+   multi-aircraft support) only have the single pilot2Name/aircraft2Reg pair. */
+function jJobCrew(job) {
+  if (Array.isArray(job.crew) && job.crew.length) return job.crew;
+  if (job.isDual && job.pilot2Name) return [{ pilotName: job.pilot2Name, aircraftReg: job.aircraft2Reg||'', aircraftType: job.aircraft2Type||'' }];
+  return [];
+}
 async function jPeekNextJobNo() { const last=await jKvGet('jobCounter',0); return last+1; } // local-only preview, offline fallback only
 async function jConsumeJobNo() {
   // Ask the server for the next number so it goes up the same way on every
@@ -4179,17 +4179,19 @@ async function jLoadPilotsAndFleet() {
     return ai - bi;
   });
 
-  // Use pilot name as option value (not index) for stability across re-sorts
-  ['f-pilot','f-pilot2'].forEach(id => {
-    const sel = document.getElementById(id); if (!sel) return;
+  // Use pilot name as option value (not index) for stability across re-sorts.
+  // f-pilot is the primary pilot; .crew-pilot-sel covers however many extra
+  // pilot rows are currently on the form (0-3 of them).
+  const pilotSels = [document.getElementById('f-pilot'), ...document.querySelectorAll('.crew-pilot-sel')].filter(Boolean);
+  pilotSels.forEach(sel => {
     const prev = sel.value;
     sel.innerHTML = sortedPilots.length
       ? `<option value="">Select pilot…</option>` + sortedPilots.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')
       : '<option value="">No pilots — go to Settings to add</option>';
     if (prev) sel.value = prev;
   });
-  ['f-aircraft','f-aircraft2'].forEach(id => {
-    const sel = document.getElementById(id); if (!sel) return;
+  const aircraftSels = [document.getElementById('f-aircraft'), ...document.querySelectorAll('.crew-ac-sel')].filter(Boolean);
+  aircraftSels.forEach(sel => {
     const prev = sel.value;
     sel.innerHTML = aircraft.length
       ? `<option value="">Select aircraft…</option>` + aircraft.map(a=>`<option value="${esc(a.reg)}">${esc(a.reg)}${a.type?' — '+esc(a.type):''}</option>`).join('')
@@ -4212,10 +4214,62 @@ function jSetHire(type) {
   document.getElementById('banner-dry').classList.toggle('hidden', type!=='dry');
   jDebouncedSave();
 }
+const JCREW_MAX = 3; // up to 3 extra pilots/aircraft, i.e. 4 total on the job
 function jToggleDual() {
   const on=document.getElementById('f-dual').checked;
   document.getElementById('dual-fields').classList.toggle('hidden',!on);
+  if (on && !document.querySelectorAll('#crew-extra-rows .crew-row').length) jAddCrewRow();
+  if (!on) { document.getElementById('crew-extra-rows').innerHTML=''; }
   jDebouncedSave();
+}
+/* Adds one more pilot+aircraft row (2nd, 3rd or 4th on the job), capped at
+   JCREW_MAX extra rows. Each row is independently removable. */
+function jAddCrewRow(person) {
+  person = person || {};
+  const rows = document.getElementById('crew-extra-rows');
+  const n = rows.children.length;
+  if (n >= JCREW_MAX) return;
+  const row = document.createElement('div');
+  row.className = 'crew-row grid2';
+  row.style.cssText = 'margin-bottom:10px;align-items:flex-end;gap:10px;display:grid;grid-template-columns:1fr 1fr auto;';
+  row.innerHTML = `
+    <div>
+      <label class="fl">Pilot ${n+2}</label>
+      <select class="crew-pilot-sel" onchange="jDebouncedSave()"><option value="">Select pilot…</option></select>
+    </div>
+    <div>
+      <label class="fl">Aircraft ${n+2}</label>
+      <select class="crew-ac-sel" onchange="jDebouncedSave()"><option value="">Select aircraft…</option></select>
+    </div>
+    <button type="button" class="btn ghost small" style="padding:10px 12px;" onclick="this.closest('.crew-row').remove();jRenumberCrewRows();jDebouncedSave();" aria-label="Remove">✕</button>`;
+  rows.appendChild(row);
+  jLoadPilotsAndFleet();
+  const pSel = row.querySelector('.crew-pilot-sel'), aSel = row.querySelector('.crew-ac-sel');
+  if (person.pilotName) pSel.value = person.pilotName;
+  if (person.aircraftReg) aSel.value = person.aircraftReg;
+  jRenumberCrewRows();
+  const addBtn = document.getElementById('crew-add-btn');
+  if (addBtn) addBtn.style.display = rows.children.length >= JCREW_MAX ? 'none' : '';
+}
+function jRenumberCrewRows() {
+  document.querySelectorAll('#crew-extra-rows .crew-row').forEach((row, i) => {
+    const labels = row.querySelectorAll('.fl');
+    if (labels[0]) labels[0].textContent = 'Pilot ' + (i + 2);
+    if (labels[1]) labels[1].textContent = 'Aircraft ' + (i + 2);
+  });
+  const addBtn = document.getElementById('crew-add-btn');
+  if (addBtn) addBtn.style.display = document.querySelectorAll('#crew-extra-rows .crew-row').length >= JCREW_MAX ? 'none' : '';
+}
+/* Collects every extra pilot+aircraft row into [{pilotName, aircraftReg, aircraftType}],
+   skipping any row where no pilot was picked. */
+function jCollectCrew() {
+  const aircraft = jGetFleet();
+  return [...document.querySelectorAll('#crew-extra-rows .crew-row')].map(row => {
+    const pilotName = row.querySelector('.crew-pilot-sel')?.value || '';
+    const reg = row.querySelector('.crew-ac-sel')?.value || '';
+    const acObj = aircraft.find(a => a.reg === reg) || {};
+    return { pilotName, aircraftReg: acObj.reg || reg, aircraftType: acObj.type || '' };
+  }).filter(c => c.pilotName);
 }
 
 /* ── Preset chips ────────────────────────────────────────────── */
@@ -4364,10 +4418,11 @@ async function jBuildRec(status) {
   const pilotName=document.getElementById('f-pilot').value||'';
   const aircraftReg=document.getElementById('f-aircraft').value||'';
   const isDual=document.getElementById('f-dual').checked;
-  const pilot2Name=isDual?(document.getElementById('f-pilot2').value||''):'';
-  const aircraft2Reg2=isDual?(document.getElementById('f-aircraft2').value||''):'';
+  const crew=isDual?jCollectCrew():[];
   const aircraftObj=aircraft.find(a=>a.reg===aircraftReg)||{};
-  const aircraft2Obj=isDual?(aircraft.find(a=>a.reg===aircraft2Reg2)||{}):{};
+  // pilot2Name/aircraft2Reg/aircraft2Type kept in sync with crew[0] so older
+  // code paths (and any already-printed history) that only know about a
+  // single "2nd pilot" still show something sensible.
   const lines=[];
   document.querySelectorAll('#job-lines .job-line').forEach(l=>{
     const date=(l.querySelector('.line-date')?.value||'');
@@ -4381,8 +4436,8 @@ async function jBuildRec(status) {
     jobNo, date:document.getElementById('f-date').value,
     client:document.getElementById('f-client').value.trim(),
     pilotName, aircraftReg:aircraftObj.reg||aircraftReg, aircraftType:aircraftObj.type||'',
-    hireType:jCurrentHire, isDual, pilot2Name,
-    aircraft2Reg:aircraft2Obj.reg||aircraft2Reg2, aircraft2Type:aircraft2Obj.type||'',
+    hireType:jCurrentHire, isDual:isDual&&crew.length>0, crew,
+    pilot2Name:crew[0]?.pilotName||'', aircraft2Reg:crew[0]?.aircraftReg||'', aircraft2Type:crew[0]?.aircraftType||'',
     lines, totalHours, notes:document.getElementById('f-notes').value.trim(),
     signatureDataURL:jSigPad ? jSigPad.data() : null,
     status, createdAt:Date.now(),
@@ -4438,7 +4493,7 @@ function jShowConfirm(job) {
   document.getElementById('confirm-card').innerHTML=`
     <div class="ckv"><span class="ck">Pilot</span><span class="cv">${esc(job.pilotName)}</span></div>
     <div class="ckv"><span class="ck">Aircraft</span><span class="cv">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</span></div>
-    <div class="ckv"><span class="ck">Hire Type</span><span class="cv">${({wet:'Wet Hire',dry:'Dry Hire'})[job.hireType]||job.hireType}${job.isDual?' · Dual':''}</span></div>
+    <div class="ckv"><span class="ck">Hire Type</span><span class="cv">${({wet:'Wet Hire',dry:'Dry Hire'})[job.hireType]||job.hireType}${(job.crew&&job.crew.length)?` · ${job.crew.length+1} aircraft`:''}</span></div>
     <div class="ckv"><span class="ck">Total Hours</span><span class="cv">${(job.totalHours||0).toFixed(1)} hrs</span></div>
     <div class="ckv"><span class="ck">Office</span><span class="cv offline" id="confirm-cloud-status">Sending…</span></div>
   `;
@@ -4479,10 +4534,11 @@ async function jRenderDetail(id) {
   const job=await jGet(id); if(!job) return;
   const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
   const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--mut);font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
-  const dual2HTML=job.isDual?`<div class="kv-row"><div class="k">2nd Pilot</div><div class="v">${esc(job.pilot2Name)||'—'}</div></div><div class="kv-row"><div class="k">2nd Aircraft</div><div class="v">${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</div></div>`:'';
+  const crew=jJobCrew(job);
+  const crewHTML=crew.map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   document.getElementById('detail-content').innerHTML=`
-    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo)}${job.isDual?' 🚁🚁':''}</div><div class="dh-sub">${jFmtDate(job.date)} · <span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
-    <div class="card"><div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}</div></div><div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div><div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}${job.isDual?' · Dual Operation':''}</div></div>${dual2HTML}${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}</div>
+    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo)}${crew.length?' 🚁🚁':''}</div><div class="dh-sub">${jFmtDate(job.date)} · <span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
+    <div class="card"><div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}</div></div><div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div><div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}${crew.length?` · ${crew.length+1} aircraft`:''}</div></div>${crewHTML}${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}</div>
     <div class="card"><div class="card-title">Flight Hours</div>${linesHTML}<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0 0;border-top:2px solid var(--navy);margin-top:4px;"><div style="font-weight:700;color:var(--navy);font-size:14px;">Total Flight Hours</div><div style="font-size:22px;font-weight:800;color:var(--orange);">${(job.totalHours||0).toFixed(1)} hrs</div></div></div>
     ${job.signatureDataURL?`<div class="card"><div class="card-title">Pilot Signature</div><img src="${job.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>`:''}
   `;
@@ -4505,13 +4561,11 @@ async function jEditJob() {
   if(job.pilotName) document.getElementById('f-pilot').value=job.pilotName;
   if(job.aircraftReg) document.getElementById('f-aircraft').value=job.aircraftReg;
   jSetHire(job.hireType||'wet');
-  const wasDual=!!job.isDual;
-  document.getElementById('f-dual').checked=wasDual;
-  document.getElementById('dual-fields').classList.toggle('hidden',!wasDual);
-  if(wasDual){
-    if(job.pilot2Name) document.getElementById('f-pilot2').value=job.pilot2Name;
-    if(job.aircraft2Reg) document.getElementById('f-aircraft2').value=job.aircraft2Reg;
-  }
+  const crew=jJobCrew(job);
+  document.getElementById('crew-extra-rows').innerHTML='';
+  document.getElementById('f-dual').checked=crew.length>0;
+  document.getElementById('dual-fields').classList.toggle('hidden',!crew.length);
+  crew.forEach(c=>jAddCrewRow(c));
   document.getElementById('job-lines').innerHTML=''; jLineIdx=0;
   (job.lines||[]).forEach(l=>{ jAddLine(l.desc||'', l.date||''); const all=document.querySelectorAll('#job-lines .job-line'),last=all[all.length-1]; if(last){ last.querySelector('.line-hrs').value=l.hours||''; } });
   jRecalcTotals();
@@ -4538,7 +4592,9 @@ function jBuildPrint(job) {
   const rows=(job.lines||[]).map(l=>`<tr><td style="border:1px solid #000;padding:6px 8px;width:95px;">${l.date?jFmtDate(l.date):''}</td><td style="border:1px solid #000;padding:6px 8px;">${esc(l.desc)}</td><td style="border:1px solid #000;padding:6px 8px;text-align:center;font-weight:bold;">${(l.hours||0).toFixed(1)}</td></tr>`).join('');
   const pad=Math.max(0,5-(job.lines?.length||0));
   const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
-  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo)}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${job.isDual?' — Dual Operation':''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${job.isDual?`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>2ND PILOT:</b> ${esc(job.pilot2Name)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>2ND AIRCRAFT:</b> ${esc(job.aircraft2Reg)||'—'}${job.aircraft2Type?' — '+esc(job.aircraft2Type):''}</td></tr>`:''}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
+  const crew=jJobCrew(job);
+  const crewRows=crew.map((c,i)=>`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT ${i+2}:</b> ${esc(c.pilotName)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT ${i+2}:</b> ${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</td></tr>`).join('');
+  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo)}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${crew.length?` — ${crew.length+1} Aircraft`:''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${crewRows}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
 }
 
 /* ── Sync ────────────────────────────────────────────────────── */
@@ -4561,9 +4617,11 @@ function jBuildServerBundle(job) {
     flightDate:job.date||'', flightTime:'', aircraftType:job.aircraftType||'',
     sms:{ values:{pilotName:job.pilotName||'',pilotArn:''}, sigs:{pilotSig:job.signatureDataURL||null}, acks:{} },
     pax:[], wb:null, client:job.client||'', hireType:job.hireType||'wet',
-    isDual:!!job.isDual, pilot2Name:job.pilot2Name||'', aircraft2Reg:job.aircraft2Reg||'', aircraft2Type:job.aircraft2Type||'',
+    isDual:!!job.isDual, crew:jJobCrew(job),
+    pilot2Name:job.pilot2Name||'', aircraft2Reg:job.aircraft2Reg||'', aircraft2Type:job.aircraft2Type||'',
     lines:job.lines||[], totalHours:job.totalHours||0, notes:job.notes||'', jobNo:job.jobNo||0,
     jobNoFormatted:jFmtJobNo(job.jobNo||0),
+    calendarJobId:job.calendarJobId||null,
   };
 }
 async function jSyncJobToServer(job) {

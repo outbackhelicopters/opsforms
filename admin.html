@@ -640,6 +640,11 @@ function wizAddAcRow(a, containerId) {
       <input type="text" class="wa-type" placeholder="Type e.g. Robinson R44" value="${esc(a.type||'')}" style="flex:2">
       <button type="button" class="btn-back" style="margin:0;flex:none;padding:8px 12px" onclick="this.closest('.wiz-arow').remove()" aria-label="Remove aircraft">✕</button>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <input type="file" accept=".pdf,image/*" class="wa-scan-file" style="display:none" onchange="scanAircraftDoc(this)">
+      <button type="button" class="btn btn-l btn-sm" onclick="this.previousElementSibling.click()">📄 Scan weighing report</button>
+      <span class="wa-scan-status" style="font-size:12px;color:var(--mut)"></span>
+    </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
       ${num('wa-bew', 'Empty weight (kg)', w.emptyWeight)}
       ${num('wa-larm', 'Empty wt. long. arm (mm)', w.emptyLongArm)}
@@ -650,6 +655,45 @@ function wizAddAcRow(a, containerId) {
     <div class="wiz-accs">${(w.accessories||[]).map(wizAccRowHtml).join('')}</div>
     <button type="button" class="btn btn-l btn-sm" onclick="wizAddAccRow(this)">+ Add accessory</button>
   </div>`);
+}
+/* Uploads a weighing report (PDF or photo) for one aircraft card, asks the
+   server to have Claude read it, then fills in whichever fields are still
+   empty. Never overwrites something already typed, and every field stays
+   fully editable — this is a first draft to check, not a final answer. */
+async function scanAircraftDoc(fileInput) {
+  const file = fileInput.files && fileInput.files[0];
+  if (!file) return;
+  const card = fileInput.closest('.wiz-arow');
+  const statusEl = card.querySelector('.wa-scan-status');
+  statusEl.style.color = 'var(--mut)';
+  statusEl.textContent = 'Scanning…';
+  try {
+    const dataUrl = await new Promise((ok, bad) => {
+      const r = new FileReader();
+      r.onload = () => ok(r.result); r.onerror = () => bad(new Error('Could not read that file'));
+      r.readAsDataURL(file);
+    });
+    const d = await api('/api/setup/scan-aircraft', { method: 'POST', body: JSON.stringify({ dataUrl, mimeType: file.type }) });
+    const x = d.data || {};
+    const fillIfEmpty = (sel, val) => {
+      const f = card.querySelector(sel);
+      if (f && !f.value.trim() && (val || val === 0)) f.value = val;
+    };
+    fillIfEmpty('.wa-reg', x.reg ? String(x.reg).toUpperCase() : '');
+    fillIfEmpty('.wa-type', x.type);
+    fillIfEmpty('.wa-bew', x.emptyWeight);
+    fillIfEmpty('.wa-larm', x.emptyLongArm);
+    fillIfEmpty('.wa-latarm', x.emptyLatArm);
+    fillIfEmpty('.wa-mtow', x.mtow);
+    if (x.fuelDensity) card.querySelector('.wa-fueld').value = x.fuelDensity;
+    statusEl.style.color = 'var(--ok)';
+    statusEl.textContent = '✓ Filled from scan — check every number before saving';
+  } catch (e) {
+    statusEl.style.color = 'var(--bad)';
+    statusEl.textContent = e.message || 'Scan failed';
+  } finally {
+    fileInput.value = '';
+  }
 }
 function collectWizPilots(containerId) {
   return [...document.querySelectorAll('#' + (containerId || 'wiz-pilot-rows') + ' .wiz-prow')].map(row => ({
@@ -710,6 +754,7 @@ async function openWizard() {
   row(e.sessionSecret ? 'ok' : 'warn', 'SESSION_SECRET', e.sessionSecret ? 'set' : 'not set — add it for stable sign-ins');
   row(e.twilio ? 'ok' : 'warn', 'Twilio SMS', e.twilio ? 'configured' : 'not set — reminders off (optional, add later)');
   row(e.deviceToken ? 'ok' : 'warn', 'Device token', e.deviceToken ? 'enforced' : 'not enforced yet — switch on after the iPads have it');
+  row(e.anthropic ? 'ok' : 'warn', 'Document scanning', e.anthropic ? 'configured' : 'not set — weighing report scan off (optional, add later)');
   el('wiz-checks').innerHTML = rows.join('');
   el('wiz-brand-form').innerHTML = brandFormHtml('wz', st.branding || {});
 }

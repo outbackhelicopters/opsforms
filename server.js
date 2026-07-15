@@ -423,6 +423,7 @@ app.get(['/setup/status', '/api/setup/status'], async (_req, res) => {
       sessionSecret: !!process.env.SESSION_SECRET,
       twilio:        !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER),
       deviceToken:   !!process.env.DEVICE_TOKEN,
+      anthropic:     !!process.env.ANTHROPIC_API_KEY,
     },
     graphOk: false, oneDriveOk: false, graphError: null,
   };
@@ -488,6 +489,66 @@ app.put(['/setup/config', '/api/setup/config'], rateLimit, requireSetupAuth, asy
     await saveLiveOpsConfig(b);
     res.json({ ok: true, pilots: LIVE_OPS.pilots, aircraft: LIVE_OPS.aircraft, clients: LIVE_OPS.clients });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+/* ── Scan an aircraft weighing report ────────────────────────────
+   Office uploads a photo or PDF of the weighing report; Claude reads it
+   and hands back the numbers so the form fills itself in — the office
+   still has to check every value before saving, and W&B still only
+   goes live once someone signs it off against the POH, same as always.
+   Nothing here bypasses that; it just removes the retyping. */
+app.post(['/setup/scan-aircraft', '/api/setup/scan-aircraft'], rateLimit, requireSetupAuth, async (req, res) => {
+  try {
+    const { dataUrl, mimeType } = req.body || {};
+    if (!dataUrl) return res.status(400).json({ ok: false, error: 'No file received' });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(400).json({ ok: false, error: "Document scanning isn't set up yet — ANTHROPIC_API_KEY is missing in DigitalOcean" });
+
+    const m = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
+    if (!m) return res.status(400).json({ ok: false, error: 'Could not read that file' });
+    const mediaType = mimeType || m[1];
+    const base64 = m[2];
+    const isPdf = mediaType === 'application/pdf';
+    if (!isPdf && !mediaType.startsWith('image/')) {
+      return res.status(400).json({ ok: false, error: 'Upload a PDF or a photo (JPG/PNG)' });
+    }
+
+    const content = [
+      { type: isPdf ? 'document' : 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+      {
+        type: 'text',
+        text: 'This is an aircraft weight & balance / weighing report. Read it and return ONLY a JSON object ' +
+          '(no other text, no markdown fences) with these exact keys: reg (registration, string or null), ' +
+          'type (aircraft type, string or null), emptyWeight (kg, number or null), emptyLongArm (mm, number or null), ' +
+          'emptyLatArm (mm, number or null), mtow (kg, number or null), fuelDensity (kg/L, number or null). ' +
+          "If a value isn't clearly on the document, use null — never guess or estimate a number.",
+      },
+    ];
+
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-5', max_tokens: 1024, messages: [{ role: 'user', content }] }),
+    });
+    if (!r.ok) {
+      console.error('Claude scan failed:', r.status, await r.text().catch(() => ''));
+      return res.status(502).json({ ok: false, error: 'Scan failed — try a clearer photo or a PDF' });
+    }
+    const data = await r.json();
+    const text = (data.content || []).map(b => b.text || '').join('').trim();
+    let parsed;
+    try {
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+    } catch (e) {
+      console.error('Could not parse scan response:', text);
+      return res.status(502).json({ ok: false, error: "Couldn't read numbers from that document — try again or enter manually" });
+    }
+    res.json({ ok: true, data: parsed });
+  } catch (err) {
+    console.error('scan-aircraft error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 app.get(['/brand-logo', '/api/brand-logo'], (_req, res) => {
@@ -1107,11 +1168,13 @@ async function saveJobRecord(token, bundle, oneDriveUrl) {
     flightDate:   bundle.flightDate || new Date().toISOString().slice(0,10),
     flightTime:   bundle.flightTime || '',
     jobNo:        bundle.jobNo      || null,
+    calendarJobId: bundle.calendarJobId || null,
     aircraftReg:  bundle.callsign   || '',
     aircraftType: bundle.aircraftType || '',
     pilotName:    bundle.sms?.values?.pilotName  || bundle.pilotName  || '',
     pilotArn:     bundle.sms?.values?.pilotArn   || bundle.pilotArn   || '',
     pilot2Name:   bundle.sms?.values?.trainerName || bundle.pilot2Name || '',
+    crew:         Array.isArray(bundle.crew) ? bundle.crew : [],
     client:       bundle.client     || '',
     hireType:     bundle.hireType   || 'wet',
     totalHours:   bundle.totalHours || 0,
@@ -1280,7 +1343,10 @@ async function buildPDF(bundle) {
       kv('Client',    bundle.client);
       kv('Job No',    bundle.jobNo   || '—');
       kv('Hire Type', bundle.hireType === 'dry' ? 'Dry Hire' : bundle.hireType === 'dual' ? 'Dual Flight' : 'Wet Hire');
-      if (bundle.pilot2Name) kv('2nd Pilot', bundle.pilot2Name);
+      const crewList = Array.isArray(bundle.crew) && bundle.crew.length ? bundle.crew : (bundle.pilot2Name ? [{ pilotName: bundle.pilot2Name, aircraftReg: bundle.aircraft2Reg }] : []);
+      crewList.forEach((c, i) => {
+        if (c.pilotName) kv(`Pilot ${i + 2}`, c.pilotName + (c.aircraftReg ? ` — ${c.aircraftReg}` : ''));
+      });
     }
 
     /* ── Job Advice: Flight hour lines ── */

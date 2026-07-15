@@ -220,8 +220,8 @@ async function loadJobs(force=false) {
   document.getElementById('tab-content').innerHTML =
     '<div class="loading"><span class="spin"></span>Fetching records from server…</div>';
   try {
-    const url = '/api/jobs' + (force ? '?refresh=1' : '');
-    const r = await fetch(url, {credentials:'include'});
+    const url = '/api/jobs' + (force ? '?refresh=1' : '') + (force ? '&t=' + Date.now() : '');
+    const r = await fetch(url, {credentials:'include', cache:'no-store'});
     if (r.status === 401) { logout(); return; }
     const d = await r.json();
     ALL_JOBS = d.jobs || [];

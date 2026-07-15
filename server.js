@@ -193,21 +193,17 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
             + `?$select=id,name&$top=1000`;
 
-    const _debug = { steps: [] }; // TEMP diagnostic — remove once root cause of intermittent 0 confirmed
     while (url) {
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.status === 404) { _debug.steps.push({ list: '404' }); break; }
-      if (!r.ok) { _debug.steps.push({ list: 'non-ok', status: r.status, body: (await r.text()).slice(0, 300), headers: Object.fromEntries(r.headers.entries()) }); throw new Error(`List records: ${r.status}`); }
+      if (r.status === 404) break;
+      if (!r.ok) throw new Error(`List records: ${r.status}`);
       const d = await r.json();
-      _debug.steps.push({ list: 'ok', count: (d.value || []).length });
       files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
       url = d['@odata.nextLink'] || null;
     }
-    _debug.filesLength = files.length;
 
     // Download all records in parallel batches of 20
     const jobs = [];
-    const downloadNotes = [];
     for (let i = 0; i < files.length; i += 20) {
       const batch = files.slice(i, i + 20);
       const results = await Promise.all(batch.map(async f => {
@@ -216,18 +212,15 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
             `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
             { headers: { Authorization: `Bearer ${token}` } }
           );
-          if (!r.ok) { downloadNotes.push({ name: f.name, status: r.status, body: (await r.text()).slice(0, 200) }); return null; }
-          return await r.json();
-        } catch (e) { downloadNotes.push({ name: f.name, exception: e.message }); return null; }
+          return r.ok ? await r.json() : null;
+        } catch { return null; }
       }));
       jobs.push(...results.filter(Boolean));
     }
-    _debug.jobsAfterDownload = jobs.length;
-    _debug.downloadNotesSample = downloadNotes.slice(0, 5);
 
     _jobsCache   = jobs;
     _jobsCacheAt = now;
-    res.json({ jobs, total: jobs.length, _debug: forceRefresh ? _debug : undefined });
+    res.json({ jobs, total: jobs.length });
   } catch (err) {
     console.error('Jobs fetch error:', err.message);
     res.status(500).json({ ok:false, error: err.message });

@@ -4405,6 +4405,13 @@ async function jSaveDraft() {
   if(!document.getElementById('f-date').value) return;
   try {
     const rec=await jBuildRec('draft');
+    // Opening the form (or just toggling Wet/Dry) used to be enough to create
+    // a permanent blank draft two seconds later — nothing typed, nothing
+    // selected, forever cluttering History. Only actually save once there's
+    // something worth keeping: a client, a pilot, an aircraft, or a line.
+    const hasContent = !!(rec.client || rec.pilotName || rec.aircraftReg ||
+      (rec.lines && rec.lines.some(l => l.desc || l.hours)));
+    if (!hasContent) return;
     if(jDraftId){ await jSave({...rec,id:jDraftId}); }
     else{ const r=await jAdd(rec); jDraftId=r; }
     const pill=document.getElementById('autosave-pill');

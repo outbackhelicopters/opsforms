@@ -798,6 +798,55 @@ app.delete(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rate
   }
 });
 
+/* ── Shared Job Advice Sheet number counter ─────────────────────
+   Job numbers need to go up the same way no matter which pilot's
+   device submits next — a per-device counter (the old approach)
+   drifts the moment two devices are in use. Single number stored
+   in OneDrive, cached in memory once loaded, incremented under an
+   in-process lock so two submits landing in the same instant still
+   come out as two different numbers. This only serializes writes
+   within this one running instance — fine at this app's scale,
+   same tradeoff already accepted by the drafts lock below. ── */
+let JOB_COUNTER = null; // { n } — null until first loaded from OneDrive
+let _jobNoLockChain = Promise.resolve();
+function withJobNoLock(fn) {
+  const result = _jobNoLockChain.then(fn, fn);
+  _jobNoLockChain = result.then(() => {}, () => {});
+  return result;
+}
+async function loadJobCounter(token) {
+  if (JOB_COUNTER !== null) return JOB_COUNTER;
+  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+  try {
+    const data = await getOneDriveJson(token, `${folderName}/_system/job-counter.json`);
+    JOB_COUNTER = { n: (data && Number.isFinite(data.n)) ? data.n : 0 };
+  } catch (e) {
+    JOB_COUNTER = { n: 0 }; // nothing saved yet — first job of this deployment
+  }
+  return JOB_COUNTER;
+}
+
+/* POST /api/job-number/next — atomically hands out the next Job Advice
+   Sheet number. Only call this once, right at the moment a pilot actually
+   submits (not while they're still filling the form in) — every call
+   consumes a number, even if the submit is later abandoned. */
+app.post(['/job-number/next', '/api/job-number/next'], requireDevice, rateLimit, async (req, res) => {
+  try {
+    const next = await withJobNoLock(async () => {
+      const token = await getGraphToken();
+      const counter = await loadJobCounter(token);
+      counter.n += 1;
+      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+      await putOneDriveJson(token, `${folderName}/_system/job-counter.json`, { n: counter.n, updatedAt: new Date().toISOString() });
+      return counter.n;
+    });
+    res.json({ ok: true, number: next });
+  } catch (err) {
+    console.error('job-number/next error:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 /* ── Serialize draft claims within this process ───────────────
    Two iPads opening the Jobs tab at almost the same instant could
    both read the same "unclaimed" draft before either had written

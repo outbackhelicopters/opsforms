@@ -302,25 +302,42 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
     <!-- FLEET -->
     <section class="view" id="v-fleet">
-      <div class="pg-h"><div class="pg-title">Fleet</div></div>
-      <div class="fleet-grid" id="fleet-grid"></div>
-      <p class="st" style="margin-top:14px">Aircraft list comes from the shared config. Editing and W&amp;B sign-off arrive in the next phase.</p>
+      <div class="pg-h"><div class="pg-title">Fleet</div>
+        <span id="fleet-edit-controls">
+          <button class="btn btn-l btn-sm" onclick="wizAddAcRow(null,'fleet-ac-rows')">+ Add aircraft</button>
+          <button class="btn btn-p btn-sm" onclick="saveFleet()">Save fleet</button>
+        </span>
+      </div>
+      <div id="fleet-ac-rows"></div>
+      <p class="st" id="fleet-err" style="color:var(--bad)"></p>
+      <p class="st" style="margin-top:6px">Weight &amp; balance is always saved unverified — sign it off against the aircraft's actual POH before it's relied on for a real flight.</p>
     </section>
 
     <!-- PILOTS -->
     <section class="view" id="v-pilots">
-      <div class="pg-h"><div class="pg-title">Pilots</div></div>
-      <div class="card"><div id="pilot-list"></div></div>
-      <p class="st">Phone numbers feed the SMS reminders. Editing arrives in the next phase — for now update config.json.</p>
+      <div class="pg-h"><div class="pg-title">Pilots</div>
+        <span id="pilots-edit-controls">
+          <button class="btn btn-l btn-sm" onclick="wizAddPilotRow(null,'pilots-rows')">+ Add pilot</button>
+          <button class="btn btn-p btn-sm" onclick="savePilots()">Save pilots</button>
+        </span>
+      </div>
+      <div class="card"><div id="pilots-rows"></div></div>
+      <p class="st" id="pilots-err" style="color:var(--bad)"></p>
+      <p class="st">Phone numbers feed the SMS reminders.</p>
     </section>
 
     <!-- CLIENTS -->
     <section class="view" id="v-clients">
       <div class="pg-h"><div class="pg-title">Clients</div>
         <input type="search" id="cl-search" placeholder="Search clients…" oninput="renderClients()" style="min-width:240px">
+        <span id="clients-edit-controls">
+          <input type="text" id="new-client-name" placeholder="New client name" style="min-width:200px">
+          <button class="btn btn-p btn-sm" onclick="addClient()">+ Add client</button>
+        </span>
       </div>
       <div class="card"><div id="client-list"></div></div>
       <p class="st" id="client-count"></p>
+      <p class="st" id="clients-err" style="color:var(--bad)"></p>
     </section>
 
     <!-- SETTINGS -->
@@ -590,9 +607,9 @@ function wizRowHtml(cls, fields) {
   const inputs = fields.map(f => `<input type="${f.type||'text'}" class="${f.cls}" placeholder="${esc(f.ph)}" value="${esc(f.val||'')}" style="flex:${f.flex||1}${f.upper?';text-transform:uppercase':''}">`).join('');
   return `<div class="${cls}" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">${inputs}<button type="button" class="btn-back" style="margin:0;flex:none;padding:8px 12px" onclick="this.closest('.${cls}').remove()" aria-label="Remove">✕</button></div>`;
 }
-function wizAddPilotRow(p) {
+function wizAddPilotRow(p, containerId) {
   p = p || {};
-  el('wiz-pilot-rows').insertAdjacentHTML('beforeend', wizRowHtml('wiz-prow', [
+  el(containerId || 'wiz-pilot-rows').insertAdjacentHTML('beforeend', wizRowHtml('wiz-prow', [
     { cls: 'wp-name',  ph: 'Name',                  val: p.name,  flex: 2 },
     { cls: 'wp-phone', ph: 'Phone (any format)',     val: p.phone, flex: 1 },
     { cls: 'wp-email', ph: 'Email (optional)', type: 'email', val: p.email, flex: 2 },
@@ -614,10 +631,10 @@ function wizAccRowHtml(x) {
 function wizAddAccRow(btn, x) {
   btn.closest('.wiz-arow').querySelector('.wiz-accs').insertAdjacentHTML('beforeend', wizAccRowHtml(x));
 }
-function wizAddAcRow(a) {
+function wizAddAcRow(a, containerId) {
   a = a || {}; const w = a.wb || {};
   const num = (id, ph, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="${esc(ph)}" value="${val || val===0 ? esc(val) : ''}" style="flex:1;min-width:120px">`;
-  el('wiz-ac-rows').insertAdjacentHTML('beforeend', `<div class="wiz-arow" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px">
+  el(containerId || 'wiz-ac-rows').insertAdjacentHTML('beforeend', `<div class="wiz-arow" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px">
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <input type="text" class="wa-reg" placeholder="Registration e.g. VH-ABC" value="${esc(a.reg||'')}" style="flex:1;text-transform:uppercase">
       <input type="text" class="wa-type" placeholder="Type e.g. Robinson R44" value="${esc(a.type||'')}" style="flex:2">
@@ -634,16 +651,16 @@ function wizAddAcRow(a) {
     <button type="button" class="btn btn-l btn-sm" onclick="wizAddAccRow(this)">+ Add accessory</button>
   </div>`);
 }
-function collectWizPilots() {
-  return [...document.querySelectorAll('#wiz-pilot-rows .wiz-prow')].map(row => ({
+function collectWizPilots(containerId) {
+  return [...document.querySelectorAll('#' + (containerId || 'wiz-pilot-rows') + ' .wiz-prow')].map(row => ({
     name: row.querySelector('.wp-name').value.trim(),
     phone: row.querySelector('.wp-phone').value.trim(),
     email: row.querySelector('.wp-email').value.trim(),
   })).filter(p => p.name);
 }
-function collectWizAircraft() {
+function collectWizAircraft(containerId) {
   const g = (card, cls) => { const v = parseFloat(card.querySelector(cls).value); return Number.isFinite(v) ? v : 0; };
-  return [...document.querySelectorAll('#wiz-ac-rows .wiz-arow')].map(card => ({
+  return [...document.querySelectorAll('#' + (containerId || 'wiz-ac-rows') + ' .wiz-arow')].map(card => ({
     reg: card.querySelector('.wa-reg').value.trim().toUpperCase(),
     type: card.querySelector('.wa-type').value.trim(),
     wb: {
@@ -740,13 +757,71 @@ function nav(btn){
 
 /* ---------- STATIC LISTS (config-driven) ---------- */
 function renderStatic(){
-  el('fleet-grid').innerHTML = (CFG.aircraft||[]).map(a =>
-    `<div class="ac"><div class="cs">${esc(a.reg)}</div><div class="ty">${esc(a.type)}</div></div>`).join('') || '<div class="empty">No aircraft in config</div>';
-  el('pilot-list').innerHTML = '<table><tr><th>Name</th><th>Phone</th><th>Email</th></tr>' +
-    (CFG.pilots||[]).map(p => `<tr><td>${esc(p.name)}</td><td class="st">${esc(p.phone)||'—'}</td><td class="st">${esc(p.email)||'—'}</td></tr>`).join('') + '</table>';
+  const canEditConfig = ME && (ME.role === 'admin' || ME.role === 'provider');
+  if (el('fleet-edit-controls'))   el('fleet-edit-controls').style.display   = canEditConfig ? '' : 'none';
+  if (el('pilots-edit-controls'))  el('pilots-edit-controls').style.display  = canEditConfig ? '' : 'none';
+  if (el('clients-edit-controls')) el('clients-edit-controls').style.display = canEditConfig ? '' : 'none';
+  renderFleetEditor();
+  renderPilotsEditor();
   el('mj-pilots').innerHTML = (CFG.pilots||[]).map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
   el('client-dl').innerHTML = (CFG.clients||[]).slice(0,2000).map(c => `<option value="${esc(c)}">`).join('');
   renderClients();
+}
+/* Fleet & Pilots reuse the same editable row components the setup wizard
+   uses (wizAddAcRow / wizAddPilotRow / collectWizAircraft / collectWizPilots),
+   just pointed at their own containers, so there's one place that knows how
+   to build an aircraft/pilot row instead of two. */
+function renderFleetEditor() {
+  const box = el('fleet-ac-rows'); if (!box) return;
+  box.innerHTML = '';
+  const list = CFG.aircraft || [];
+  if (!list.length) { wizAddAcRow(null, 'fleet-ac-rows'); return; }
+  list.forEach(a => wizAddAcRow(a, 'fleet-ac-rows'));
+}
+async function saveFleet() {
+  el('fleet-err').textContent = '';
+  try {
+    const aircraft = collectWizAircraft('fleet-ac-rows');
+    const d = await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ aircraft }) });
+    CFG.aircraft = d.aircraft;
+    toast('Fleet saved');
+  } catch (e) { el('fleet-err').textContent = e.message; }
+}
+function renderPilotsEditor() {
+  const box = el('pilots-rows'); if (!box) return;
+  box.innerHTML = '';
+  const list = CFG.pilots || [];
+  if (!list.length) { wizAddPilotRow(null, 'pilots-rows'); return; }
+  list.forEach(p => wizAddPilotRow(p, 'pilots-rows'));
+}
+async function savePilots() {
+  el('pilots-err').textContent = '';
+  try {
+    const pilots = collectWizPilots('pilots-rows');
+    const d = await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ pilots }) });
+    CFG.pilots = d.pilots;
+    toast('Pilots saved');
+    el('mj-pilots').innerHTML = (CFG.pilots||[]).map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join('');
+  } catch (e) { el('pilots-err').textContent = e.message; }
+}
+async function addClient() {
+  el('clients-err').textContent = '';
+  const nameEl = el('new-client-name');
+  const name = (nameEl.value || '').trim();
+  if (!name) return;
+  if ((CFG.clients || []).some(c => String(c).toLowerCase() === name.toLowerCase())) {
+    el('clients-err').textContent = 'That client is already on the list';
+    return;
+  }
+  try {
+    const clients = [...(CFG.clients || []), name];
+    const d = await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ clients }) });
+    CFG.clients = d.clients;
+    nameEl.value = '';
+    el('client-dl').innerHTML = (CFG.clients||[]).slice(0,2000).map(c => `<option value="${esc(c)}">`).join('');
+    renderClients();
+    toast('Client added');
+  } catch (e) { el('clients-err').textContent = e.message; }
 }
 function renderClients(){
   const q = (el('cl-search').value||'').toLowerCase();

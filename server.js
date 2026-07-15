@@ -207,19 +207,29 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     for (let i = 0; i < files.length; i += 20) {
       const batch = files.slice(i, i + 20);
       const results = await Promise.all(batch.map(async f => {
-        try {
-          const r = await fetch(
-            `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          return r.ok ? await r.json() : null;
-        } catch { return null; }
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const r = await fetch(
+              `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (r.ok) return await r.json();
+          } catch { /* retry */ }
+        }
+        return null;
       }));
       jobs.push(...results.filter(Boolean));
     }
 
-    _jobsCache   = jobs;
-    _jobsCacheAt = now;
+    // Only cache the result if it looks trustworthy: either the folder
+    // genuinely has no files, or we actually got records back. If Graph
+    // listed files but every download failed (transient throttling/cold
+    // start), don't poison the cache with a false empty result — let the
+    // next request try again live instead of serving 0 for up to 5 min.
+    if (files.length === 0 || jobs.length > 0) {
+      _jobsCache   = jobs;
+      _jobsCacheAt = now;
+    }
     res.json({ jobs, total: jobs.length });
   } catch (err) {
     console.error('Jobs fetch error:', err.message);

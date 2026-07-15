@@ -188,9 +188,11 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
 
     while (url) {
       const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.status === 404) break;
-      if (!r.ok) throw new Error(`List records: ${r.status}`);
+      console.log('DEBUG-RECORDS url:', url, 'status:', r.status); // TEMP diagnostic — remove after root cause confirmed
+      if (r.status === 404) { console.log('DEBUG-RECORDS 404 body:', await r.text()); break; }
+      if (!r.ok) { console.log('DEBUG-RECORDS non-ok body:', await r.text()); throw new Error(`List records: ${r.status}`); }
       const d = await r.json();
+      console.log('DEBUG-RECORDS value count:', (d.value || []).length, 'names:', (d.value || []).map(x => x.name));
       files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
       url = d['@odata.nextLink'] || null;
     }

@@ -1000,10 +1000,12 @@ select.has-value{font-weight:700;color:var(--navy);}
         <div class="sdot" id="sdot-2">2</div>
         <div class="sline" id="sline-2"></div>
         <div class="sdot" id="sdot-3">3</div>
+        <div class="sline" id="sline-3"></div>
+        <div class="sdot" id="sdot-4">4</div>
       </div>
       <div class="step-info">
         <div class="step-name" id="step-label">Job Details</div>
-        <div class="step-num" id="step-num">Step 1 of 3</div>
+        <div class="step-num" id="step-num">Step 1 of 4</div>
         <div class="autosave-pill" id="autosave-pill">Saved</div>
       </div>
     </div>
@@ -1120,10 +1122,23 @@ select.has-value{font-weight:700;color:var(--navy);}
       </div>
       <div class="step-nav">
         <button class="btn ghost" onclick="jGoStep(2)">← Back</button>
-        <button class="btn green" onclick="jSubmitJob('submitted')">Submit Job Sheet ✓</button>
+        <button class="btn amber" onclick="jGoStep(4)">Review →</button>
       </div>
       <button class="btn ghost no-print" style="margin-top:10px;" onclick="jSubmitJob('draft')">Save as Draft</button>
     </div><!-- end step-3 -->
+
+    <!-- STEP 4 -->
+    <div id="step-4" class="step-panel">
+      <div class="card">
+        <div class="card-title">Review before sending</div>
+        <div style="font-size:12px;color:var(--mut);margin:-4px 0 12px;line-height:1.5;">Check the details below are correct — this is exactly what gets sent to the office.</div>
+        <div id="review-summary"></div>
+      </div>
+      <div class="step-nav">
+        <button class="btn ghost" onclick="jGoStep(3)">← Back</button>
+        <button class="btn green" onclick="jSubmitJob('submitted')">Submit Job Sheet ✓</button>
+      </div>
+    </div><!-- end step-4 -->
   </div><!-- end screen-new -->
 
   <!-- CONFIRM -->
@@ -4066,7 +4081,7 @@ function jBackFromDetail() {
 }
 
 /* ── Step wizard ─────────────────────────────────────────────── */
-const J_STEP_LABELS = ['Job Details', 'Flight Hours', 'Sign & Submit'];
+const J_STEP_LABELS = ['Job Details', 'Flight Hours', 'Sign', 'Review'];
 
 function jGoStep(n) {
   if (n > jCurrentStep && !jValidateStep(jCurrentStep)) return;
@@ -4075,21 +4090,22 @@ function jGoStep(n) {
 }
 function jShowStep(n) {
   document.querySelectorAll('.step-panel').forEach((p,i) => p.classList.toggle('active', i+1===n));
-  for (let i=1;i<=3;i++) {
+  for (let i=1;i<=4;i++) {
     const dot = document.getElementById('sdot-'+i);
     if (!dot) continue;
     dot.classList.toggle('done', i<n); dot.classList.toggle('active', i===n);
     dot.textContent = i<n ? '✓' : i;
   }
-  for (let i=1;i<=2;i++) {
+  for (let i=1;i<=3;i++) {
     document.getElementById('sline-'+i)?.classList.toggle('done', i<n);
   }
   const lbl = document.getElementById('step-label');
   const num = document.getElementById('step-num');
   if (lbl) lbl.textContent = J_STEP_LABELS[n-1];
-  if (num) num.textContent = 'Step '+n+' of 3';
+  if (num) num.textContent = 'Step '+n+' of 4';
   window.scrollTo(0,0);
   if (n===3 && jSigPad) requestAnimationFrame(()=>requestAnimationFrame(()=>jSigPad._initCtx()));
+  if (n===4) jRenderReviewStep();
 }
 function jValidateStep(n) {
   jClearFieldErrors();
@@ -4112,7 +4128,40 @@ function jValidateStep(n) {
     if (!linesOk) { document.getElementById('err-lines').classList.add('show'); return false; }
     return true;
   }
+  if (n===3) {
+    if (!jSigPad || jSigPad.empty) { document.getElementById('err-sig').classList.add('show'); return false; }
+    return true;
+  }
   return true;
+}
+
+/* ── Step 4: Review before send ─────────────────────────────────
+   Pulls a live snapshot via jBuildRec (read-only, no side effects —
+   doesn't burn a job number or save anything) so the pilot sees
+   exactly what's about to be sent, including their signature,
+   before the real submit happens. */
+async function jRenderReviewStep() {
+  const rec = await jBuildRec('review');
+  const hireMap = {wet:'Wet Hire', dry:'Dry Hire'};
+  const linesHTML = (rec.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--mut);font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const crewHTML = (rec.crew||[]).map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
+  const el = document.getElementById('review-summary');
+  if (!el) return;
+  el.innerHTML =
+    `<div class="kv-row"><div class="k">Date</div><div class="v">${jFmtDate(rec.date)}</div></div>` +
+    `<div class="kv-row"><div class="k">Client / Place</div><div class="v">${esc(rec.client)||'—'}</div></div>` +
+    `<div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(rec.pilotName)||'—'}</div></div>` +
+    `<div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(rec.aircraftReg)||'—'}${rec.aircraftType?' — '+esc(rec.aircraftType):''}</div></div>` +
+    `<div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[rec.hireType]||rec.hireType}${rec.crew&&rec.crew.length?` · ${rec.crew.length+1} aircraft`:''}</div></div>` +
+    crewHTML +
+    (rec.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(rec.notes)}</div></div>`:'') +
+    `<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px;">` +
+    (linesHTML || '<p class="sub">No flight hours entered</p>') +
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0 0;border-top:2px solid var(--navy);margin-top:8px;">` +
+    `<div style="font-weight:700;color:var(--navy);font-size:14px;">Total Flight Hours</div>` +
+    `<div style="font-size:22px;font-weight:800;color:var(--orange);">${(rec.totalHours||0).toFixed(1)} hrs</div>` +
+    `</div></div>` +
+    (rec.signatureDataURL ? `<div style="margin-top:14px;"><div class="card-title" style="padding:0 0 8px;">Pilot Signature</div><img src="${rec.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>` : '');
 }
 
 /* ── Form ────────────────────────────────────────────────────── */

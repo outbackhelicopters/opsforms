@@ -20,8 +20,13 @@ const { ClientSecretCredential } = require('@azure/identity');
    back to Outback's own details if config.json has no branding
    block yet, so existing behaviour is unchanged. */
 function loadConfigFile() {
-  try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')); }
-  catch (e) { console.error('config.json load failed:', e.message); return {}; }
+  // CONFIG_FILE env var lets a separate deployment (e.g. a sales demo
+  // instance) point at a different data file — same code, same repo,
+  // just a different JSON of branding/pilots/aircraft/clients. Unset
+  // in production, so production always loads config.json unchanged.
+  const configName = process.env.CONFIG_FILE || 'config.json';
+  try { return JSON.parse(fs.readFileSync(path.join(__dirname, configName), 'utf8')); }
+  catch (e) { console.error(`${configName} load failed:`, e.message); return {}; }
 }
 const APP_CONFIG = loadConfigFile();
 const BRAND = Object.assign({

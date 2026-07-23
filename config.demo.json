@@ -1,0 +1,54 @@
+{
+  "_note": "DEMO DATA ONLY — used by the sales/demo deployment via the CONFIG_FILE env var. Entirely fictional company, pilots, aircraft and clients. Safe to submit real test job sheets against this file without touching any real OHANT data.",
+  "branding": {
+    "companyName": "SOUTHERN SKY ROTOR SERVICES PTY LTD",
+    "shortName": "Southern Sky Rotor Services",
+    "shortest": "Southern Sky",
+    "brandLine1": "SOUTHERN",
+    "brandLine2": "SKY ROTOR",
+    "brandLine3": "SERVICES",
+    "logoAlt": "Southern Sky Rotor Services",
+    "abn": "11 222 333 444",
+    "acn": "222 333 444",
+    "location": "Alice Springs, NT",
+    "address": "PO Box 1234 Alice Springs NT 0870",
+    "phone": "Ph: 8950 1234 | Mob: 0400 111 222",
+    "opsEmail": "ops@demo.southernskyrotor.example"
+  },
+  "pilots": [
+    { "name": "Sam Carter",       "phone": "", "email": "sam.carter@demo.southernskyrotor.example" },
+    { "name": "Ellie Fraser",     "phone": "", "email": "ellie.fraser@demo.southernskyrotor.example" },
+    { "name": "Marcus Delaney",  "phone": "", "email": "marcus.delaney@demo.southernskyrotor.example" },
+    { "name": "Priya Nair",      "phone": "", "email": "priya.nair@demo.southernskyrotor.example" },
+    { "name": "Tom Whitfield",    "phone": "", "email": "tom.whitfield@demo.southernskyrotor.example" },
+    { "name": "Jess Okafor",      "phone": "", "email": "jess.okafor@demo.southernskyrotor.example" }
+  ],
+  "aircraft": [
+    { "reg": "VH-DM1", "type": "Robinson R22" },
+    { "reg": "VH-DM2", "type": "Robinson R44" },
+    { "reg": "VH-DM3", "type": "Cabri G2" },
+    { "reg": "VH-DM4", "type": "Bell 206 Jetranger" }
+  ],
+  "clients": [
+    "ACME PASTORAL CO",
+    "BLUE HORIZON CATTLE STATION",
+    "COASTAL SURVEY GROUP",
+    "DESERT ROSE STATION",
+    "EAGLEVIEW AGRICULTURE PTY LTD",
+    "FRONTIER MINING SERVICES",
+    "GREAT NORTHERN STOCK CO",
+    "HIGH COUNTRY MUSTERING",
+    "IRONBARK STATION",
+    "JUNCTION CREEK PASTORAL",
+    "KESTREL SURVEY & MAPPING",
+    "LONE GUM CATTLE COMPANY",
+    "MERIDIAN LAND MANAGEMENT",
+    "NORTHWIND STATION HOLDINGS",
+    "OUTBACK TOURISM VENTURES",
+    "PLAINSVIEW GRAZING CO",
+    "QUARTZ RIDGE MINING",
+    "RED EARTH PASTORAL TRUST",
+    "SUNSTONE CATTLE STATION",
+    "TABLELAND SURVEY SERVICES"
+  ]
+}

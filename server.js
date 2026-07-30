@@ -396,16 +396,29 @@ async function loadLiveOpsConfig() {
     }
   } catch (e) { console.error('live config load failed (using repo config.json):', e.message); }
 }
-/* Aircraft carry a nested W&B block. Numbers only, always saved as
-   unverified — POH sign-off is a deliberate step a customer's own
-   admin/chief pilot takes later (see PLAN-admin-and-commercial.md);
-   nothing entered here or via the setup wizard is ever auto-verified. */
+/* Aircraft carry a nested W&B block. Numbers only — POH sign-off (name,
+   ARN, date, drawn signature) is a deliberate separate step a customer's
+   own admin/chief pilot takes via POST /setup/aircraft-signoff (see
+   PLAN-admin-and-commercial.md). Nothing entered here or via the setup
+   wizard/Fleet editor is ever auto-verified: editing any of these numbers
+   carries a prior sign-off forward ONLY if every figure is byte-identical
+   to what was last signed — any real change voids it and a fresh sign-off
+   is required, so the audit trail always matches what pilots are flying
+   on. */
 function numOrZero(v) { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; }
-function normalizeAircraft(list) {
+function wbNumbersMatch(a, b) {
+  const eq = (x, y) => Math.abs((+x || 0) - (+y || 0)) < 1e-9;
+  return eq(a.emptyWeight, b.emptyWeight) && eq(a.emptyLongArm, b.emptyLongArm) &&
+    eq(a.emptyLatArm, b.emptyLatArm) && eq(a.mtow, b.mtow) && eq(a.fuelDensity, b.fuelDensity) &&
+    (a.source || '') === (b.source || '') && (a.cgEnvKey || '') === (b.cgEnvKey || '') &&
+    JSON.stringify(a.accessories || []) === JSON.stringify(b.accessories || []);
+}
+function normalizeAircraft(list, prevList) {
+  const prevByReg = new Map((Array.isArray(prevList) ? prevList : []).map(a => [a.reg, a]));
   return (Array.isArray(list) ? list : []).map(a => {
     const wIn = (a && a.wb) || {};
+    const reg = String((a && a.reg) || '').trim().toUpperCase();
     const wb = {
-      verified:     false,
       source:       String(wIn.source || '').trim(),
       emptyWeight:  numOrZero(wIn.emptyWeight),
       emptyLongArm: numOrZero(wIn.emptyLongArm),
@@ -417,12 +430,52 @@ function normalizeAircraft(list) {
         .map(x => ({ name: String((x && x.name) || '').trim(), weight: numOrZero(x && x.weight), arm: numOrZero(x && x.arm) }))
         .filter(x => x.name),
     };
-    return { reg: String((a && a.reg) || '').trim().toUpperCase(), type: String((a && a.type) || '').trim(), wb };
+    const prev = prevByReg.get(reg);
+    const carriesOver = !!(prev && prev.wb && prev.wb.verified && wbNumbersMatch(prev.wb, wb));
+    wb.verified = carriesOver;
+    wb.signOff  = carriesOver ? prev.wb.signOff : null;
+    return { reg, type: String((a && a.type) || '').trim(), wb };
   }).filter(a => a.reg);
 }
-async function saveLiveOpsConfig(patch) {
+
+/* Append-only audit log — who changed what, when. Never blocks a save if
+   the write itself fails (e.g. OneDrive hiccup); logged, not thrown. */
+const AUDIT_LOCAL = path.join(__dirname, '_audit.local.json');
+async function appendAudit(entry) {
+  try {
+    let list = [];
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      list = (await getOneDriveJson(token, `${BRAND_FOLDER()}/_system/audit-log.json`)) || [];
+      if (!Array.isArray(list)) list = [];
+      list.push(entry);
+      if (list.length > 5000) list = list.slice(-5000);
+      await putOneDriveJson(token, `${BRAND_FOLDER()}/_system/audit-log.json`, list);
+    } else {
+      if (fs.existsSync(AUDIT_LOCAL)) { try { list = JSON.parse(fs.readFileSync(AUDIT_LOCAL, 'utf8')); } catch (_) { list = []; } }
+      if (!Array.isArray(list)) list = [];
+      list.push(entry);
+      if (list.length > 5000) list = list.slice(-5000);
+      fs.writeFileSync(AUDIT_LOCAL, JSON.stringify(list, null, 2));
+    }
+  } catch (e) { console.error('audit log write failed (non-fatal):', e.message); }
+}
+
+async function saveLiveOpsConfig(patch, who) {
   if (Array.isArray(patch.pilots))   LIVE_OPS.pilots   = normalizePilots(patch.pilots);
-  if (Array.isArray(patch.aircraft)) LIVE_OPS.aircraft  = normalizeAircraft(patch.aircraft);
+  if (Array.isArray(patch.aircraft)) {
+    const prevAircraft = LIVE_OPS.aircraft;
+    const nextAircraft = normalizeAircraft(patch.aircraft, prevAircraft);
+    nextAircraft.forEach(next => {
+      const prev = prevAircraft.find(p => p.reg === next.reg);
+      if (prev && prev.wb && prev.wb.verified && !next.wb.verified) {
+        appendAudit({ ts: new Date().toISOString(), who: who || null, action: 'wb-edit-voided-signoff', reg: next.reg });
+      } else if (!prev) {
+        appendAudit({ ts: new Date().toISOString(), who: who || null, action: 'aircraft-added', reg: next.reg });
+      }
+    });
+    LIVE_OPS.aircraft = nextAircraft;
+  }
   if (Array.isArray(patch.clients))  LIVE_OPS.clients  = patch.clients
     .map(c => String(c || '').trim()).filter(Boolean);
   const snapshot = { ...LIVE_OPS };
@@ -517,8 +570,56 @@ app.put(['/setup/config', '/api/setup/config'], rateLimit, requireSetupAuth, asy
     const b = req.body || {};
     if (!Array.isArray(b.pilots) && !Array.isArray(b.aircraft) && !Array.isArray(b.clients))
       return res.status(400).json({ ok: false, error: 'Send pilots, aircraft and/or clients as arrays' });
-    await saveLiveOpsConfig(b);
+    const u = await authApi.sessionUser(req);
+    await saveLiveOpsConfig(b, u ? { name: u.name, email: u.email, role: u.role } : null);
     res.json({ ok: true, pilots: LIVE_OPS.pilots, aircraft: LIVE_OPS.aircraft, clients: LIVE_OPS.clients });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+/* ── W&B sign-off ─────────────────────────────────────────────
+   The ONLY place `verified` is ever set to true. Deliberately
+   restricted to the customer's own admin (chief pilot/HOFO) —
+   never the provider — so CASA/regulatory responsibility for the
+   figures being flown on stays on the customer's side, per
+   PLAN-admin-and-commercial.md. Requires a name, an ARN, a date and
+   a drawn signature; all four are stored with the sign-off and
+   logged to the audit trail. */
+async function requireAdminSignOffAuth(req, res, next) {
+  try {
+    const u = await authApi.sessionUser(req);
+    if (u && u.role === 'admin') { req._signOffUser = u; return next(); }
+    if (u && u.role === 'provider') return res.status(403).json({ ok: false, error: "Providers can't sign off W&B data — this has to come from the customer's own admin/chief pilot" });
+    return res.status(401).json({ ok: false, error: 'Admin sign-in required' });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+}
+app.post(['/setup/aircraft-signoff', '/api/setup/aircraft-signoff'], rateLimit, requireAdminSignOffAuth, async (req, res) => {
+  try {
+    const { reg, name, arn, date, sigDataUrl } = req.body || {};
+    const R = String(reg || '').trim().toUpperCase();
+    const ac = LIVE_OPS.aircraft.find(a => a.reg === R);
+    if (!ac) return res.status(404).json({ ok: false, error: 'Aircraft not found — save the fleet first' });
+    if (!String(name || '').trim())      return res.status(400).json({ ok: false, error: 'Name is required' });
+    if (!String(arn || '').trim())       return res.status(400).json({ ok: false, error: 'ARN is required' });
+    if (!String(date || '').trim())      return res.status(400).json({ ok: false, error: 'Date is required' });
+    if (!sigDataUrl || !/^data:image\//.test(sigDataUrl)) return res.status(400).json({ ok: false, error: 'Signature is required' });
+    ac.wb.verified = true;
+    ac.wb.signOff = {
+      name: String(name).trim(), arn: String(arn).trim(), date: String(date).trim(),
+      sigDataUrl, signedAt: new Date().toISOString(),
+    };
+    const snapshot = { ...LIVE_OPS };
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      await putOneDriveJson(token, `${BRAND_FOLDER()}/_system/config.json`, snapshot);
+    } else {
+      fs.writeFileSync(OPCONFIG_LOCAL, JSON.stringify(snapshot, null, 2));
+    }
+    await appendAudit({
+      ts: new Date().toISOString(),
+      who: { name: req._signOffUser.name, email: req._signOffUser.email, role: req._signOffUser.role },
+      action: 'wb-signoff', reg: R, arn: String(arn).trim(),
+    });
+    res.json({ ok: true, aircraft: LIVE_OPS.aircraft });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

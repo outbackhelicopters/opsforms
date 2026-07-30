@@ -102,6 +102,16 @@ input:focus,select:focus{border-color:var(--acc);}
 .modal-actions .btn{flex:1;padding:11px;}
 .m-err{font-size:12.5px;color:var(--bad);margin-top:12px;min-height:16px;}
 .inv-link{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px 11px;margin-top:12px;word-break:break-all;display:none;}
+.modal.wide{max-width:520px;}
+.sigwrap{margin-top:8px;}
+.sigwrap canvas{width:100%;height:150px;border:1.5px dashed var(--line);border-radius:8px;background:var(--card);touch-action:none;display:block;}
+.sigwrap.signed canvas{border:1.5px solid var(--ok);}
+.sigbar{display:flex;align-items:center;gap:10px;margin-top:7px;}
+.sigbar .hint{flex:1;color:var(--mut);font-size:12px;}
+.wb-signoff-status{font-size:12.5px;border-radius:8px;padding:8px 12px;margin:8px 0;}
+.wb-signoff-status.ok{background:#EAF5EE;color:var(--ok);border:1px solid #CDEAD9;}
+.wb-signoff-status.bad{background:#FBEAEA;color:var(--bad);border:1px solid #F3D2D2;}
+.wb-lock-row{display:flex;align-items:center;gap:8px;margin:6px 0 2px;}
 .fleet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
 .ac{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;}
 .ac .cs{font-size:15px;font-weight:800;}
@@ -194,7 +204,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       <button type="button" class="btn btn-l btn-sm" onclick="wizAddPilotRow()">+ Add pilot</button>
 
       <label class="lbl" style="margin-top:18px">Aircraft (optional)</label>
-      <div class="auth-note" style="margin:0 0 8px">Weight &amp; balance figures entered here are saved as <b>unverified</b> — your chief pilot/HOFO still needs to check them against each aircraft's POH before they're used for a real flight. Leave them blank now and fill them in later if you'd rather.</div>
+      <div class="auth-note" style="margin:0 0 8px">Weight &amp; balance figures entered here are saved as <b>unverified</b> — your chief pilot/HOFO signs them off against each aircraft's POH from the Fleet tab once setup is finished, before they're used for a real flight. Leave them blank now and fill them in later if you'd rather.</div>
       <div id="wiz-ac-rows"></div>
       <button type="button" class="btn btn-l btn-sm" onclick="wizAddAcRow()">+ Add aircraft</button>
 
@@ -311,7 +321,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
       </div>
       <div id="fleet-ac-rows"></div>
       <p class="st" id="fleet-err" style="color:var(--bad)"></p>
-      <p class="st" style="margin-top:6px">Weight &amp; balance is always saved unverified — sign it off against the aircraft's actual POH before it's relied on for a real flight.</p>
+      <p class="st" style="margin-top:6px">Weight &amp; balance figures aren't usable for a real flight until an admin signs them off against the aircraft's actual POH — see the status under each aircraft below. Once signed off, every pilot device picks up the same verified figures automatically; editing the numbers afterwards voids that sign-off and a fresh one is needed.</p>
     </section>
 
     <!-- PILOTS -->
@@ -403,6 +413,25 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
   </div>
 </div>
 
+<!-- W&B SIGN-OFF MODAL -->
+<div class="modal-bg" id="m-signoff">
+  <div class="modal wide">
+    <h3>Sign off W&amp;B — <span id="so-reg"></span></h3>
+    <div class="sub">This confirms these exact figures have been checked against the aircraft's POH. It's recorded with your name, ARN, the date and your signature, and can't be edited after saving — if the numbers ever change, this sign-off is voided and a fresh one is required.</div>
+    <label class="lbl">Your name</label><input type="text" id="so-name">
+    <label class="lbl">ARN</label><input type="text" id="so-arn" placeholder="e.g. 1234567">
+    <label class="lbl">Date</label><input type="date" id="so-date">
+    <label class="lbl">Signature</label>
+    <div class="sigwrap" id="so-sigwrap"><canvas id="so-sig-canvas"></canvas></div>
+    <div class="sigbar"><span class="hint">Draw with mouse or finger</span><button type="button" class="btn-l btn-sm" onclick="clearSignOffSig()">Clear</button></div>
+    <div class="m-err" id="so-err"></div>
+    <div class="modal-actions">
+      <button class="btn btn-l" onclick="closeModal('m-signoff')">Cancel</button>
+      <button class="btn btn-p" onclick="submitSignOff()">Confirm sign-off</button>
+    </div>
+  </div>
+</div>
+
 <div class="toastbox" id="toastbox" role="status"></div>
 
 <script>
@@ -441,6 +470,71 @@ function show(id){ ['w-loading','w-login','w-boot','w-invite'].forEach(w => el(w
 function openModal(id){ el(id).classList.add('open'); }
 function closeModal(id){ el(id).classList.remove('open'); }
 function jobPilotNames(j){ return (j.pilots && j.pilots.length ? j.pilots.map(p=>p.name) : (j.pilotName ? [j.pilotName] : [])).join(', '); }
+
+/* ---------- SIGNATURE PAD (for W&B sign-off) ---------- */
+class SigPad {
+  _themeColors() {
+    const s = getComputedStyle(document.documentElement);
+    return { bg: (s.getPropertyValue('--card').trim() || '#fff'), stroke: (s.getPropertyValue('--text').trim() || '#1B1C1E') };
+  }
+  constructor(canvas) { this.c = canvas; this.empty = true; this._setup(); }
+  _initCtx() {
+    const c = this.c, dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth || c.parentElement?.clientWidth || 460;
+    const h = c.clientHeight || 150;
+    if (w < 10) return false;
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    const x = this.ctx = c.getContext('2d');
+    x.setTransform(1,0,0,1,0,0); x.scale(dpr, dpr);
+    const tc = this._themeColors();
+    x.fillStyle = tc.bg; x.fillRect(0, 0, w, h);
+    x.lineWidth = 2.4; x.lineCap = 'round'; x.lineJoin = 'round'; x.strokeStyle = tc.stroke;
+    return true;
+  }
+  _setup() {
+    const c = this.c;
+    this._initCtx();
+    requestAnimationFrame(() => { if (!this._initCtx()) setTimeout(() => this._initCtx(), 120); });
+    let pts = [];
+    const pos = e => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+    c.addEventListener('pointerdown', e => {
+      const dpr = window.devicePixelRatio || 1;
+      if (c.clientWidth > 10 && Math.abs(c.width - c.clientWidth * dpr) > 4) this._initCtx();
+      e.preventDefault(); c.setPointerCapture(e.pointerId);
+      pts = [pos(e)]; this._drawing = true;
+    });
+    c.addEventListener('pointermove', e => {
+      if (!this._drawing) return; e.preventDefault();
+      pts.push(pos(e));
+      if (pts.length >= 3) {
+        const [a, b, m] = [pts[pts.length-3], pts[pts.length-2], pts[pts.length-1]];
+        const ctx = this.ctx; if (!ctx) return;
+        ctx.beginPath();
+        ctx.moveTo((a.x+b.x)/2, (a.y+b.y)/2);
+        ctx.quadraticCurveTo(b.x, b.y, (b.x+m.x)/2, (b.y+m.y)/2);
+        ctx.stroke();
+      }
+      this.empty = false;
+    });
+    const up = () => {
+      if (!this._drawing) return; this._drawing = false;
+      if (pts.length < 3 && pts.length > 0) {
+        const ctx = this.ctx; if (ctx) { ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, 1.5, 0, 7); ctx.fillStyle = this._themeColors().stroke; ctx.fill(); }
+        this.empty = false;
+      }
+      pts = []; this._refresh();
+    };
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+  }
+  _refresh() { this.c.parentElement.classList.toggle('signed', !this.empty); }
+  clear() {
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.fillStyle = this._themeColors().bg;
+    this.ctx.fillRect(0, 0, this.c.width / dpr, this.c.height / dpr);
+    this.empty = true; this._refresh();
+  }
+  data() { return this.empty ? null : this.c.toDataURL('image/png'); }
+}
 
 /* ---------- BOOT ---------- */
 (async function boot(){
@@ -619,14 +713,17 @@ function wizAddPilotRow(p, containerId) {
 /* Aircraft rows are richer: identity + base W&B numbers + a nested,
    repeatable accessories list (each with its own weight & arm — e.g.
    spray gear, cargo hook, extra tank). Everything here is optional
-   except registration, and is always saved unverified. */
-function wizAccRowHtml(x) {
+   except registration. Numbers stay unverified until an admin signs
+   them off (see openSignOff/submitSignOff below) — editing a verified
+   row unlocks it via unlockWbRow() and voids the sign-off once saved. */
+function wizAccRowHtml(x, locked) {
   x = x || {};
+  const ro = locked ? 'readonly' : '';
   return `<div class="wiz-accrow" style="display:flex;gap:8px;margin:6px 0;align-items:center">
-    <input type="text" class="wac-name" placeholder="Accessory e.g. Spray gear" value="${esc(x.name||'')}" style="flex:2">
-    <input type="number" step="0.1" class="wac-weight" placeholder="Weight (kg)" value="${esc(x.weight??'')}" style="flex:1">
-    <input type="number" step="0.1" class="wac-arm" placeholder="Arm (mm)" value="${esc(x.arm??'')}" style="flex:1">
-    <button type="button" class="btn-back" style="margin:0;flex:none;padding:6px 10px" onclick="this.closest('.wiz-accrow').remove()" aria-label="Remove accessory">✕</button>
+    <input type="text" class="wac-name" placeholder="Accessory e.g. Spray gear" value="${esc(x.name||'')}" style="flex:2" ${ro}>
+    <input type="number" step="0.1" class="wac-weight" placeholder="Weight (kg)" value="${esc(x.weight??'')}" style="flex:1" ${ro}>
+    <input type="number" step="0.1" class="wac-arm" placeholder="Arm (mm)" value="${esc(x.arm??'')}" style="flex:1" ${ro}>
+    <button type="button" class="btn-back" style="margin:0;flex:none;padding:6px 10px" onclick="this.closest('.wiz-accrow').remove()" aria-label="Remove accessory" ${locked ? 'disabled' : ''}>✕</button>
   </div>`;
 }
 function wizAddAccRow(btn, x) {
@@ -634,7 +731,12 @@ function wizAddAccRow(btn, x) {
 }
 function wizAddAcRow(a, containerId) {
   a = a || {}; const w = a.wb || {};
-  const num = (id, ph, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="${esc(ph)}" value="${val || val===0 ? esc(val) : ''}" style="flex:1;min-width:120px">`;
+  const locked = !!w.verified;
+  const num = (id, ph, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="${esc(ph)}" value="${val || val===0 ? esc(val) : ''}" style="flex:1;min-width:120px" ${locked ? 'readonly' : ''}>`;
+  const canSignOff = typeof ME !== 'undefined' && ME && ME.role === 'admin';
+  const statusHtml = locked
+    ? `<div class="wb-signoff-status ok">✓ Verified against POH by ${esc((w.signOff&&w.signOff.name)||'—')} (ARN ${esc((w.signOff&&w.signOff.arn)||'—')}) on ${esc((w.signOff&&w.signOff.date)||'—')}</div>`
+    : `<div class="wb-signoff-status bad">⚠ Not verified — these figures are unusable for a real flight until an admin signs them off against the POH${canSignOff ? '' : ' (only the customer admin/chief pilot can do this)'}.</div>`;
   el(containerId || 'wiz-ac-rows').insertAdjacentHTML('beforeend', `<div class="wiz-arow" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px">
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <input type="text" class="wa-reg" placeholder="Registration e.g. VH-ABC" value="${esc(a.reg||'')}" style="flex:1;text-transform:uppercase">
@@ -643,9 +745,10 @@ function wizAddAcRow(a, containerId) {
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <input type="file" accept=".pdf,image/*" class="wa-scan-file" style="display:none" onchange="scanAircraftDoc(this)">
-      <button type="button" class="btn btn-l btn-sm" onclick="this.previousElementSibling.click()">📄 Scan weighing report</button>
+      <button type="button" class="btn btn-l btn-sm" onclick="this.previousElementSibling.click()" ${locked ? 'disabled' : ''}>📄 Scan weighing report</button>
       <span class="wa-scan-status" style="font-size:12px;color:var(--mut)"></span>
     </div>
+    ${statusHtml}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
       ${num('wa-bew', 'Empty weight (kg)', w.emptyWeight)}
       ${num('wa-larm', 'Empty wt. long. arm (mm)', w.emptyLongArm)}
@@ -653,9 +756,25 @@ function wizAddAcRow(a, containerId) {
       ${num('wa-mtow', 'MTOW (kg)', w.mtow)}
       ${num('wa-fueld', 'Fuel density (kg/L)', w.fuelDensity || 0.720, '0.001')}
     </div>
-    <div class="wiz-accs">${(w.accessories||[]).map(wizAccRowHtml).join('')}</div>
-    <button type="button" class="btn btn-l btn-sm" onclick="wizAddAccRow(this)">+ Add accessory</button>
+    <div class="wiz-accs">${(w.accessories||[]).map(x => wizAccRowHtml(x, locked)).join('')}</div>
+    <div class="wb-lock-row">
+      <button type="button" class="btn btn-l btn-sm" onclick="wizAddAccRow(this)" ${locked ? 'disabled' : ''}>+ Add accessory</button>
+      ${locked ? `<button type="button" class="btn btn-d btn-sm" onclick="unlockWbRow(this)">🔓 Edit W&amp;B (will void sign-off)</button>` : ''}
+      ${canSignOff ? `<button type="button" class="btn btn-p btn-sm" onclick="openSignOff(this)">✎ Sign off W&amp;B</button>` : ''}
+    </div>
   </div>`);
+}
+/* Numeric W&B fields are read-only once verified — this button is the
+   explicit, deliberate "yes I know this voids the existing sign-off"
+   action, rather than someone accidentally typing over a verified
+   figure. The sign-off itself is only actually cleared server-side once
+   the new numbers are saved and no longer match what was signed. */
+function unlockWbRow(btn) {
+  if (!confirm('Editing these figures will void the current POH sign-off — a fresh sign-off will be required before pilots can use this aircraft. Continue?')) return;
+  const card = btn.closest('.wiz-arow');
+  card.querySelectorAll('input').forEach(i => i.removeAttribute('readonly'));
+  card.querySelectorAll('button').forEach(b => b.removeAttribute('disabled'));
+  btn.remove();
 }
 /* Uploads a weighing report (PDF or photo) for one aircraft card, asks the
    server to have Claude read it, then fills in whichever fields are still
@@ -830,8 +949,42 @@ async function saveFleet() {
     const aircraft = collectWizAircraft('fleet-ac-rows');
     const d = await api('/api/setup/config', { method: 'PUT', body: JSON.stringify({ aircraft }) });
     CFG.aircraft = d.aircraft;
+    renderFleetEditor(); // reflect any sign-offs the server just voided because numbers changed
     toast('Fleet saved');
   } catch (e) { el('fleet-err').textContent = e.message; }
+}
+
+/* ---------- W&B SIGN-OFF ---------- */
+let _signOffPad = null, _signOffReg = null;
+function openSignOff(btn) {
+  const card = btn.closest('.wiz-arow');
+  const reg = (card.querySelector('.wa-reg').value || '').trim().toUpperCase();
+  if (!reg) { toast('Enter and save a registration for this aircraft first'); return; }
+  _signOffReg = reg;
+  el('so-reg').textContent = reg;
+  el('so-name').value = (ME && ME.name) || '';
+  el('so-arn').value = '';
+  el('so-date').value = localYmd(new Date());
+  el('so-err').textContent = '';
+  openModal('m-signoff');
+  _signOffPad = new SigPad(el('so-sig-canvas'));
+}
+function clearSignOffSig() { if (_signOffPad) _signOffPad.clear(); }
+async function submitSignOff() {
+  el('so-err').textContent = '';
+  const name = el('so-name').value.trim(), arn = el('so-arn').value.trim(), date = el('so-date').value;
+  const sigDataUrl = _signOffPad ? _signOffPad.data() : null;
+  if (!name) return el('so-err').textContent = 'Name is required';
+  if (!arn)  return el('so-err').textContent = 'ARN is required';
+  if (!date) return el('so-err').textContent = 'Date is required';
+  if (!sigDataUrl) return el('so-err').textContent = 'Signature is required';
+  try {
+    const d = await api('/api/setup/aircraft-signoff', { method: 'POST', body: JSON.stringify({ reg: _signOffReg, name, arn, date, sigDataUrl }) });
+    CFG.aircraft = d.aircraft;
+    renderFleetEditor();
+    closeModal('m-signoff');
+    toast(_signOffReg + ' — W&B signed off. Pilot devices will pick this up next sync.');
+  } catch (e) { el('so-err').textContent = e.message; }
 }
 function renderPilotsEditor() {
   const box = el('pilots-rows'); if (!box) return;

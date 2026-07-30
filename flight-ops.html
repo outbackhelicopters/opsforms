@@ -914,7 +914,6 @@ select.has-value{font-weight:700;color:var(--navy);}
   <span class="callsign" id="tb-callsign">—</span>
   <span class="spacer"></span>
   <button id="syncpill" class="ok" aria-label="Sync status" onclick="App.showQueue()"><span class="dot"></span><span id="syncpill-txt">All sent</span></button>
-  <button id="btn-settings" title="Settings" aria-label="Settings" onclick="App.openSettings()">⚙︎</button>
 </div>
 
 
@@ -935,14 +934,6 @@ select.has-value{font-weight:700;color:var(--navy);}
       </div>
       <span class="hc-arrow">›</span>
     </button>
-    <button class="home-card" onclick="showMainTab('calendar')">
-      <span class="hc-icon">📅</span>
-      <div class="hc-text">
-        <div class="hc-label">Job Calendar</div>
-        <div class="hc-sub">Schedule jobs &amp; allocate pilots</div>
-      </div>
-      <span class="hc-arrow">›</span>
-    </button>
     <button class="home-card" onclick="showMainTab('safety')">
       <span class="hc-icon">📋</span>
       <div class="hc-text">
@@ -956,22 +947,6 @@ select.has-value{font-weight:700;color:var(--navy);}
       <div class="hc-text">
         <div class="hc-label">Settings</div>
         <div class="hc-sub">Fleet, crew, PIN &amp; preferences</div>
-      </div>
-      <span class="hc-arrow">›</span>
-    </button>
-    <button class="home-card" onclick="location.href='admin.html'">
-      <span class="hc-icon">🛠️</span>
-      <div class="hc-text">
-        <div class="hc-label">Admin</div>
-        <div class="hc-sub">Multi-aircraft jobs &amp; office tools</div>
-      </div>
-      <span class="hc-arrow">›</span>
-    </button>
-    <button class="home-card" onclick="location.href='reports.html'">
-      <span class="hc-icon">📊</span>
-      <div class="hc-text">
-        <div class="hc-label">Reports</div>
-        <div class="hc-sub">Job history, hours &amp; client billing</div>
       </div>
       <span class="hc-arrow">›</span>
     </button>
@@ -3958,6 +3933,10 @@ const App = {
       '<div class="btnrow"><button class="btn ghost small" onclick="App.restartApp()">↺ Restart app</button>' +
       '<button class="btn ghost small" onclick="App.clearSent()">Delete sent bundles</button>' +
       '<button class="btn danger small" onclick="App.factoryReset()">Factory reset iPad app</button></div></div>' +
+
+      '<div class="card"><h2>Admin &amp; Reports</h2><p class="sub">Office tools — multi-aircraft jobs, admin fleet setup, and job history/billing reports.</p>' +
+      '<div class="btnrow"><button class="btn ghost small" onclick="location.href=\'admin.html\'">🛠️ Open Admin</button>' +
+      '<button class="btn ghost small" onclick="location.href=\'reports.html\'">📊 Open Reports</button></div></div>' +
 
       '<button class="btn primary bigaction" onclick="App.saveSettingsForm()">Save settings ✓</button><div style="height:14px;"></div>';
   },

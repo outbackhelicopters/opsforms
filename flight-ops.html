@@ -2411,7 +2411,7 @@ const App = {
       const cfg = await res.json();
       const pilots   = Array.isArray(cfg.pilots)   ? cfg.pilots.filter(p => p && p.name)   : [];
       const aircraft = Array.isArray(cfg.aircraft) ? cfg.aircraft.filter(a => a && a.reg) : [];
-      if (pilots.length)   this.S.crew  = pilots.map(p => ({ name: p.name }));
+      if (pilots.length)   this.S.crew  = pilots.map(p => ({ name: p.name, managedByAdmin: true }));
       if (aircraft.length) this.S.fleet = aircraft.map((a, i) => ({
         id: 'srv' + i + '_' + Date.now(), callsign: a.reg,
         type: a.type || 'Type not set', wb: wbFromServerAircraft(a.wb),
@@ -2433,8 +2433,13 @@ const App = {
      verified/signOff — admin is the source of truth for both once
      signed off there), adds any new aircraft/pilots the server has
      that this device doesn't, and never deletes a locally-added
-     aircraft/pilot the server doesn't know about yet. Silent no-op if
-     offline; never blocks boot. */
+     aircraft/pilot the server doesn't know about yet. Pilots synced
+     from the server are flagged managedByAdmin so this function can
+     also DROP a pilot from this device once admin removes them —
+     without that flag we'd only ever grow the list, which is the bug
+     this fixed on 2026-07-30 (admin removed pilots, iPads kept
+     showing them forever). Locally-added pilots (no flag) are never
+     touched. Silent no-op if offline; never blocks boot. */
   async syncFleetFromServer(showToast) {
     if (!this.S || !this.S.configured) return; // brand-new devices are handled by seedFromServerConfig()
     try {
@@ -2458,12 +2463,42 @@ const App = {
         }
       });
       const serverPilots = Array.isArray(cfg.pilots) ? cfg.pilots.filter(p => p && p.name) : [];
+      const serverPilotNames = new Set(serverPilots.map(p => p.name.trim().toLowerCase()));
       serverPilots.forEach(sp => {
-        if (!this.S.crew.some(c => c.name.trim().toLowerCase() === sp.name.trim().toLowerCase())) {
-          this.S.crew.push({ name: sp.name });
+        const local = this.S.crew.find(c => c.name.trim().toLowerCase() === sp.name.trim().toLowerCase());
+        if (local) {
+          if (!local.managedByAdmin) { local.managedByAdmin = true; changed = true; }
+        } else {
+          this.S.crew.push({ name: sp.name, managedByAdmin: true });
           changed = true;
         }
       });
+      // Drop pilots that came from head office but have since been removed
+      // there — admin is the source of truth for anyone it manages.
+      // Locally-added pilots (never flagged managedByAdmin) are left alone.
+      //
+      // One-time migration: every device configured before this fix has a
+      // crew list with NO managedByAdmin flag at all (the flag didn't
+      // exist yet), so the flag-based filter below can't tell "removed by
+      // admin, needs dropping" apart from "added locally, keep forever" —
+      // it would leave every already-stale pilot stuck on the device
+      // forever, which is the exact bug being fixed. So the first sync
+      // after this update reconciles the WHOLE roster against the server
+      // once (anyone not currently on head office's list is dropped,
+      // no exceptions), then every sync after that only touches pilots
+      // it has proof came from the server. If a pilot was typed in
+      // directly on this iPad's Settings and never added in admin, this
+      // one-time cleanup will remove it too — add them in admin if they
+      // need to stay.
+      const crewBefore = this.S.crew.length;
+      if (!this.S._pilotSyncMigrated) {
+        this.S.crew = this.S.crew.filter(c => serverPilotNames.has(c.name.trim().toLowerCase()));
+        this.S._pilotSyncMigrated = true;
+        changed = true; // persist the migration flag even if the roster happened to already match
+      } else {
+        this.S.crew = this.S.crew.filter(c => !c.managedByAdmin || serverPilotNames.has(c.name.trim().toLowerCase()));
+      }
+      if (this.S.crew.length !== crewBefore) changed = true;
       if (changed) {
         await this.saveSettings();
         if ($('scr-settings') && $('scr-settings').classList.contains('active')) this.renderSettings();
@@ -2546,10 +2581,15 @@ const App = {
     });
   },
   _crewRowHtml(c, i) {
-    return '<div class="crew-row" id="crew-row-' + i + '">' +
+    const managed = !!c.managedByAdmin;
+    return '<div class="crew-row" id="crew-row-' + i + '" data-managed="' + (managed ? '1' : '0') + '"' + (managed ? ' data-name="' + esc(c.name||'') + '"' : '') + '>' +
       '<span class="crew-num">' + (i+1) + '</span>' +
-      '<input type="text" class="crew-name" placeholder="Full name" value="' + esc(c.name||'') + '" oninput="App._renumberCrew()">' +
-      '<button class="crew-del" onclick="App.removeCrewRow(this)" title="Remove" aria-label="Remove crew member">×</button>' +
+      (managed
+        ? '<span class="crew-name ro-val" style="flex:1;">' + esc(c.name||'') + '<span style="display:block;color:var(--mut);font-size:11px;font-weight:400;">Managed by head office</span></span>'
+        : '<input type="text" class="crew-name" placeholder="Full name" value="' + esc(c.name||'') + '" oninput="App._renumberCrew()">') +
+      (managed
+        ? '<span class="crew-del" style="opacity:.35;cursor:default;" title="Managed by head office — add/remove pilots from admin">🔒</span>'
+        : '<button class="crew-del" onclick="App.removeCrewRow(this)" title="Remove" aria-label="Remove crew member">×</button>') +
       '</div>';
   },
   addCrewRow() {
@@ -2562,16 +2602,17 @@ const App = {
   },
   removeCrewRow(btn) {
     const row = btn.closest('.crew-row');
-    if (document.querySelectorAll('.crew-row').length <= 1) return toast('At least one pilot is required');
+    if (document.querySelectorAll('#crew-rows .crew-row').length <= 1) return toast('At least one pilot is required');
     row.remove(); this._renumberCrew();
   },
   _renumberCrew() {
-    document.querySelectorAll('.crew-row').forEach((r,i) => { const n = r.querySelector('.crew-num'); if(n) n.textContent = i+1; });
+    document.querySelectorAll('#crew-rows .crew-row').forEach((r,i) => { const n = r.querySelector('.crew-num'); if(n) n.textContent = i+1; });
   },
   _collectCrewRows() {
-    return Array.from(document.querySelectorAll('.crew-row')).map(r => ({
-      name: (r.querySelector('.crew-name')?.value || '').trim()
-    })).filter(c => c.name);
+    return Array.from(document.querySelectorAll('#crew-rows .crew-row')).map(r => {
+      if (r.dataset.managed === '1') return { name: r.dataset.name || '', managedByAdmin: true };
+      return { name: (r.querySelector('.crew-name')?.value || '').trim() };
+    }).filter(c => c.name);
   },
 
   /* ---------- home ---------- */

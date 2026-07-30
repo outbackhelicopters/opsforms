@@ -1014,17 +1014,8 @@ select.has-value{font-weight:700;color:var(--navy);}
     <div id="step-1" class="step-panel active">
       <div class="card">
         <div class="card-title">Job Details</div>
-        <div class="grid2">
-          <div>
-            <label class="fl">Date <span class="req">*</span></label>
-            <input type="date" id="f-date" oninput="jDebouncedSave()">
-            <div class="err" id="err-date">Required</div>
-          </div>
-          <div>
-            <label class="fl">Job No.</label>
-            <input type="text" id="f-jobno" readonly placeholder="Auto">
-          </div>
-        </div>
+        <label class="fl">Job No.</label>
+        <input type="text" id="f-jobno" readonly placeholder="Auto">
         <label class="fl">Client / Place <span class="req">*</span></label>
         <div class="client-picker-wrap">
           <input type="text" id="f-client" placeholder="Type client name or place…" autocomplete="off" oninput="jOnClientInput()">
@@ -2247,7 +2238,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v58'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v59'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.
@@ -4111,7 +4102,6 @@ function jValidateStep(n) {
   jClearFieldErrors();
   if (n===1) {
     let ok=true;
-    if (!document.getElementById('f-date').value) { jFieldErr('f-date','err-date'); ok=false; }
     if (!document.getElementById('f-client').value.trim()) { jFieldErr('f-client','err-client'); ok=false; }
     if (!document.getElementById('f-pilot').value) { jFieldErr('f-pilot','err-pilot'); ok=false; }
     if (!document.getElementById('f-aircraft').value) { jFieldErr('f-aircraft','err-aircraft'); ok=false; }
@@ -4143,12 +4133,11 @@ function jValidateStep(n) {
 async function jRenderReviewStep() {
   const rec = await jBuildRec('review');
   const hireMap = {wet:'Wet Hire', dry:'Dry Hire'};
-  const linesHTML = (rec.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--mut);font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const linesHTML = (rec.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:600;font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
   const crewHTML = (rec.crew||[]).map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   const el = document.getElementById('review-summary');
   if (!el) return;
   el.innerHTML =
-    `<div class="kv-row"><div class="k">Date</div><div class="v">${jFmtDate(rec.date)}</div></div>` +
     `<div class="kv-row"><div class="k">Client / Place</div><div class="v">${esc(rec.client)||'—'}</div></div>` +
     `<div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(rec.pilotName)||'—'}</div></div>` +
     `<div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(rec.aircraftReg)||'—'}${rec.aircraftType?' — '+esc(rec.aircraftType):''}</div></div>` +
@@ -4166,7 +4155,6 @@ async function jRenderReviewStep() {
 
 /* ── Form ────────────────────────────────────────────────────── */
 async function jInitForm(keepJobNo=false) {
-  document.getElementById('f-date').value = todayISO();
   // No real number until the pilot actually submits — showing a guessed
   // one here is exactly what caused numbers to collide across devices.
   if (!keepJobNo) { const el=document.getElementById('f-jobno'); el.value=jFmtJobNo(0); el.dataset.jobno=0; }
@@ -4455,7 +4443,6 @@ function jFieldErr(fid,eid) {
 function jValidateFinal() {
   jClearFieldErrors(); let ok=true;
   // Re-run step 1 checks in case pilot navigated back and cleared a required field
-  if(!document.getElementById('f-date').value){ jFieldErr('f-date','err-date'); ok=false; }
   if(!document.getElementById('f-client').value.trim()){ jFieldErr('f-client','err-client'); ok=false; }
   if(!document.getElementById('f-pilot').value){ jFieldErr('f-pilot','err-pilot'); ok=false; }
   if(!document.getElementById('f-aircraft').value){ jFieldErr('f-aircraft','err-aircraft'); ok=false; }
@@ -4467,7 +4454,6 @@ function jValidateFinal() {
 /* ── Auto-save ───────────────────────────────────────────────── */
 function jDebouncedSave() { clearTimeout(jAutoSaveTimer); jAutoSaveTimer=setTimeout(jSaveDraft,2000); }
 async function jSaveDraft() {
-  if(!document.getElementById('f-date').value) return;
   try {
     const rec=await jBuildRec('draft');
     // Opening the form (or just toggling Wet/Dry) used to be enough to create
@@ -4504,8 +4490,13 @@ async function jBuildRec(status) {
   });
   const totalHours=lines.reduce((s,l)=>s+l.hours,0);
   const jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||0;
+  // No single job-level date field anymore — each line carries its own date
+  // (Step 2). Use the earliest line date as the job's canonical date for
+  // sorting/history/sync; fall back to today if no line has a date yet.
+  const lineDates=lines.map(l=>l.date).filter(Boolean).sort();
+  const jobDate=lineDates[0]||todayISO();
   return {
-    jobNo, date:document.getElementById('f-date').value,
+    jobNo, date:jobDate,
     client:document.getElementById('f-client').value.trim(),
     pilotName, aircraftReg:aircraftObj.reg||aircraftReg, aircraftType:aircraftObj.type||'',
     hireType:jCurrentHire, isDual:isDual&&crew.length>0, crew,
@@ -4605,11 +4596,11 @@ function jFmtDate(d){ if(!d) return '—'; try{ return new Date(d+'T00:00:00').t
 async function jRenderDetail(id) {
   const job=await jGet(id); if(!job) return;
   const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
-  const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--mut);font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:600;font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
   const crew=jJobCrew(job);
   const crewHTML=crew.map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   document.getElementById('detail-content').innerHTML=`
-    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo)}${crew.length?' 🚁🚁':''}</div><div class="dh-sub">${jFmtDate(job.date)} · <span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
+    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo)}${crew.length?' 🚁🚁':''}</div><div class="dh-sub"><span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
     <div class="card"><div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}</div></div><div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div><div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}${crew.length?` · ${crew.length+1} aircraft`:''}</div></div>${crewHTML}${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}</div>
     <div class="card"><div class="card-title">Flight Hours</div>${linesHTML}<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0 0;border-top:2px solid var(--navy);margin-top:4px;"><div style="font-weight:700;color:var(--navy);font-size:14px;">Total Flight Hours</div><div style="font-size:22px;font-weight:800;color:var(--orange);">${(job.totalHours||0).toFixed(1)} hrs</div></div></div>
     ${job.signatureDataURL?`<div class="card"><div class="card-title">Pilot Signature</div><img src="${job.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>`:''}
@@ -4623,7 +4614,6 @@ async function jEditJob() {
   const job=await jGet(jCurrentDetailId); if(!job) return;
   await jDel(jCurrentDetailId); jCurrentDetailId=null;
   await jInitForm(true);
-  document.getElementById('f-date').value=job.date||'';
   const jeEl=document.getElementById('f-jobno'); jeEl.value=jFmtJobNo(job.jobNo||0); jeEl.dataset.jobno=job.jobNo||0;
   document.getElementById('f-client').value=job.client||'';
   document.getElementById('f-notes').value=job.notes||'';
@@ -4666,7 +4656,7 @@ function jBuildPrint(job) {
   const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
   const crew=jJobCrew(job);
   const crewRows=crew.map((c,i)=>`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT ${i+2}:</b> ${esc(c.pilotName)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT ${i+2}:</b> ${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</td></tr>`).join('');
-  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo)}</div><div style="margin-top:5px;font-size:10pt;"><b>Date:</b> ${jFmtDate(job.date)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${crew.length?` — ${crew.length+1} Aircraft`:''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${crewRows}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
+  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${crew.length?` — ${crew.length+1} Aircraft`:''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${crewRows}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
 }
 
 /* ── Sync ────────────────────────────────────────────────────── */

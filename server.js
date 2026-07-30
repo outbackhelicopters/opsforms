@@ -410,6 +410,7 @@ function wbNumbersMatch(a, b) {
   const eq = (x, y) => Math.abs((+x || 0) - (+y || 0)) < 1e-9;
   return eq(a.emptyWeight, b.emptyWeight) && eq(a.emptyLongArm, b.emptyLongArm) &&
     eq(a.emptyLatArm, b.emptyLatArm) && eq(a.mtow, b.mtow) && eq(a.fuelDensity, b.fuelDensity) &&
+    eq(a.maxFuelL, b.maxFuelL) &&
     (a.source || '') === (b.source || '') && (a.cgEnvKey || '') === (b.cgEnvKey || '') &&
     JSON.stringify(a.accessories || []) === JSON.stringify(b.accessories || []);
 }
@@ -425,6 +426,7 @@ function normalizeAircraft(list, prevList) {
       emptyLatArm:  numOrZero(wIn.emptyLatArm),
       mtow:         numOrZero(wIn.mtow),
       fuelDensity:  numOrZero(wIn.fuelDensity) || 0.720,
+      maxFuelL:     numOrZero(wIn.maxFuelL), // usable fuel capacity for this specific tail number — overrides the pilot app's generic per-type table when set (0 = not entered, falls back to the type default)
       cgEnvKey:     String(wIn.cgEnvKey || '').trim(), // matches a built-in CG envelope preset, if any
       accessories: (Array.isArray(wIn.accessories) ? wIn.accessories : [])
         .map(x => ({ name: String((x && x.name) || '').trim(), weight: numOrZero(x && x.weight), arm: numOrZero(x && x.arm) }))
@@ -652,7 +654,8 @@ app.post(['/setup/scan-aircraft', '/api/setup/scan-aircraft'], rateLimit, requir
         text: 'This is an aircraft weight & balance / weighing report. Read it and return ONLY a JSON object ' +
           '(no other text, no markdown fences) with these exact keys: reg (registration, string or null), ' +
           'type (aircraft type, string or null), emptyWeight (kg, number or null), emptyLongArm (mm, number or null), ' +
-          'emptyLatArm (mm, number or null), mtow (kg, number or null), fuelDensity (kg/L, number or null). ' +
+          'emptyLatArm (mm, number or null), mtow (kg, number or null), fuelDensity (kg/L, number or null), ' +
+          'maxFuelL (usable fuel capacity in litres, number or null). ' +
           "If a value isn't clearly on the document, use null — never guess or estimate a number.",
       },
     ];

@@ -2154,6 +2154,7 @@ function makeWb(bew, bewArm, bewLat, mtow, fuelDensity, source, verified, cgData
     emptyLatArm: bewLat,
     mtow: mtow,
     fuelDensity: fuelDensity || 0.720,
+    maxFuelL: 0, // per-tail-number usable fuel capacity override — 0 means "use the generic per-type table", see App.fuelLimitsFor()
     cgEnv: cgData || null,
     /* CG limits not entered — weight-only dispatch check is used */
     cgFwd: 0, cgAft: 0, latMin: 0, latMax: 0,
@@ -2180,6 +2181,7 @@ function wbFromServerAircraft(w) {
     +w.mtow || 0, +w.fuelDensity || 0.720, w.source || '', !!w.verified, null
   );
   wb.accessories = Array.isArray(w.accessories) ? w.accessories : [];
+  wb.maxFuelL = +w.maxFuelL || 0;
   wb.signOff = w.signOff || null;
   wb.managedByAdmin = true; // these numbers come from head office — see App.syncFleetFromServer()
   return wb;
@@ -2879,6 +2881,20 @@ const App = {
     if (t.includes('206') || t.includes('jetranger')) return this._FUEL_LIMITS.B206;
     return null;
   },
+  /* Fuel capacity for one specific aircraft. The table above is generic
+     per aircraft TYPE (e.g. every "Bell 206/Jetranger" shares one number)
+     — that's wrong the moment two tail numbers of the same type have
+     different tanks (extended-range fit, etc.). Admin can now enter a
+     per-registration wb.maxFuelL in Fleet; when set (>0) it overrides the
+     type table's main-tank figure for that one aircraft. Aux tank figures
+     (Robinson main+aux setups) still come from the type table only —
+     nobody's asked for per-tail aux overrides yet. */
+  fuelLimitsFor(ac) {
+    const typeLimits = this._getFuelLimits(ac && ac.type) || {};
+    const override = ac && ac.wb && ac.wb.maxFuelL > 0 ? ac.wb.maxFuelL : null;
+    const main = override != null ? override : typeLimits.main;
+    return (main != null) ? { main, aux: typeLimits.aux } : null;
+  },
 
   /* ================== STEP 1 — SMS FORM (schema-driven) ================== */
   renderSms() {
@@ -3470,7 +3486,7 @@ const App = {
       '<div class="wbunit">' + unit + '</div></div>';
 
     /* ── Fuel capacity limits for this aircraft ── */
-    const flims   = this._getFuelLimits(this.flight.aircraftType);
+    const flims   = this.fuelLimitsFor(this.S.fleet.find(a => a.id === this.flight.aircraftId) || this.S.fleet[0]);
     const hasAux  = !!(flims && flims.aux != null);
     if (!f.fuelAuxL) f.fuelAuxL = 0;
     const capNote = cap => '<span style="display:block;font-size:10px;color:var(--mut);font-weight:500;margin-top:1px;">max ' + cap + ' L</span>';
@@ -3584,7 +3600,7 @@ const App = {
     const fuelKgEl = $('wb-fuel-kg');
     if (fuelKgEl) fuelKgEl.textContent = (fuelRaw + fuelAuxRaw) > 0 ? '= ' + fuelKg.toFixed(1) + ' kg' : '';
     /* Capacity validation */
-    const _flims = this._getFuelLimits(this.flight.aircraftType);
+    const _flims = this.fuelLimitsFor(this.S.fleet.find(a => a.id === this.flight.aircraftId) || this.S.fleet[0]);
     let fuelOverCap = false;
     const _chkCap = (errId, inpId, val, max) => {
       const errEl = $(errId), inpEl = $(inpId);
@@ -3888,6 +3904,7 @@ const App = {
         '<div><label class="fl">Basic Empty Weight (kg)</label><div class="ro-val">' + esc(W.emptyWeight) + '</div></div>' +
         '<div><label class="fl">Max Take-Off Weight (kg)</label><div class="ro-val">' + esc(W.mtow) + '</div></div>' +
         '<div><label class="fl">Fuel density (kg/L)</label><div class="ro-val">' + esc(W.fuelDensity || 0.720) + '</div></div>' +
+        '<div><label class="fl">Max fuel capacity (L)</label><div class="ro-val">' + esc(W.maxFuelL || 'Type default') + '</div></div>' +
         '<div><label class="fl">Data source</label><div class="ro-val">' + esc(W.source || '—') + '</div></div>' +
         '</div>' +
         (W.verified && W.signOff
@@ -3901,6 +3918,7 @@ const App = {
         inp('set-ew',   'Basic Empty Weight (kg)', W.emptyWeight,   'number') +
         inp('set-mtow', 'Max Take-Off Weight (kg)', W.mtow,         'number') +
         inp('set-dens', 'Fuel density (kg/L)',       W.fuelDensity || 0.720, 'number') +
+        inp('set-maxfuel', 'Max fuel capacity (L) — blank uses the type default', W.maxFuelL || '', 'number') +
         inp('set-src',  'Data source',               W.source || '', 'text') +
         '</div>' +
         '<div class="ackrow" style="margin-top:12px;border:1px solid var(--line);border-radius:10px;">' +
@@ -3955,6 +3973,7 @@ const App = {
     W.emptyWeight  = n('set-ew');
     W.mtow         = n('set-mtow');
     W.fuelDensity  = n('set-dens') || 0.720;
+    W.maxFuelL     = n('set-maxfuel');
     W.source       = g('set-src');
     W.verified     = $('set-verified') ? $('set-verified').classList.contains('on') : W.verified;
     W.dummy        = !W.verified;

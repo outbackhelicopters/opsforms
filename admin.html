@@ -112,6 +112,7 @@ input:focus,select:focus{border-color:var(--acc);}
 .wb-signoff-status.ok{background:#EAF5EE;color:var(--ok);border:1px solid #CDEAD9;}
 .wb-signoff-status.bad{background:#FBEAEA;color:var(--bad);border:1px solid #F3D2D2;}
 .wb-lock-row{display:flex;align-items:center;gap:8px;margin:6px 0 2px;}
+.wa-lbl{display:block;font-size:10.5px;font-weight:600;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin:0 0 4px;}
 .fleet-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
 .ac{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;}
 .ac .cs{font-size:15px;font-weight:800;}
@@ -720,9 +721,9 @@ function wizAccRowHtml(x, locked) {
   x = x || {};
   const ro = locked ? 'readonly' : '';
   return `<div class="wiz-accrow" style="display:flex;gap:8px;margin:6px 0;align-items:center">
-    <input type="text" class="wac-name" placeholder="Accessory e.g. Spray gear" value="${esc(x.name||'')}" style="flex:2" ${ro}>
-    <input type="number" step="0.1" class="wac-weight" placeholder="Weight (kg)" value="${esc(x.weight??'')}" style="flex:1" ${ro}>
-    <input type="number" step="0.1" class="wac-arm" placeholder="Arm (mm)" value="${esc(x.arm??'')}" style="flex:1" ${ro}>
+    <input type="text" class="wac-name" placeholder="e.g. Spray gear" value="${esc(x.name||'')}" style="flex:2" ${ro}>
+    <input type="number" step="0.1" class="wac-weight" placeholder="0" value="${esc(x.weight??'')}" style="flex:1" ${ro}>
+    <input type="number" step="0.1" class="wac-arm" placeholder="0" value="${esc(x.arm??'')}" style="flex:1" ${ro}>
     <button type="button" class="btn-back" style="margin:0;flex:none;padding:6px 10px" onclick="this.closest('.wiz-accrow').remove()" aria-label="Remove accessory" ${locked ? 'disabled' : ''}>✕</button>
   </div>`;
 }
@@ -732,16 +733,22 @@ function wizAddAccRow(btn, x) {
 function wizAddAcRow(a, containerId) {
   a = a || {}; const w = a.wb || {};
   const locked = !!w.verified;
-  const num = (id, ph, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="${esc(ph)}" value="${val || val===0 ? esc(val) : ''}" style="flex:1;min-width:120px" ${locked ? 'readonly' : ''}>`;
+  /* Every field gets its own persistent label — plain placeholder text
+     used to be the only clue what a field was, which disappears the
+     moment a real value is typed in, leaving a row of unlabelled
+     numbers nobody could identify at a glance. Label stays visible
+     regardless of value. */
+  const field = (labelText, inputHtml) => `<div style="flex:1;min-width:120px"><label class="wa-lbl">${esc(labelText)}</label>${inputHtml}</div>`;
+  const num = (id, val, step) => `<input type="number" step="${step||'0.1'}" class="${id}" placeholder="0" value="${val || val===0 ? esc(val) : ''}" style="width:100%" ${locked ? 'readonly' : ''}>`;
   const canSignOff = typeof ME !== 'undefined' && ME && ME.role === 'admin';
   const statusHtml = locked
     ? `<div class="wb-signoff-status ok">✓ Verified against POH by ${esc((w.signOff&&w.signOff.name)||'—')} (ARN ${esc((w.signOff&&w.signOff.arn)||'—')}) on ${esc((w.signOff&&w.signOff.date)||'—')}</div>`
     : `<div class="wb-signoff-status bad">⚠ Not verified — these figures are unusable for a real flight until an admin signs them off against the POH${canSignOff ? '' : ' (only the customer admin/chief pilot can do this)'}.</div>`;
   el(containerId || 'wiz-ac-rows').insertAdjacentHTML('beforeend', `<div class="wiz-arow" style="border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px">
     <div style="display:flex;gap:8px;margin-bottom:10px">
-      <input type="text" class="wa-reg" placeholder="Registration e.g. VH-ABC" value="${esc(a.reg||'')}" style="flex:1;text-transform:uppercase">
-      <input type="text" class="wa-type" placeholder="Type e.g. Robinson R44" value="${esc(a.type||'')}" style="flex:2">
-      <button type="button" class="btn-back" style="margin:0;flex:none;padding:8px 12px" onclick="this.closest('.wiz-arow').remove()" aria-label="Remove aircraft">✕</button>
+      ${field('Registration', `<input type="text" class="wa-reg" placeholder="VH-ABC" value="${esc(a.reg||'')}" style="width:100%;text-transform:uppercase">`)}
+      <div style="flex:2;min-width:160px"><label class="wa-lbl">Aircraft type</label><input type="text" class="wa-type" placeholder="e.g. Robinson R44" value="${esc(a.type||'')}" style="width:100%"></div>
+      <button type="button" class="btn-back" style="margin:20px 0 0;flex:none;padding:8px 12px;height:fit-content" onclick="this.closest('.wiz-arow').remove()" aria-label="Remove aircraft">✕</button>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
       <input type="file" accept=".pdf,image/*" class="wa-scan-file" style="display:none" onchange="scanAircraftDoc(this)">
@@ -750,11 +757,17 @@ function wizAddAcRow(a, containerId) {
     </div>
     ${statusHtml}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-      ${num('wa-bew', 'Empty weight (kg)', w.emptyWeight)}
-      ${num('wa-larm', 'Empty wt. long. arm (mm)', w.emptyLongArm)}
-      ${num('wa-latarm', 'Empty wt. lateral arm (mm)', w.emptyLatArm)}
-      ${num('wa-mtow', 'MTOW (kg)', w.mtow)}
-      ${num('wa-fueld', 'Fuel density (kg/L)', w.fuelDensity || 0.720, '0.001')}
+      ${field('Empty weight (kg)',              num('wa-bew', w.emptyWeight))}
+      ${field('Empty wt. long. arm (mm)',       num('wa-larm', w.emptyLongArm))}
+      ${field('Empty wt. lateral arm (mm)',     num('wa-latarm', w.emptyLatArm))}
+      ${field('MTOW (kg)',                      num('wa-mtow', w.mtow))}
+      ${field('Fuel density (kg/L)',            num('wa-fueld', w.fuelDensity || 0.720, '0.001'))}
+      ${field('Max fuel capacity (L)',          num('wa-maxfuel', w.maxFuelL))}
+    </div>
+    <div style="display:flex;gap:8px;margin:10px 0 2px;">
+      <label class="wa-lbl" style="flex:2">Accessory</label>
+      <label class="wa-lbl" style="flex:1">Weight (kg)</label>
+      <label class="wa-lbl" style="flex:1">Arm (mm)</label>
     </div>
     <div class="wiz-accs">${(w.accessories||[]).map(x => wizAccRowHtml(x, locked)).join('')}</div>
     <div class="wb-lock-row">
@@ -806,6 +819,7 @@ async function scanAircraftDoc(fileInput) {
     fillIfEmpty('.wa-latarm', x.emptyLatArm);
     fillIfEmpty('.wa-mtow', x.mtow);
     if (x.fuelDensity) card.querySelector('.wa-fueld').value = x.fuelDensity;
+    fillIfEmpty('.wa-maxfuel', x.maxFuelL);
     statusEl.style.color = 'var(--ok)';
     statusEl.textContent = '✓ Filled from scan — check every number before saving';
   } catch (e) {
@@ -833,6 +847,7 @@ function collectWizAircraft(containerId) {
       emptyLatArm:  g(card, '.wa-latarm'),
       mtow:         g(card, '.wa-mtow'),
       fuelDensity:  g(card, '.wa-fueld') || 0.720,
+      maxFuelL:     g(card, '.wa-maxfuel'),
       accessories: [...card.querySelectorAll('.wiz-accrow')].map(r => ({
         name: r.querySelector('.wac-name').value.trim(),
         weight: parseFloat(r.querySelector('.wac-weight').value) || 0,

@@ -2238,7 +2238,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v59'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v60'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.
@@ -4133,7 +4133,7 @@ function jValidateStep(n) {
 async function jRenderReviewStep() {
   const rec = await jBuildRec('review');
   const hireMap = {wet:'Wet Hire', dry:'Dry Hire'};
-  const linesHTML = (rec.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:600;font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const linesHTML = (rec.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:128px 1fr 75px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:700;font-size:15px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
   const crewHTML = (rec.crew||[]).map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   const el = document.getElementById('review-summary');
   if (!el) return;
@@ -4596,7 +4596,7 @@ function jFmtDate(d){ if(!d) return '—'; try{ return new Date(d+'T00:00:00').t
 async function jRenderDetail(id) {
   const job=await jGet(id); if(!job) return;
   const hireMap={wet:'Wet Hire',dry:'Dry Hire'};
-  const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:110px 1fr 80px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:600;font-size:12px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
+  const linesHTML=(job.lines||[]).map(l=>`<div style="display:grid;grid-template-columns:128px 1fr 75px;gap:6px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:center;"><div style="color:var(--ink);font-weight:700;font-size:15px;">${l.date?jFmtDate(l.date):''}</div><div>${esc(l.desc)}</div><div style="font-weight:700;color:var(--navy);text-align:right;">${(l.hours||0).toFixed(1)} hrs</div></div>`).join('');
   const crew=jJobCrew(job);
   const crewHTML=crew.map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   document.getElementById('detail-content').innerHTML=`

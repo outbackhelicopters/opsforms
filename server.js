@@ -1287,7 +1287,10 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
     /* 4 — Save structured job record to OneDrive for reporting */
     try { await saveJobRecord(token, bundle, oneDriveUrl); } catch (e) { console.error('Record save failed (non-fatal):', e.message); }
 
-    res.json({ ok: true, filename, oneDriveUrl });
+    /* Hand the actual PDF bytes back to the pilot app so it can show "what the
+       office receives" right after send, without needing the office /reports
+       password that normally guards viewing filed PDFs. */
+    res.json({ ok: true, filename, oneDriveUrl, pdfBase64: pdfBuffer.toString('base64') });
 
   } catch (err) {
     console.error('Send error:', err);

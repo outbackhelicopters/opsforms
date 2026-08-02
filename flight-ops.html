@@ -2669,6 +2669,8 @@ const App = {
         if (res.ok && json.ok) {
           f.status = 'sent'; f.sentAt = Date.now();
           f.sendNote = json.spacesUrl ? 'Archived to DO Spaces' : 'Emailed to ops';
+          f.pdfBase64 = json.pdfBase64 || null;
+          f.pdfFilename = json.filename || (f.bundleName + '.pdf');
           sent++;
         } else {
           f.status = 'failed'; f.failNote = json.error || ('HTTP ' + res.status);
@@ -3878,7 +3880,9 @@ const App = {
       '<div class="kv"><div class="k">3. Passengers</div><div class="v">' + (f.noPax ? 'None carried' : f.pax.map(p => esc(p.name) + ' — signed ' + esc(p.date) + ' ' + esc(p.time)).join('<br>')) + '</div></div>' +
       (f.sms.sigs.pilotSig ? '<div class="kv"><div class="k">Pilot signature</div><div class="v"><img src="' + f.sms.sigs.pilotSig + '" style="height:54px;border:1px solid var(--line);border-radius:6px;"></div></div>' : '') +
       (f.pax.length ? '<div class="kv"><div class="k">Pax signatures</div><div class="v">' + f.pax.map(p => '<img src="' + p.sig + '" style="height:46px;border:1px solid var(--line);border-radius:6px;margin:2px 4px 2px 0;">').join('') + '</div></div>' : '') +
-      '<div class="btnrow"><button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
+      '<div class="btnrow">' +
+      (f.status === 'sent' && f.pdfBase64 ? '<button class="btn amber small" onclick="openPdfFromBase64(\'' + f.pdfBase64 + '\',' + JSON.stringify(f.pdfFilename || (f.bundleName + '.pdf')) + ')">📄 View PDF sent to office</button>' : (f.status === 'sent' ? '<span class="sub" style="align-self:center;">PDF preview unavailable</span>' : '')) +
+      '<button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
     );
   },
 
@@ -4668,11 +4672,24 @@ async function jSubmitJob(status) {
   if(status==='submitted'){
     const savedJob={...rec,id:savedId};
     jShowConfirm(savedJob);
-    jSyncJobToServer(savedJob).then(async ok=>{
+    jSyncJobToServer(savedJob).then(async result=>{
+      const ok=!!(result&&result.ok);
       const cvEl=document.getElementById('confirm-cloud-status');
       if(cvEl){ cvEl.textContent=ok?'☁ Sent to office':'⚠ Saved offline — will sync'; cvEl.className='cv '+(ok?'sent':'offline'); }
+      const pdfBtn=document.getElementById('confirm-pdf-btn');
+      if(pdfBtn){
+        if(ok&&result.pdfBase64){
+          pdfBtn.disabled=false; pdfBtn.textContent='📄 View PDF sent to office';
+          pdfBtn.onclick=()=>openPdfFromBase64(result.pdfBase64, result.filename||(jFmtJobNo(savedJob.jobNo)+'.pdf'));
+        } else {
+          pdfBtn.textContent=ok?'📄 PDF preview unavailable':'📄 Will preview once synced';
+        }
+      }
       await jUpdateSyncBadge();
-    }).catch(()=>{});
+    }).catch(()=>{
+      const pdfBtn=document.getElementById('confirm-pdf-btn');
+      if(pdfBtn) pdfBtn.textContent='📄 Will preview once synced';
+    });
     await jUpdateSyncBadge();
   } else {
     toast('📋 Saved as draft');
@@ -4694,8 +4711,34 @@ function jShowConfirm(job) {
     <div class="ckv"><span class="ck">Office</span><span class="cv offline" id="confirm-cloud-status">Sending…</span></div>
   `;
   document.getElementById('screen-confirm').classList.add('active');
+  const btnRow=document.querySelector('#screen-confirm .confirm-btns');
+  const oldPdfBtn=document.getElementById('confirm-pdf-btn'); if(oldPdfBtn) oldPdfBtn.remove();
+  if(btnRow){
+    const pdfBtn=document.createElement('button');
+    pdfBtn.id='confirm-pdf-btn'; pdfBtn.className='btn ghost'; pdfBtn.disabled=true;
+    pdfBtn.textContent='📄 Preparing PDF preview…';
+    btnRow.insertBefore(pdfBtn, btnRow.firstChild);
+  }
   window.scrollTo(0,0);
   setTimeout(()=>jInitForm(),200);
+}
+
+/* ── PDF preview (what the office actually receives) ───────────
+   /api/send hands the real generated PDF back as base64 (see server.js
+   comment above its res.json call) so pilots can see exactly what lands
+   in the office inbox, not just a text summary. */
+function openPdfFromBase64(b64, filename) {
+  if (!b64) return toast('PDF not ready yet — try again in a moment');
+  try {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) { const a = document.createElement('a'); a.href = url; a.download = filename || 'document.pdf'; a.click(); }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { toast('Could not open PDF preview'); }
 }
 
 /* ── History ─────────────────────────────────────────────────── */
@@ -4823,11 +4866,14 @@ async function jSyncJobToServer(job) {
   try {
     const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),45000);
     const res=await apiFetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(jBuildServerBundle(job)),signal:ctrl.signal});
-    clearTimeout(t); if(!res.ok) return false;
+    clearTimeout(t); if(!res.ok) return {ok:false};
     const data=await res.json();
-    if(data.ok){ await jSave({...job,status:'synced',syncedAt:Date.now(),oneDriveUrl:data.oneDriveUrl||null}); return true; }
-    return false;
-  } catch{ return false; }
+    if(data.ok){
+      await jSave({...job,status:'synced',syncedAt:Date.now(),oneDriveUrl:data.oneDriveUrl||null});
+      return {ok:true, pdfBase64:data.pdfBase64||null, filename:data.filename||null};
+    }
+    return {ok:false};
+  } catch{ return {ok:false}; }
 }
 async function jSyncNow() {
   const jobs=await jAll(), pending=jobs.filter(j=>j.status==='submitted');
@@ -4835,7 +4881,7 @@ async function jSyncNow() {
   const btn=document.getElementById('jsync-now-btn');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Syncing…'; }
   let ok=0,fail=0;
-  for(const j of pending){ (await jSyncJobToServer(j))?ok++:fail++; await jUpdateSyncBadge(); jRenderSync(); }
+  for(const j of pending){ (await jSyncJobToServer(j)).ok?ok++:fail++; await jUpdateSyncBadge(); jRenderSync(); }
   if(btn){ btn.disabled=false; btn.innerHTML='☁️ Sync Now'; }
   if(ok)   toast(`✅ Synced ${ok} sheet${ok>1?'s':''} to office!`);
   if(fail) toast(`⚠ ${fail} sheet${fail>1?'s':''} failed — check internet`);

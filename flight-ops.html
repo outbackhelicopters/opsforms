@@ -748,6 +748,15 @@ select.has-value{font-weight:700;color:var(--navy);}
 .kv-row:last-child{border-bottom:none;}
 .kv-row .k{width:110px;color:var(--mut);font-weight:600;flex:none;font-size:12px;}
 .kv-row .v{font-weight:600;color:var(--ink);}
+/* .kv (no "-row" suffix) was used across the modal-based review/summary
+   screens (bundle viewer, sync status, fleet/pilot lists) but never had
+   CSS rules of its own — it silently rendered as unstyled stacked <div>s
+   with no label/value distinction, which is why those screens read as a
+   dense wall of text. Styled to match .kv-row. */
+.kv{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:flex-start;}
+.kv:last-child{border-bottom:none;}
+.kv .k{width:130px;flex:none;color:var(--mut);font-weight:600;font-size:12px;padding-top:2px;}
+.kv .v{font-weight:600;color:var(--ink);flex:1;line-height:1.45;}
 .back-btn{background:var(--card);border:1px solid var(--line);color:var(--navy);
   border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow);margin-bottom:12px;}
@@ -4726,7 +4735,13 @@ function jShowConfirm(job) {
 /* ── PDF preview (what the office actually receives) ───────────
    /api/send hands the real generated PDF back as base64 (see server.js
    comment above its res.json call) so pilots can see exactly what lands
-   in the office inbox, not just a text summary. */
+   in the office inbox, not just a text summary. Shown in an in-page
+   full-screen iframe rather than window.open — iOS Safari (the real
+   target device, an iPad) frequently blocks or silently no-ops
+   window.open on a blob: URL, especially when the button lives inside
+   dynamically-injected modal HTML. An iframe in the same document
+   always has access to the blob URL and Safari renders PDFs inside
+   iframes natively, so this is far more reliable. */
 function openPdfFromBase64(b64, filename) {
   if (!b64) return toast('PDF not ready yet — try again in a moment');
   try {
@@ -4735,10 +4750,31 @@ function openPdfFromBase64(b64, filename) {
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (!win) { const a = document.createElement('a'); a.href = url; a.download = filename || 'document.pdf'; a.click(); }
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    showPdfOverlay(url, filename || 'document.pdf');
   } catch (e) { toast('Could not open PDF preview'); }
+}
+function showPdfOverlay(url, filename) {
+  const old = document.getElementById('pdf-overlay'); if (old) old.remove();
+  const ov = document.createElement('div');
+  ov.id = 'pdf-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;background:#0b0d18;';
+  ov.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top));background:var(--navy);color:#fff;">' +
+      '<span style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(filename) + '</span>' +
+      '<div style="display:flex;gap:8px;flex:none;">' +
+        '<a href="' + url + '" download="' + esc(filename) + '" style="color:#fff;text-decoration:none;font-size:19px;line-height:1;padding:6px 8px;background:rgba(255,255,255,.15);border-radius:8px;">⬇</a>' +
+        '<button type="button" onclick="closePdfOverlay()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:16px;width:34px;height:34px;border-radius:8px;">✕</button>' +
+      '</div>' +
+    '</div>' +
+    '<iframe src="' + url + '" title="PDF preview" style="flex:1;border:none;width:100%;background:#fff;"></iframe>';
+  ov._blobUrl = url;
+  document.body.appendChild(ov);
+}
+function closePdfOverlay() {
+  const ov = document.getElementById('pdf-overlay');
+  if (!ov) return;
+  if (ov._blobUrl) URL.revokeObjectURL(ov._blobUrl);
+  ov.remove();
 }
 
 /* ── History ─────────────────────────────────────────────────── */

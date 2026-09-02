@@ -182,62 +182,26 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
   // reliably returned fresh, correct data every time.
   res.set('Cache-Control', 'no-store');
   try {
+    if (!hasGraphCreds()) {
+      const jobs = readLocalJson('records', []);
+      return res.json({ jobs, total: jobs.length });
+    }
+
     const forceRefresh = req.query.refresh === '1';
     const now = Date.now();
     if (!forceRefresh && _jobsCache && now - _jobsCacheAt < CACHE_TTL) {
       return res.json({ jobs: _jobsCache, cached: true });
     }
 
-    const token      = await getGraphToken();
-    const driveUser  = process.env.OPS_EMAIL;
-    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-    const recPath    = encodeURIComponent(`${folderName}/_records`);
-
-    // NOTE: we deliberately do NOT $select=@microsoft.graph.downloadUrl here.
-    // On OneDrive-for-Business/SharePoint-backed drives, Graph silently omits
-    // that field from /children listings even when explicitly selected — it
-    // only reliably appears on a per-item GET. Confirmed by direct testing:
-    // every listed record here had @odata.etag + name only. So instead we
-    // grab each item's id from the listing and download its content via
-    // /drive/items/{id}/content, which works regardless of drive type.
-    let files = [];
-    let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
-            + `?$select=id,name&$top=1000`;
-
-    while (url) {
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (r.status === 404) break;
-      if (!r.ok) throw new Error(`List records: ${r.status}`);
-      const d = await r.json();
-      files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
-      url = d['@odata.nextLink'] || null;
-    }
-
-    // Download all records in parallel batches of 20
-    const jobs = [];
-    for (let i = 0; i < files.length; i += 20) {
-      const batch = files.slice(i, i + 20);
-      const results = await Promise.all(batch.map(async f => {
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            const r = await fetch(
-              `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            if (r.ok) return await r.json();
-          } catch { /* retry */ }
-        }
-        return null;
-      }));
-      jobs.push(...results.filter(Boolean));
-    }
+    const token = await getGraphToken();
+    const { jobs, fileCount } = await fetchAllJobRecords(token);
 
     // Only cache the result if it looks trustworthy: either the folder
     // genuinely has no files, or we actually got records back. If Graph
     // listed files but every download failed (transient throttling/cold
     // start), don't poison the cache with a false empty result — let the
     // next request try again live instead of serving 0 for up to 5 min.
-    if (files.length === 0 || jobs.length > 0) {
+    if (fileCount === 0 || jobs.length > 0) {
       _jobsCache   = jobs;
       _jobsCacheAt = now;
     }
@@ -247,6 +211,56 @@ app.get(['/jobs', '/api/jobs'], requireReportsAuth, async (req, res) => {
     res.status(500).json({ ok:false, error: err.message });
   }
 });
+
+/* ── Fetch every job record from OneDrive _records/ ─────────────
+   Shared by the /api/jobs reporting endpoint and by the per-pilot
+   job-counter history seeding below — both need the exact same
+   real submission history, fetched the same reliable way. */
+async function fetchAllJobRecords(token) {
+  const driveUser  = process.env.OPS_EMAIL;
+  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+  const recPath    = encodeURIComponent(`${folderName}/_records`);
+
+  // NOTE: we deliberately do NOT $select=@microsoft.graph.downloadUrl here.
+  // On OneDrive-for-Business/SharePoint-backed drives, Graph silently omits
+  // that field from /children listings even when explicitly selected — it
+  // only reliably appears on a per-item GET. Confirmed by direct testing:
+  // every listed record here had @odata.etag + name only. So instead we
+  // grab each item's id from the listing and download its content via
+  // /drive/items/{id}/content, which works regardless of drive type.
+  let files = [];
+  let url = `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/root:/${recPath}:/children`
+          + `?$select=id,name&$top=1000`;
+
+  while (url) {
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (r.status === 404) break;
+    if (!r.ok) throw new Error(`List records: ${r.status}`);
+    const d = await r.json();
+    files.push(...(d.value || []).filter(f => f.name && f.name.endsWith('.json')));
+    url = d['@odata.nextLink'] || null;
+  }
+
+  // Download all records in parallel batches of 20
+  const jobs = [];
+  for (let i = 0; i < files.length; i += 20) {
+    const batch = files.slice(i, i + 20);
+    const results = await Promise.all(batch.map(async f => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const r = await fetch(
+            `https://graph.microsoft.com/v1.0/users/${driveUser}/drive/items/${f.id}/content`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          if (r.ok) return await r.json();
+        } catch { /* retry */ }
+      }
+      return null;
+    }));
+    jobs.push(...results.filter(Boolean));
+  }
+  return { jobs, fileCount: files.length };
+}
 
 /* ── Generic OneDrive JSON helpers (used by calendar + drafts) ─ */
 async function listOneDriveJsonFiles(token, folderPath) {
@@ -364,6 +378,28 @@ async function saveLiveBranding(patch) {
    own OneDrive — fully separate from every other deployment and
    from the repo itself, and editable with no redeploy. */
 const OPCONFIG_LOCAL = path.join(__dirname, '_opconfig.local.json');
+
+/* ── Generic local JSON store ──────────────────────────────────
+   Same fallback pattern as branding/ops-config/audit above, extended
+   to calendar jobs, drafts, the job-number counter and job records —
+   the pieces that previously called getGraphToken() unconditionally
+   and would 500 with no Graph creds set. Used automatically whenever
+   hasGraphCreds() is false (e.g. a sales-demo deployment with
+   CONFIG_FILE=config.demo.json and no MS_* env vars): data lives in
+   flat JSON files next to server.js instead of OneDrive, so the app
+   is genuinely interactive with no external integrations, at the
+   cost of not surviving a redeploy — fine for a demo, never used in
+   a real customer deployment since those always carry Graph creds. */
+function localJsonPath(name) { return path.join(__dirname, `_${name}.local.json`); }
+function readLocalJson(name, fallback) {
+  try { return JSON.parse(fs.readFileSync(localJsonPath(name), 'utf8')); }
+  catch (e) { return fallback; }
+}
+function writeLocalJson(name, data) {
+  try { fs.writeFileSync(localJsonPath(name), JSON.stringify(data, null, 2)); }
+  catch (e) { console.error(`local store write failed (${name}):`, e.message); }
+}
+
 let LIVE_OPS = {
   pilots:   Array.isArray(APP_CONFIG.pilots)   ? APP_CONFIG.pilots   : [],
   aircraft: Array.isArray(APP_CONFIG.aircraft) ? APP_CONFIG.aircraft : [],
@@ -376,23 +412,39 @@ async function loadLiveOpsConfig() {
       const opPath = `${BRAND_FOLDER()}/_system/config.json`;
       const data = await getOneDriveJson(token, opPath);
       if (data && typeof data === 'object') {
+        const rawPilots = Array.isArray(data.pilots) ? data.pilots : [];
+        const codedPilots = assignPilotCodes(rawPilots);
         LIVE_OPS = {
-          pilots:   Array.isArray(data.pilots)   ? data.pilots   : [],
+          pilots:   codedPilots,
           aircraft: Array.isArray(data.aircraft) ? data.aircraft : [],
           clients:  Array.isArray(data.clients)  ? data.clients  : [],
         };
+        // A pilot without a code just got one for the first time (e.g. an
+        // existing customer upgrading into per-pilot job numbering) — save
+        // it back so the code is stable from here on, not recomputed.
+        if (codedPilots.some((p, i) => p.code !== (rawPilots[i] && rawPilots[i].code))) {
+          await putOneDriveJson(token, opPath, LIVE_OPS);
+        }
       } else {
         // First boot for this deployment — seed OneDrive from the repo
         // copy so nothing breaks, then the repo file stops mattering.
+        LIVE_OPS.pilots = assignPilotCodes(LIVE_OPS.pilots);
         await putOneDriveJson(token, opPath, LIVE_OPS);
       }
     } else if (fs.existsSync(OPCONFIG_LOCAL)) {
       const data = JSON.parse(fs.readFileSync(OPCONFIG_LOCAL, 'utf8'));
+      const rawPilots = Array.isArray(data.pilots) ? data.pilots : LIVE_OPS.pilots;
+      const codedPilots = assignPilotCodes(rawPilots);
       LIVE_OPS = {
-        pilots:   Array.isArray(data.pilots)   ? data.pilots   : LIVE_OPS.pilots,
+        pilots:   codedPilots,
         aircraft: Array.isArray(data.aircraft) ? data.aircraft : LIVE_OPS.aircraft,
         clients:  Array.isArray(data.clients)  ? data.clients  : LIVE_OPS.clients,
       };
+      if (codedPilots.some((p, i) => p.code !== (rawPilots[i] && rawPilots[i].code))) {
+        fs.writeFileSync(OPCONFIG_LOCAL, JSON.stringify(LIVE_OPS, null, 2));
+      }
+    } else {
+      LIVE_OPS.pilots = assignPilotCodes(LIVE_OPS.pilots);
     }
   } catch (e) { console.error('live config load failed (using repo config.json):', e.message); }
 }
@@ -464,7 +516,7 @@ async function appendAudit(entry) {
 }
 
 async function saveLiveOpsConfig(patch, who) {
-  if (Array.isArray(patch.pilots))   LIVE_OPS.pilots   = normalizePilots(patch.pilots);
+  if (Array.isArray(patch.pilots))   LIVE_OPS.pilots   = assignPilotCodes(normalizeRosterPilots(patch.pilots));
   if (Array.isArray(patch.aircraft)) {
     const prevAircraft = LIVE_OPS.aircraft;
     const nextAircraft = normalizeAircraft(patch.aircraft, prevAircraft);
@@ -704,9 +756,14 @@ const CAL_CACHE_TTL = 60 * 1000; // 1 min — calendar should feel close to live
 async function loadCalendarJobs(force) {
   const now = Date.now();
   if (!force && _calCache && now - _calCacheAt < CAL_CACHE_TTL) return _calCache;
-  const token = await getGraphToken();
-  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-  const jobs = await listOneDriveJsonFiles(token, `${folderName}/_calendar`);
+  let jobs;
+  if (hasGraphCreds()) {
+    const token = await getGraphToken();
+    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+    jobs = await listOneDriveJsonFiles(token, `${folderName}/_calendar`);
+  } else {
+    jobs = readLocalJson('calendar', []);
+  }
   _calCache = jobs; _calCacheAt = now;
   return jobs;
 }
@@ -746,6 +803,52 @@ function normalizePilots(input, legacyBody) {
   return list
     .map(p => ({ name: String((p && p.name) || '').trim(), phone: normalizeAuPhone((p && p.phone) || ''), email: String((p && p.email) || '').trim() }))
     .filter(p => p.name);
+}
+
+/* ── Pilot codes for per-pilot job numbering ─────────────────────
+   normalizeRosterPilots() is like normalizePilots() above but for the
+   master Fleet/Pilot roster specifically (not a one-off job's pilot
+   list) — it keeps an existing `code` field intact so a pilot's short
+   code never changes just because the office re-saves Settings.
+   assignPilotCodes() then fills in a code for any pilot that doesn't
+   have one yet: first letter of first name + first letter of last
+   name, uppercased. If two pilots would collide (e.g. Angus Watson
+   and Anton Williams both "AW"), whoever doesn't already have that
+   code gets "AW2", "AW3", etc. Existing codes are never recomputed,
+   so a pilot's prefix — and therefore their run of job numbers —
+   stays stable even if the roster is edited or reordered later. */
+function normalizeRosterPilots(input) {
+  return normalizePilots(input).map((p, i) => {
+    const raw = (Array.isArray(input) ? input[i] : null) || {};
+    const code = String(raw.code || '').trim().toUpperCase();
+    return code ? { ...p, code } : p;
+  });
+}
+function assignPilotCodes(pilots) {
+  const list = Array.isArray(pilots) ? pilots : [];
+  const used = new Set(list.filter(p => p.code).map(p => p.code));
+  return list.map(p => {
+    if (p.code) return p;
+    const parts = String(p.name || '').trim().split(/\s+/).filter(Boolean);
+    const base = (((parts[0] || '')[0] || 'X') + ((parts[parts.length - 1] || '')[0] || 'X')).toUpperCase();
+    let code = base, n = 2;
+    while (used.has(code)) { code = base + n; n++; }
+    used.add(code);
+    return { ...p, code };
+  });
+}
+/* Looks up a pilot's stable code from the current roster by name (case/
+   whitespace-insensitive). Falls back to deriving one on the fly for a
+   name that isn't in the roster (typo, pilot removed after their jobs
+   were logged, etc.) so job-number issuance never hard-fails — just
+   isn't guaranteed collision-free against the real roster in that rare
+   case, same tradeoff the client's offline fallback already accepts. */
+function pilotCodeForName(name) {
+  const key = String(name || '').trim().toLowerCase();
+  const match = (LIVE_OPS.pilots || []).find(p => String(p.name || '').trim().toLowerCase() === key);
+  if (match && match.code) return match.code;
+  const parts = key.split(/\s+/).filter(Boolean);
+  return (((parts[0] || '')[0] || 'X') + ((parts[parts.length - 1] || '')[0] || 'X')).toUpperCase();
 }
 function jobPilots(job) {
   if (Array.isArray(job.pilots) && job.pilots.length) return job.pilots;
@@ -868,7 +971,6 @@ app.post(['/calendar-jobs', '/api/calendar-jobs'], requireDevice, rateLimit, asy
     const b = req.body || {};
     const pilots = normalizePilots(b.pilots, b);
     if (!b.date || !pilots.length) return res.status(400).json({ ok: false, error: 'date and at least one pilot are required' });
-    const token = await getGraphToken();
     const id = crypto.randomUUID();
     const record = {
       id,
@@ -885,8 +987,15 @@ app.post(['/calendar-jobs', '/api/calendar-jobs'], requireDevice, rateLimit, asy
       loggedAt:        null,
       createdAt:       new Date().toISOString(),
     };
-    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-    await putOneDriveJson(token, `${folderName}/_calendar/${id}.json`, record);
+    if (hasGraphCreds()) {
+      const token = await getGraphToken();
+      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+      await putOneDriveJson(token, `${folderName}/_calendar/${id}.json`, record);
+    } else {
+      const jobs = readLocalJson('calendar', []);
+      jobs.push(record);
+      writeLocalJson('calendar', jobs);
+    }
     _calCache = null;
     res.json({ ok: true, job: record });
 
@@ -900,7 +1009,7 @@ app.post(['/calendar-jobs', '/api/calendar-jobs'], requireDevice, rateLimit, asy
 
 app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateLimit, async (req, res) => {
   try {
-    const token = await getGraphToken();
+    const token = hasGraphCreds() ? await getGraphToken() : null;
     const jobs = await loadCalendarJobs(true);
     const existing = jobs.find(j => j.id === req.params.id);
     if (!existing) return res.status(404).json({ ok: false, error: 'Not found' });
@@ -932,8 +1041,15 @@ app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateL
     const addedPilots   = newPilots.filter(p => !oldNames.has(p.name));
     const keptPilots    = newPilots.filter(p => oldNames.has(p.name));
 
-    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-    await putOneDriveJson(token, `${folderName}/_calendar/${req.params.id}.json`, updated);
+    if (hasGraphCreds()) {
+      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+      await putOneDriveJson(token, `${folderName}/_calendar/${req.params.id}.json`, updated);
+    } else {
+      const local = readLocalJson('calendar', []);
+      const idx = local.findIndex(j => j.id === req.params.id);
+      if (idx >= 0) local[idx] = updated; else local.push(updated);
+      writeLocalJson('calendar', local);
+    }
     _calCache = null;
     res.json({ ok: true, job: updated });
 
@@ -948,7 +1064,9 @@ app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateL
       if (timeChanged) for (const p of keptPilots) scheduleNotice(req.params.id, p.name, () => notifyJobChanged(existing, updated, p, wasLogged)); // same pilots, date/start time moved
     }
 
-    if (wasLogged) {
+    // Draft job-sheet sync only applies when the drafts pipeline is Graph-backed
+    // (the 6pm sweep that creates them never runs without Graph creds either — see runScheduler)
+    if (wasLogged && hasGraphCreds()) {
       // Off the job — cancel their draft if it's still sitting on the server, unpulled
       for (const p of removedPilots) cancelJobDrafts(token, req.params.id, p.name).catch(e => console.error('draft cancel failed:', p.name, e.message));
       // Newly added to an already-logged job — they missed the 6pm sweep, so start their draft now
@@ -969,15 +1087,22 @@ app.patch(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateL
 
 app.delete(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rateLimit, async (req, res) => {
   try {
-    const token = await getGraphToken();
+    const token = hasGraphCreds() ? await getGraphToken() : null;
     const jobs = await loadCalendarJobs(true);
     const existing = jobs.find(j => j.id === req.params.id);
     if (!existing) return res.status(404).json({ ok: false, error: 'Not found' });
     const wasScheduled = existing.status === 'scheduled';
     const wasLogged    = existing.status === 'logged';
     const updated = { ...existing, status: 'cancelled', cancelledAt: new Date().toISOString() };
-    const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-    await putOneDriveJson(token, `${folderName}/_calendar/${req.params.id}.json`, updated);
+    if (hasGraphCreds()) {
+      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+      await putOneDriveJson(token, `${folderName}/_calendar/${req.params.id}.json`, updated);
+    } else {
+      const local = readLocalJson('calendar', []);
+      const idx = local.findIndex(j => j.id === req.params.id);
+      if (idx >= 0) local[idx] = updated; else local.push(updated);
+      writeLocalJson('calendar', local);
+    }
     _calCache = null;
     res.json({ ok: true });
 
@@ -987,56 +1112,86 @@ app.delete(['/calendar-jobs/:id', '/api/calendar-jobs/:id'], requireDevice, rate
 
     // If a draft job sheet already exists for this job, cancel any copy still sitting on the
     // server (unpulled) — a pilot who already has it on their iPad is told by SMS not to submit it
-    if (wasLogged) cancelJobDrafts(token, req.params.id).catch(e => console.error('draft cancel failed:', e.message));
+    if (wasLogged && hasGraphCreds()) cancelJobDrafts(token, req.params.id).catch(e => console.error('draft cancel failed:', e.message));
   } catch (err) {
     console.error('calendar-jobs delete error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-/* ── Shared Job Advice Sheet number counter ─────────────────────
-   Job numbers need to go up the same way no matter which pilot's
-   device submits next — a per-device counter (the old approach)
-   drifts the moment two devices are in use. Single number stored
-   in OneDrive, cached in memory once loaded, incremented under an
-   in-process lock so two submits landing in the same instant still
-   come out as two different numbers. This only serializes writes
-   within this one running instance — fine at this app's scale,
-   same tradeoff already accepted by the drafts lock below. ── */
-let JOB_COUNTER = null; // { n } — null until first loaded from OneDrive
+/* ── Per-pilot Job Advice Sheet number counters ──────────────────
+   Each pilot gets their own consecutive sequence (DC-0001, DC-0002...)
+   instead of sharing one pool with every other pilot — previously a
+   single shared counter meant Danny's and Chris's numbers were
+   interleaved and looked random from either one's point of view.
+   Counters are keyed by the pilot's stable code (see assignPilotCodes
+   above), stored together in one OneDrive file, cached in memory once
+   loaded, incremented under an in-process lock so two submits landing
+   in the same instant still come out as two different numbers. This
+   only serializes writes within this one running instance — fine at
+   this app's scale, same tradeoff already accepted by the drafts lock
+   below.
+   The first time this runs for a deployment with no counters file yet,
+   each pilot's starting count is seeded from their real submission
+   history in _records/ (existing jobNo values) so numbers continue on
+   sensibly instead of resetting everyone to 1. ── */
+let JOB_COUNTERS = null; // { counters: { CODE: n } } — null until first loaded
 let _jobNoLockChain = Promise.resolve();
 function withJobNoLock(fn) {
   const result = _jobNoLockChain.then(fn, fn);
   _jobNoLockChain = result.then(() => {}, () => {});
   return result;
 }
-async function loadJobCounter(token) {
-  if (JOB_COUNTER !== null) return JOB_COUNTER;
+async function seedJobCountersFromHistory(token) {
+  const counters = {};
+  try {
+    const { jobs } = await fetchAllJobRecords(token);
+    for (const rec of jobs) {
+      if (!rec || !rec.jobNo) continue; // only real Job Advice Sheet submissions carry a jobNo
+      const code = rec.jobCode || pilotCodeForName(rec.pilotName);
+      counters[code] = (counters[code] || 0) + 1;
+    }
+  } catch (e) { console.error('job counter history scan failed (starting from zero):', e.message); }
+  return counters;
+}
+async function loadJobCounters(token) {
+  if (JOB_COUNTERS !== null) return JOB_COUNTERS;
   const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   try {
-    const data = await getOneDriveJson(token, `${folderName}/_system/job-counter.json`);
-    JOB_COUNTER = { n: (data && Number.isFinite(data.n)) ? data.n : 0 };
-  } catch (e) {
-    JOB_COUNTER = { n: 0 }; // nothing saved yet — first job of this deployment
-  }
-  return JOB_COUNTER;
+    const data = await getOneDriveJson(token, `${folderName}/_system/job-counters.json`);
+    if (data && data.counters && typeof data.counters === 'object') {
+      JOB_COUNTERS = { counters: data.counters };
+      return JOB_COUNTERS;
+    }
+  } catch (e) { /* fall through to seed */ }
+  JOB_COUNTERS = { counters: await seedJobCountersFromHistory(token) };
+  return JOB_COUNTERS;
 }
 
 /* POST /api/job-number/next — atomically hands out the next Job Advice
-   Sheet number. Only call this once, right at the moment a pilot actually
-   submits (not while they're still filling the form in) — every call
-   consumes a number, even if the submit is later abandoned. */
+   Sheet number for the given pilot. Only call this once, right at the
+   moment a pilot actually submits (not while they're still filling the
+   form in) — every call consumes a number, even if the submit is later
+   abandoned. Body: { pilotName }. */
 app.post(['/job-number/next', '/api/job-number/next'], requireDevice, rateLimit, async (req, res) => {
   try {
-    const next = await withJobNoLock(async () => {
-      const token = await getGraphToken();
-      const counter = await loadJobCounter(token);
-      counter.n += 1;
-      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-      await putOneDriveJson(token, `${folderName}/_system/job-counter.json`, { n: counter.n, updatedAt: new Date().toISOString() });
-      return counter.n;
+    const pilotName = String((req.body && req.body.pilotName) || '').trim();
+    const result = await withJobNoLock(async () => {
+      const code = pilotCodeForName(pilotName);
+      if (hasGraphCreds()) {
+        const token = await getGraphToken();
+        const counters = await loadJobCounters(token);
+        counters.counters[code] = (counters.counters[code] || 0) + 1;
+        const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+        await putOneDriveJson(token, `${folderName}/_system/job-counters.json`, { counters: counters.counters, updatedAt: new Date().toISOString() });
+        return { number: counters.counters[code], code };
+      }
+      const stored = readLocalJson('jobcounters', { counters: {} });
+      stored.counters[code] = (stored.counters[code] || 0) + 1;
+      writeLocalJson('jobcounters', stored);
+      return { number: stored.counters[code], code };
     });
-    res.json({ ok: true, number: next });
+    res.json({ ok: true, number: result.number, code: result.code });
   } catch (err) {
     console.error('job-number/next error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
@@ -1066,16 +1221,25 @@ function withDraftsLock(fn) {
 app.get(['/job-drafts', '/api/job-drafts'], requireDevice, rateLimit, async (req, res) => {
   try {
     const pending = await withDraftsLock(async () => {
-      const token = await getGraphToken();
-      const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
-      const drafts = await listOneDriveJsonFiles(token, `${folderName}/_drafts`);
       const pilot = req.query.pilot;
-      const claim = drafts.filter(d => !d.pulled && d.status === 'draft' && (!pilot || d.pilotName === pilot));
-      for (const d of claim) {
-        try {
-          await putOneDriveJson(token, `${folderName}/_drafts/${d.id}.json`, { ...d, pulled: true, pulledAt: new Date().toISOString() });
-        } catch (e) { console.error('draft pull-flag failed:', e.message); }
+      if (hasGraphCreds()) {
+        const token = await getGraphToken();
+        const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
+        const drafts = await listOneDriveJsonFiles(token, `${folderName}/_drafts`);
+        const claim = drafts.filter(d => !d.pulled && d.status === 'draft' && (!pilot || d.pilotName === pilot));
+        for (const d of claim) {
+          try {
+            await putOneDriveJson(token, `${folderName}/_drafts/${d.id}.json`, { ...d, pulled: true, pulledAt: new Date().toISOString() });
+          } catch (e) { console.error('draft pull-flag failed:', e.message); }
+        }
+        return claim;
       }
+      // Local mode: the 6pm sweep that creates drafts never runs without Graph creds
+      // (see runScheduler), so this is always an empty list — kept for API shape parity.
+      const drafts = readLocalJson('drafts', []);
+      const claim = drafts.filter(d => !d.pulled && d.status === 'draft' && (!pilot || d.pilotName === pilot));
+      claim.forEach(d => { d.pulled = true; d.pulledAt = new Date().toISOString(); });
+      if (claim.length) writeLocalJson('drafts', drafts);
       return claim;
     });
     res.json({ drafts: pending });
@@ -1083,6 +1247,16 @@ app.get(['/job-drafts', '/api/job-drafts'], requireDevice, rateLimit, async (req
     console.error('job-drafts error:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
+});
+
+/* ── Local PDF serving (demo mode only — real deployments file to OneDrive) ─
+   /send saves the built PDF to _local-pdfs/ and points the job record's
+   oneDriveUrl at this route instead, so the admin Paperwork screen's
+   "View filed PDF" link works the same way it does against a real OneDrive URL. */
+app.get(['/local-pdf/:filename', '/api/local-pdf/:filename'], requireReportsAuth, (req, res) => {
+  const safe = String(req.params.filename || '').replace(/[^a-zA-Z0-9_.-]/g, '');
+  const filePath = path.join(__dirname, '_local-pdfs', safe);
+  res.sendFile(filePath, err => { if (err) res.status(404).json({ ok: false, error: 'Not found' }); });
 });
 
 /* ── Send bundle ──────────────────────────────────────────── */
@@ -1096,18 +1270,54 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
 
     const safeForm = (bundle.formName || 'form').replace(/[^a-zA-Z0-9_-]/g, '_');
     const dateStr  = new Date(bundle.queuedAt || Date.now()).toISOString().slice(0, 10);
-    const filename = `${bundle.callsign}_${safeForm}_${dateStr}.pdf`;
+
+    /* Job Advice Sheet PDFs (identified by bundle.client, same gate used in
+       buildPDF's JOB DETAILS section) are named:
+         <Jobsheet #> <Pilot Initials> <Rego suffix> <Date DD.MM.YYYY>.pdf
+       e.g. "A009 PB RYT 20.08.2026.pdf" — office staff asked for this exact
+       layout so filed PDFs sort and scan the same way their paper job sheets
+       always did. Other forms (SWMS etc, no job number) keep the original
+       Rego_Form_Date name. */
+    let filename;
+    if (bundle.client) {
+      const jobNoLabel = 'A' + String(bundle.jobNo || 0).padStart(3, '0');
+      const pilotCode  = bundle.jobCode || pilotCodeForName(bundle.sms?.values?.pilotName || bundle.pilotName || '');
+      const regoSuffix = String(bundle.callsign || 'UNK').replace(/^VH-?/i, '') || 'UNK';
+      const fdSource   = bundle.flightDate || dateStr; // YYYY-MM-DD
+      const [fy, fm, fd] = String(fdSource).split('-');
+      const dateForName = (fy && fm && fd) ? `${fd}.${fm}.${fy}` : fdSource;
+      filename = `${jobNoLabel} ${pilotCode} ${regoSuffix} ${dateForName}`.replace(/[\\/:*?"<>|]/g, '_') + '.pdf';
+    } else {
+      filename = `${bundle.callsign}_${safeForm}_${dateStr}.pdf`;
+    }
+
+    /* No Graph creds (e.g. a demo deployment) → skip OneDrive/email entirely and
+       keep the PDF + job record on local disk instead. Same fallback pattern used
+       everywhere else in this file when hasGraphCreds() is false. */
+    const demoMode = !hasGraphCreds();
 
     /* Get Microsoft Graph access token (shared for email + OneDrive) */
-    const token = await getGraphToken();
+    const token = demoMode ? null : await getGraphToken();
 
-    /* 2 — File to OneDrive */
+    /* 2 — File to OneDrive (or a local folder, served back via /api/local-pdf) */
     let oneDriveUrl = null;
-    try {
-      oneDriveUrl = await uploadToOneDrive(token, pdfBuffer, filename, bundle.callsign, dateStr.slice(0, 7));
-      console.log('OneDrive:', oneDriveUrl);
-    } catch (err) {
-      console.error('OneDrive upload failed (non-fatal):', err.message);
+    if (demoMode) {
+      try {
+        const localDir = path.join(__dirname, '_local-pdfs');
+        if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+        const safeName = `${Date.now()}_${filename}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+        fs.writeFileSync(path.join(localDir, safeName), pdfBuffer);
+        oneDriveUrl = `/api/local-pdf/${safeName}`;
+      } catch (err) {
+        console.error('Local PDF save failed (non-fatal):', err.message);
+      }
+    } else {
+      try {
+        oneDriveUrl = await uploadToOneDrive(token, pdfBuffer, filename, bundle.callsign, dateStr.slice(0, 7));
+        console.log('OneDrive:', oneDriveUrl);
+      } catch (err) {
+        console.error('OneDrive upload failed (non-fatal):', err.message);
+      }
     }
 
     /* 3 — Send email via Office 365 */
@@ -1281,16 +1491,17 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
 </body></html>
     `;
 
-    await graphSendMail(token, sender, opsTo, subject, html, pdfBuffer, filename);
-    console.log('Email sent:', subject);
+    if (!demoMode) {
+      await graphSendMail(token, sender, opsTo, subject, html, pdfBuffer, filename);
+      console.log('Email sent:', subject);
+    } else {
+      console.log('Demo mode — email skipped:', subject);
+    }
 
-    /* 4 — Save structured job record to OneDrive for reporting */
+    /* 4 — Save structured job record (OneDrive, or the local store in demo mode) */
     try { await saveJobRecord(token, bundle, oneDriveUrl); } catch (e) { console.error('Record save failed (non-fatal):', e.message); }
 
-    /* Hand the actual PDF bytes back to the pilot app so it can show "what the
-       office receives" right after send, without needing the office /reports
-       password that normally guards viewing filed PDFs. */
-    res.json({ ok: true, filename, oneDriveUrl, pdfBase64: pdfBuffer.toString('base64') });
+    res.json({ ok: true, filename, oneDriveUrl });
 
   } catch (err) {
     console.error('Send error:', err);
@@ -1306,6 +1517,7 @@ async function saveJobRecord(token, bundle, oneDriveUrl) {
     flightDate:   bundle.flightDate || new Date().toISOString().slice(0,10),
     flightTime:   bundle.flightTime || '',
     jobNo:        bundle.jobNo      || null,
+    jobCode:      bundle.jobCode    || '',
     calendarJobId: bundle.calendarJobId || null,
     aircraftReg:  bundle.callsign   || '',
     aircraftType: bundle.aircraftType || '',
@@ -1324,11 +1536,20 @@ async function saveJobRecord(token, bundle, oneDriveUrl) {
     oneDriveUrl:  oneDriveUrl || '',
   };
 
-  const driveUser  = process.env.OPS_EMAIL;
-  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   const ts  = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const reg = (record.aircraftReg).replace(/[^A-Z0-9]/gi,'');
   const filename = `${ts}_${reg || 'UNK'}.json`;
+
+  if (!hasGraphCreds()) {
+    const records = readLocalJson('records', []);
+    records.push(record);
+    writeLocalJson('records', records);
+    console.log('Job record saved locally:', filename);
+    return;
+  }
+
+  const driveUser  = process.env.OPS_EMAIL;
+  const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';
   const uploadPath = `${folderName}/_records/${filename}`;
 
   const r = await fetch(
@@ -1425,7 +1646,7 @@ async function buildPDF(bundle) {
     }
 
     doc.fillColor('#FFFFFF').font('Helvetica-Bold').fontSize(16)
-       .text('OUTBACK HELICOPTER AIRWORK NT', textX, 64, { width: W - (textX - 50) - 16, lineBreak: false });
+       .text(BRAND.shortName.toUpperCase(), textX, 64, { width: W - (textX - 50) - 16, lineBreak: false });
     doc.font('Helvetica').fontSize(9.5).fillColor('#9AA3C7')
        .text(`Flight Paperwork Bundle — ${BRAND.companyName}`, textX, 85, { width: W - (textX - 50) - 16 });
 
@@ -1479,7 +1700,7 @@ async function buildPDF(bundle) {
     if (bundle.client) {
       secHead('JOB DETAILS');
       kv('Client',    bundle.client);
-      kv('Job No',    bundle.jobNo   || '—');
+      kv('Job No',    bundle.jobNoFormatted || bundle.jobNo || '—');
       kv('Hire Type', bundle.hireType === 'dry' ? 'Dry Hire' : bundle.hireType === 'dual' ? 'Dual Flight' : 'Wet Hire');
       const crewList = Array.isArray(bundle.crew) && bundle.crew.length ? bundle.crew : (bundle.pilot2Name ? [{ pilotName: bundle.pilot2Name, aircraftReg: bundle.aircraft2Reg }] : []);
       crewList.forEach((c, i) => {
@@ -1897,6 +2118,10 @@ async function notifyJobCancelled(job, pilot, hadDraft) {
 }
 
 async function runScheduler() {
+  // No Graph creds → no OneDrive-backed calendar to sweep and no Twilio SMS to
+  // send (e.g. a demo deployment). Skip quietly instead of logging an error
+  // every 2 minutes forever.
+  if (!hasGraphCreds()) return;
   try {
     const token = await getGraphToken();
     const folderName = process.env.ONEDRIVE_FOLDER || 'Helicopter Paperwork';

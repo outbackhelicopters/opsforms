@@ -748,15 +748,6 @@ select.has-value{font-weight:700;color:var(--navy);}
 .kv-row:last-child{border-bottom:none;}
 .kv-row .k{width:110px;color:var(--mut);font-weight:600;flex:none;font-size:12px;}
 .kv-row .v{font-weight:600;color:var(--ink);}
-/* .kv (no "-row" suffix) was used across the modal-based review/summary
-   screens (bundle viewer, sync status, fleet/pilot lists) but never had
-   CSS rules of its own — it silently rendered as unstyled stacked <div>s
-   with no label/value distinction, which is why those screens read as a
-   dense wall of text. Styled to match .kv-row. */
-.kv{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;align-items:flex-start;}
-.kv:last-child{border-bottom:none;}
-.kv .k{width:130px;flex:none;color:var(--mut);font-weight:600;font-size:12px;padding-top:2px;}
-.kv .v{font-weight:600;color:var(--ink);flex:1;line-height:1.45;}
 .back-btn{background:var(--card);border:1px solid var(--line);color:var(--navy);
   border-radius:10px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;box-shadow:var(--shadow);margin-bottom:12px;}
@@ -1445,7 +1436,22 @@ async function syncBranding() {
       applyBranding();
       try { localStorage.setItem('brandCache', JSON.stringify(cfg.branding)); } catch (_) {}
     }
+    if (cfg.demoBanner) showDemoBanner(cfg.demoBanner);
   } catch (e) { /* offline at boot — cached/default branding stays */ }
+}
+
+/* Sales-demo deployments (CONFIG_FILE=config.demo.json) set branding.demoBanner —
+   real customer deployments never set this field, so this never shows in production. */
+function showDemoBanner(text) {
+  if (document.getElementById('demo-banner')) return;
+  const bar = document.createElement('div');
+  bar.id = 'demo-banner';
+  bar.textContent = text;
+  bar.style.cssText = 'background:#1B1C1E;color:#c9a13d;font:600 10.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;padding:5px 8px;letter-spacing:.5px;text-transform:uppercase;';
+  document.body.insertBefore(bar, document.body.firstChild);
+  const meta = document.createElement('meta');
+  meta.name = 'robots'; meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
 }
 
 /* ================================================================
@@ -1454,10 +1460,10 @@ async function syncBranding() {
    ================================================================ */
 const FORM_DEFS = [{
   id: "form14",
-  formNo: "Form 14",
+  formNo: "SWMS-01",
   issue: "Issue 1.0",
-  issueDate: "June 2022",
-  company: "OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  issueDate: "March 2025",
+  company: "SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title: "SWMS – General Operations - Helicopter",
   header: [
     { id: "pilotName",  label: "Pilot Name",  type: "crew",  required: true },
@@ -1471,246 +1477,201 @@ const FORM_DEFS = [{
   ackText: "Reviewed & understood — controls in place",
   sections: [
     {
-      step: "Weather",
+      step: "Weather assessment",
       hazards: [{
-        hazard: ["Weather not suitable to task (MIN DAY Visual Flight Rule) causing either delays or unsafe flying conditions"],
+        hazard: ["Marginal weather leading to delayed departure or an unsafe continuation of the task"],
         rl: [3,2,5],
         controls: [
-          "Pilot to get updated weather from NAIPS (navigation software) prior to commencing task",
-          "Visual weather assessment",
-          "Delay task if weather not suitable"
+          "Pilot obtains a current area forecast before leaving base",
+          "A visual check of conditions is made immediately before start-up",
+          "Task is postponed or reworked if conditions fall below the operator's personal minima"
         ],
         resp: ["Pilot"], rr: [2,1,3]
       }]
     },
     {
-      step: "Departure point",
+      step: "Setting up the landing site",
       hazards: [{
-        hazard: ["Unauthorized vehicles and personnel entering the HLS"],
+        hazard: ["Vehicles or bystanders entering the landing area unannounced"],
         rl: [4,4,8],
         controls: [
-          "A designated vehicle parking area shall be established. No vehicle is allowed near the aircraft without the approval and supervision and the pilot.",
-          "Only Company staff or personnel under the supervision of Company staff are allowed on the HLS",
-          "The ground crew/ pilot shall organise the passenger in a group at a safe location beside the HLS"
+          "A clear parking zone is marked out well away from the rotor disc",
+          "Nobody approaches the aircraft without a signal from the pilot",
+          "Visitors are grouped and briefed at a fixed waiting point"
         ],
         resp: [], rr: [3,4,7]
       },{
-        hazard: ["Uncontrolled passengers"],
+        hazard: ["Passengers moving freely near a running aircraft"],
         rl: [4,5,9],
         controls: [
-          "The passengers will not be allowed to board until the pilot indicates it is safe to do so.",
-          "The ground crew/ pilot shall organise the passenger(s) in a group at a safe location beside the HLS"
+          "Boarding does not begin until the pilot gives a clear hand signal",
+          "A single waiting point is nominated and briefed before the aircraft starts"
         ],
         resp: [], rr: [3,3,6]
       },{
-        hazard: ["Aircraft positioning (personnel walking into tail rotor)"],
+        hazard: ["Personnel walking into the tail rotor arc"],
         rl: [4,5,9],
         controls: [
-          "Aircraft is to be parked in a direction with tail away from personnel and equipment wherever possible",
-          "Only briefed or suitably qualified personnel allowed to approach / depart the helicopter whilst running without ground crew supervision",
-          "Passenger to wait in designated Waiting areas and not approach helicopter until signalled to do so by pilot",
-          "A positive confirmation ie 'thumbs up' must be attained from the pilot before exiting or entering the rotor disk",
-          "No person shall move further aft than the baggage compartment while the helicopter is running",
-          "Loose articles or clothing are to be secured to stop them blowing away and being chased into the tail rotor",
-          "Long objects must be carried horizontally at all times and below shoulder height when walking around the helicopter",
-          "Safety briefing"
+          "Aircraft parked with the tail facing away from foot traffic where possible",
+          "Only briefed personnel approach a running aircraft, and only from the front",
+          "A visible thumbs-up from the pilot is required before anyone crosses the disc",
+          "Loose clothing and gear is secured before anyone nears the aircraft",
+          "Long items are carried horizontally and below shoulder height"
         ],
         resp: [], rr: [2,3,5]
       }]
     },
     {
-      step: "Refuelling of aircraft",
+      step: "Refuelling",
       hazards: [{
-        hazard: ["Fire / explosion","Fuel contamination","Fuel spill","Theft"],
+        hazard: ["Fire risk","Contaminated fuel","Spillage","Unattended fuel stock"],
         rl: [3,4,7],
         controls: [
-          "Only ground crew and pilots to undertake refuelling of helicopters",
-          "All refuelling shall be done in accordance with Operations Manual",
-          "A fuel drain inspection should be conducted to confirm the quality of the fuel delivered, when refuelling in the field",
-          "Always adhere to Operator and clients Environmental policy",
-          "Refuelling must be done in a way as to not impact the environment in any way possible",
-          "Spill kits to be available at all refuelling locations",
-          "Refueller to carry a rag to capture any drips",
-          "Fire extinguishers must be available at the refuelling site"
+          "Refuelling is carried out only by trained ground crew or the pilot",
+          "A drain check is done before uplift when refuelling away from base",
+          "Spill kit and extinguisher are on hand at every refuelling point",
+          "Drip rag kept with the refueller at all times"
         ],
         resp: [], rr: [2,3,5]
       }]
     },
     {
-      step: "Helicopter and Crew Pre-Flight",
+      step: "Pre-flight — aircraft and crew",
       hazards: [{
-        hazard: ["Incorrect Aircraft Loading"],
+        hazard: ["Aircraft loaded outside its approved weight and balance envelope"],
         rl: [3,4,7],
-        lead: "Pilots are responsible to:",
+        lead: "Before every departure the pilot confirms:",
         controls: [
-          "Ensure the gross weight of the aircraft does not exceed the aircraft limitations and is such that flight performance in accordance with the standards specified by CASA for the type of operation to be undertaken is possible under the prevailing conditions",
-          "Ensure any directions of CASA with respect to the loading of the aircraft have been complied with",
-          "Aircraft shall at all times be loaded in accordance with the weight and balance limitations specified in its approved FM and the loading system. In so doing the Zero Fuel Weight, Ramp Weight, Take-off Weight, Landing Weight and any performance limited weights must be considered as appropriate"
+          "Gross weight and CG remain within the limits published in the aircraft's flight manual",
+          "Passenger and freight weights are declared and recorded before boarding",
+          "Fuel load is adjusted to keep the aircraft within limits for the planned sectors"
         ],
         resp: ["Pilot"], rr: [2,3,5]
       },{
-        hazard: ["Aircraft Malfunction/ Structural/Mechanical Failure"],
+        hazard: ["Undetected airframe or mechanical fault"],
         rl: [2,4,6],
         controls: [
-          "Pre-Flight inspection conducted prior to flight and maintenance release signed",
-          "Maintenance conducted by approved maintenance personnel in accordance with aircraft maintenance schedule",
-          "ECTM program in use"
+          "Daily inspection completed and signed off before first flight",
+          "Scheduled maintenance carried out only by an approved provider",
+          "Any defect is entered in the tech log before further flight"
         ],
         resp: ["Pilot","Approved Maintenance Provider"], rr: [2,2,4]
       },{
-        hazard: ["Equipment Malfunction"],
+        hazard: ["Faulty ancillary equipment carried on the aircraft"],
         rl: [2,4,6],
         controls: [
-          "Pre-use inspection of equipment conducted prior to work starting",
-          "Only serviceable equipment to be used",
-          "A register of equipment is maintained with a service inspection history"
+          "Equipment checked before first use each day",
+          "Unserviceable items are removed from service immediately",
+          "A simple equipment log tracks last inspection date"
         ],
-        resp: ["Pilot","Ground Crew","Approved Safety Inspectors"], rr: [2,2,4]
-      },{
-        hazard: ["Incorrect position of the aircraft for take-off and landing"],
-        rl: [2,4,6],
-        controls: [
-          "The aircraft take-off and landing direction shall be discussed with the ground crew at the prestart meeting",
-          "Minimum HLS size is 2 X D"
-        ],
-        resp: ["Pilot","Ground crew"], rr: [2,2,4]
+        resp: ["Pilot","Ground Crew"], rr: [2,2,4]
       }]
     },
     {
-      step: "Flight Operations",
+      step: "In flight",
       hazards: [{
-        hazard: ["Fuel Exhaustion"],
+        hazard: ["Running low on fuel without adequate reserve"],
         rl: [3,4,7],
         controls: [
-          "Pilots are to continually monitor and assess fuel burn for all flight operations",
-          "Pilots will cross check fuel consumption using flight time and know consumption vs fuel gauge and in the event of a substantial variance – work with the worst scenario",
-          "Pilots will record and calculate actual fuel burn for every flight and record on the DOR as per CASA regulations and Company Operating Procedures. Any variations will be reported to the HOO",
-          "Fuel monitoring and calculations are included in all company flight reviews",
-          "Land if unsure - Fuel can always be delivered"
+          "Fuel burn is tracked against plan throughout the flight",
+          "Gauge readings are cross-checked against known burn rates",
+          "A conservative reserve is maintained on every sector — land early if in doubt"
         ],
         resp: ["Pilot"], rr: [2,3,5]
       },{
-        hazard: ["Collision on Ground"],
+        hazard: ["Poor visibility on approach to an unprepared site"],
         rl: [3,4,7],
         controls: [
-          "Pilots will fly with due caution in areas prone to 'brown outs' or 'white outs' where dust or fog/cloud/drizzle/smoke, can impact on visibility",
-          "Where available, pilots will converse with ground crew as to the conditions at a proposed landing site",
-          "An alternate site will be used if there is any doubt about safety",
-          "Hand held radios or mobile phones can be used to provide Air to Ground communications",
-          "Where dust is of concern, water trucks may be utilised to wet down the landing site",
-          "Minimum HLS size is 2 X D"
+          "Site conditions are discussed with ground crew before approach where possible",
+          "An alternate site is used if there is any doubt about safety",
+          "Dust-prone sites are wet down beforehand if practical"
         ],
         resp: ["Pilot","Ground Crew"], rr: [2,3,5]
       },{
-        hazard: ["Loose items in cabin (tail rotor strike risk)"],
+        hazard: ["Loose cabin items striking the tail rotor if ejected"],
         rl: [3,4,7],
         controls: [
-          "The safety briefing to include the instruction that no equipment i.e. cameras, phones, tablets etc. to be used with doors off operations",
-          "All to be stowed in cargo bays or left at departure / return point",
-          "The windows are to remain closed whenever practical"
+          "Cameras, phones and similar items are stowed for doors-off work",
+          "Windows remain closed where practical"
         ],
-        resp: ["Pilot","Ground Crew","Site Personnel"], rr: [2,3,5]
+        resp: ["Pilot","Ground Crew"], rr: [2,3,5]
       },{
-        hazard: ["Emergency landings"],
+        hazard: ["Precautionary or forced landing in a remote area"],
         rl: [3,5,8],
         controls: [
-          "Before commencing of works all persons involved will receive a safety briefing from the pilot",
-          "This may be on the HLS or in the aircraft",
-          "Satellite phones to be carried for remote area operations",
-          "All personnel to have General emergency procedures training"
+          "All occupants briefed before departure on emergency procedure",
+          "Satellite communicator carried for remote sectors",
+          "Crew hold current emergency response training"
         ],
-        resp: ["Pilot","Ground Crew","Site Personnel"], rr: [2,4,6]
+        resp: ["Pilot","Ground Crew"], rr: [2,4,6]
       },{
-        hazard: ["Adverse Weather"],
+        hazard: ["Deteriorating weather en route"],
         rl: [3,3,6],
         controls: [
-          "Weather forecast obtained prior to flight in accordance with CASA regulations.",
-          "Pilots to show due caution with poor weather conditions.",
-          "Pilots maintain the ability to access weather updates in flight.",
-          "Pilots will not 'push on' in adverse weather. Safety always prevails over pressure to complete a task in unsafe conditions."
+          "Forecast obtained before departure and monitored in flight where possible",
+          "Task is not pushed on in marginal conditions — a delay costs less than an incident"
         ],
         resp: ["Pilot"], rr: [2,2,4]
       },{
-        hazard: ["No Fly/Restricted Zones"],
+        hazard: ["Inadvertent entry into controlled or restricted airspace"],
         rl: [2,2,4],
         controls: [
-          "Pilots will check any airspace restrictions along the prescribed route prior to flight.",
-          "Pilots can access airspace restrictions and changes/updates via Oz Runways en-route."
+          "Airspace along the route is checked prior to flight",
+          "In-flight updates are checked via the operator's navigation app"
         ],
         resp: ["Pilot"], rr: [2,1,3]
       },{
-        hazard: ["Airprox/Loss of Separation/Mid Air Collision"],
+        hazard: ["Conflict with other aircraft in the operating area"],
         rl: [3,5,8],
         controls: [
-          "Pilots will maintain situational awareness at all times.",
-          "Pilots will monitor local area radio frequencies and converse with any traffic that may cause a conflict during flight operations.",
-          "Ground crew will alert Air Crew via Radio/Phone or text if any aircraft are observed operating in the vicinity."
+          "Situational awareness maintained throughout",
+          "Area frequency monitored and position calls made as needed"
         ],
-        resp: ["Pilot","Ground Crew"], rr: [2,5,7]
+        resp: ["Pilot"], rr: [2,5,7]
       }]
     },
     {
-      step: "Passengers embarking/ disembarking the helicopter",
+      step: "Passengers boarding and leaving",
       hazards: [{
-        hazard: ["Dust/Stones/Debris from rotor wash","Hot exhaust gas/fumes","Crush Injury beneath skids","Hearing Damage"],
+        hazard: ["Dust or debris thrown up by rotor wash","Contact with hot exhaust","Injury near the skids","Hearing damage"],
         rl: [3,4,7],
         controls: [
-          "Before starting up the area surrounding the helicopter is to be assessed for any loose objects or surfaces",
-          "If the pilot believes dust may cause loss of visibility on take-off, 'brown out', then the pad should be watered down before taking off if possible",
-          "If the chance of a brown out is high, then an alternative landing area must be found",
-          "Keep clear of exhaust and skids",
-          "Hearing Protection for ground crew working around air craft as required",
-          "Passenger to wait in designated Waiting areas and not approach helicopter until signalled to do so by pilot."
+          "Loose surface material assessed before start-up",
+          "Site is wet down beforehand if a dust hazard is likely",
+          "Everyone stays clear of the exhaust and skid area",
+          "Hearing protection worn by ground personnel as required"
         ],
         resp: ["Pilot","Ground Crew"], rr: [3,2,5]
       },{
-        hazard: ["Seatbelt incorrectly fitted"],
+        hazard: ["Seatbelt not correctly fastened"],
         rl: [2,4,6],
         controls: [
-          "Pilot or Ground crew to ensure passenger's seat belts are secure and properly fitted.",
-          "Daily briefing to include demonstration of releasing of all seatbelt types on board the aircraft type",
-          "Shoulder harness or 'sash's' to be used at all times if fitted to aircraft"
+          "Belts checked by pilot or ground crew before departure",
+          "Belt operation demonstrated during the pre-flight briefing"
         ],
         resp: ["Pilot","Ground Crew"], rr: [1,2,3]
       },{
-        hazard: ["Doors not secured"],
+        hazard: ["Door not properly latched"],
         rl: [3,5,8],
         controls: [
-          "All passengers to be briefed on operation of all types of doors and operation from inside and outside",
-          "Doors to remain closed for duration of flight unless operationally necessary to open i.e. filming",
-          "Separate briefing required for doors opening/closing in flight"
+          "Passengers briefed on door operation before boarding",
+          "Doors confirmed latched by the pilot before take-off"
         ],
         resp: ["Pilot","Ground Crew"], rr: [2,3,6]
       },{
-        hazard: ["Lockers not secured"],
-        rl: [3,5,8],
-        controls: [
-          "Only approved personnel allowed to operate lockers / baggage compartments",
-          "Lockers/hatches/compartments to be checked before take off by pilot, crewman or approved personnel"
-        ],
-        resp: ["Pilot","Ground Crew"], rr: [2,3,6]
-      },{
-        hazard: ["Emergency exits blocked / door locked"],
-        rl: [3,5,8],
-        controls: [
-          "Briefing to include demonstration of correct door operations and jettisons if fitted",
-          "Ground crew and pilot to confirm luggage storage locations do not impact emergency exits"
-        ],
-        resp: ["Pilot","Ground Crew"], rr: [2,3,6]
-      },{
-        hazard: ["Intercom failure","Failure to communicate hazards or problems to pilot"],
+        hazard: ["Loss of intercom during flight"],
         rl: [3,4,7],
         controls: [
-          "Passengers to use raised voice to communicate with pilot",
-          "Loss of intercom is no reason for lack of communication with the pilot with relation to threats and hazards"
+          "Passengers instructed to raise their voice if intercom fails",
+          "A hand signal convention is briefed as a backup"
         ],
         resp: ["Pilot","Passenger"], rr: [3,2,5]
       }]
     }
   ]
 },{
-  id:"form15",formNo:"Form 15",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form15",formNo:"SWMS-02",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"SWMS – Stock & Feral Animal Control",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
@@ -1723,20 +1684,20 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    {step:"Briefing",hazards:[{hazard:["PIC responsibility for safety of persons onboard prior to commencement of sortie"],rl:[2,2,4],controls:["Brief all personnel on proposed plan of action and general conduct of operations","Brief on signals to be used and safety precautions in the air and on the ground","Brief on requirements for safe auto-rotational landing in event of sudden power loss"],resp:["Pilot","Shooter","Other essential person","Ground Crew"],rr:[2,1,3]}]},
-    {step:"Reconnaissance",hazards:[{hazard:["Pilot to be aware of hazards within area of operation prior to commencement"],rl:[3,2,5],controls:["Prior to commencement PIC to carry out general survey of area to ascertain position of overhead wires and other obstacles","Ensure area is clear of unauthorised people"],resp:["Pilot"],rr:[2,1,3]}]},
-    {step:"Transportation to cull location",hazards:[{hazard:["Legal and security considerations whilst travelling to the location of operations"],rl:[3,2,5],controls:["All firearms transported in locked strong box with ammunition separately in locked box","Only accessible by licensed shooter"],resp:["Shooter"],rr:[2,2,4]}]},
-    {step:"Firearms to be used",hazards:[{hazard:["Identify and assess firearm types for the operation"],rl:[3,3,6],controls:["Firearms limited to shotguns, anaesthetising guns, net guns, rifles and semi-automatic rifles","Semi-automatic rifles restricted to types where ejection direction is below the horizontal and not greater than 90 degrees back from direction of fire","Use of revolvers or handguns is not approved","PIC to conduct trial to ensure empty case ejection and noise level is satisfactory before using semi-automatic rifle"],resp:["Pilot","Client","Shooter"],rr:[2,2,4]}]},
-    {step:"Carriage of firearms and ammunition in aircraft",hazards:[{hazard:["Accidental discharge of firearms or ammunition in aircraft"],rl:[3,3,6],controls:["Magazine not loaded until animals are sighted and muzzle is pointing outside cabin in downward direction","Ammunition in suitable container within easy reach of shooter, restrained from movement during flight","Quantity limited to 250 shotgun cartridges (14 kg) or 500 rounds rifle ammunition (7 kg) per person"],resp:["Pilot","Shooter"],rr:[2,2,4]}]},
-    {step:"Arrival/Departure of helicopter – staging area",hazards:[{hazard:["Landing/departure mishap","Non-secured objects becoming airborne","Non-essential staff causing distraction"],rl:[4,4,8],controls:["Identify possible hazards prior to operations","Risk Assessments performed; SWMS updated with new hazards","Approval obtained for landing in public field if applicable","All staff to wear hi-vis vest, hearing protection and hard hat","Ensure landing area clear of non-secured items","Fixed hazards (power lines) identified before determining staging area suitability","Communications and First Aid Kit on site at all times"],resp:["Pilot","Shooter","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Loading, aiming, firing & maintaining airspeed",hazards:[{hazard:["Accidental discharge of firearm during loading or firing operations"],rl:[4,4,8],controls:["Firearm to remain unloaded except immediately prior to shooting operation and when loaded shall point outside cabin","Pilot and shooter confirm verbally weapon is empty and clear","Aiming and firing within arc well clear of helicopter components and at minimum 30 degrees below main rotor disc","Pilot to approve weapon use when aircraft is positioned","PIC to maintain airspeed above translation whilst approaching animal from rear","Where airspeed cannot be maintained an additional height margin of 50 feet shall be allowed"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
-    {step:"Discharge of firearm & cull operations (RSPCA doctrine)",hazards:[{hazard:["Accidental death or injury from discharge","Catastrophic failure of firearm","Wounded animals and helicopter hard landing or crash"],rl:[4,4,8],controls:["Magazine not loaded until muzzle pointing outside cabin; action not cocked until pilot is lining up — communicate LOADING","Shooter only takes shot if background safe and range ideal for humane dispatch — communicate FIRING","At completion firearm unloaded, action checked clear — communicate CLEAR before muzzle comes inside cabin","Second identical semi-automatic rifle carried in case of catastrophic failure","Pilot always flies back over downed animals to check for signs of life","Helicopters carry EPIRB devices; satellite tracking preferred"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
-    {step:"Communication between pilot and shooter",hazards:[{hazard:["Loss of communication between pilot and shooter during cull operations"],rl:[3,4,7],controls:["Pilot and shooter communicate via headsets and microphones installed in helmets","Secondary headsets carried in aircraft","If radio comms lost, shooting ceases until comms restored; if not restorable operation is aborted","Continuous two-way communication maintained at all times during flight","Failure of communication requires immediate termination of sortie"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
-    {step:"Helicopter landing zone, refuelling & completion",hazards:[{hazard:["Unsecured landing zone","Fuel spill/fire during refuelling","Unsecured firearms on completion"],rl:[3,4,7],controls:["Identify and brief all personnel on landing zone hazards","Spill kits and fire extinguishers available at all refuelling sites","Refuelling in accordance with Operations Manual with fuel drain inspection","On completion: all firearms checked unloaded, placed in transportation containers, transported concealed in locked container secured to vehicle"],resp:["Pilot","Shooter","Ground Crew"],rr:[2,2,4]}]}
+    {step:"Pre-task briefing",hazards:[{hazard:["Crew not aligned on the plan before departure"],rl:[2,2,4],controls:["Plan of action and general conduct discussed with all crew","Hand signals and ground safety agreed beforehand","Auto-rotation and emergency landing options reviewed"],resp:["Pilot","Shooter","Ground Crew"],rr:[2,1,3]}]},
+    {step:"Area familiarisation",hazards:[{hazard:["Unknown obstacles within the work area"],rl:[3,2,5],controls:["Pilot conducts an overview pass to note wires and obstacles before work begins","Area confirmed clear of unauthorised persons"],resp:["Pilot"],rr:[2,1,3]}]},
+    {step:"Travel to the work site",hazards:[{hazard:["Security of firearms and ammunition in transit"],rl:[3,2,5],controls:["Firearms carried in a locked case, ammunition stored separately","Only the licensed shooter has access to the case"],resp:["Shooter"],rr:[2,2,4]}]},
+    {step:"Firearm selection",hazards:[{hazard:["Unsuitable firearm type for aerial use"],rl:[3,3,6],controls:["Only shotguns, rifles and approved semi-automatics are used","Ejection pattern checked before flight for semi-automatic types","Handguns are not used under any circumstance"],resp:["Pilot","Client","Shooter"],rr:[2,2,4]}]},
+    {step:"Firearms carried aboard",hazards:[{hazard:["Accidental discharge inside the cabin"],rl:[3,3,6],controls:["Magazine stays empty until a target is sighted and the muzzle is clear of the cabin","Ammunition stored securely within reach of the shooter","Quantities carried kept to what is needed for the sortie"],resp:["Pilot","Shooter"],rr:[2,2,4]}]},
+    {step:"Arrival and departure — staging area",hazards:[{hazard:["Unsecured items becoming airborne","Bystanders near the aircraft"],rl:[4,4,8],controls:["Hazards at the staging area identified before operations start","Hi-vis, hearing protection and head protection worn by all ground staff","Loose items cleared from the landing area","Communications and first aid kept on site throughout"],resp:["Pilot","Shooter","Ground Crew"],rr:[3,2,5]}]},
+    {step:"Loading and firing sequence",hazards:[{hazard:["Accidental discharge during loading or firing"],rl:[4,4,8],controls:["Firearm loaded only immediately before a shot and always pointed clear of the cabin","Pilot and shooter verbally confirm the weapon is clear before and after each pass","Firing arc kept well clear of rotor and tail components","Airspeed kept above translational lift during the approach where practical"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
+    {step:"Dispatch operations",hazards:[{hazard:["Injury from discharge","Firearm malfunction","Hard landing following a wounded-animal response"],rl:[4,4,8],controls:["Standard call-outs used for loading, firing and clear","Shots only taken with a safe backdrop","Spare firearm carried in case of malfunction","Pilot conducts a follow-up pass to confirm outcome","Satellite tracking carried on all sorties"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
+    {step:"Crew communication",hazards:[{hazard:["Loss of communication between pilot and shooter"],rl:[3,4,7],controls:["Headset communication used throughout","Spare headset carried as backup","Operations pause if comms are lost and cannot be restored quickly"],resp:["Pilot","Shooter"],rr:[3,2,5]}]},
+    {step:"Return, refuel and stand-down",hazards:[{hazard:["Refuelling hazards","Unsecured firearms at end of task"],rl:[3,4,7],controls:["Landing zone hazards reconfirmed before return","Spill kit and extinguisher available for refuelling","All firearms unloaded, checked and returned to locked transport case"],resp:["Pilot","Shooter","Ground Crew"],rr:[2,2,4]}]}
   ]
 },{
-  id:"form16",formNo:"Form 16",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form16",formNo:"SWMS-03",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"SWMS – Powerline Patrol",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
@@ -1749,19 +1710,19 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    {step:"Safety/risk analysis briefing to all personnel",hazards:[{hazard:["All personnel not briefed on hazards and risks associated with powerline patrol"],rl:[3,2,5],controls:["Safety/risk analysis briefing conducted prior to all operations","All personnel to sign SWMS before works commence","Emergency Response Plan briefed to all personnel","Signal conventions between pilot and ground crew confirmed"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
-    {step:"Ensure no new worksite hazards",hazards:[{hazard:["New hazards at worksite not identified in original SWMS"],rl:[3,2,5],controls:["Pilot to conduct inspection of site prior to operations commencing","Any new hazards to be added to SWMS before works commence","Operations to cease if new hazard cannot be controlled"],resp:["Pilot"],rr:[2,1,3]}]},
-    {step:"Weather",hazards:[{hazard:["Weather not suitable to task (MIN DAY VFR) causing delays or unsafe flying conditions"],rl:[3,2,5],controls:["Pilot to get updated weather from NAIPS prior to commencing task","Visual weather assessment prior to flight","Delay task if weather not suitable","Pilots will not push on in adverse weather — safety always prevails"],resp:["Pilot"],rr:[2,1,3]}]},
-    {step:"Site preparation",hazards:[{hazard:["Unauthorised vehicles and personnel entering HLS","Unsecured objects causing hazard to aircraft"],rl:[4,4,8],controls:["Designated vehicle parking area established; no vehicle near aircraft without pilot approval","Only company staff or supervised personnel on HLS","Ground crew to organise passengers in safe location beside HLS","Landing area clear of non-secured items which may be displaced by rotor wash","Fixed hazards (power lines) identified prior to determining suitability of staging area"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Helicopter and crew pre-flight",hazards:[{hazard:["Incorrect aircraft loading","Aircraft malfunction/mechanical failure","Equipment malfunction"],rl:[3,4,7],controls:["Gross weight not to exceed aircraft limitations; loading in accordance with W&B in Flight Manual","Pre-flight inspection completed and maintenance release signed","Maintenance by approved personnel in accordance with aircraft maintenance schedule","Pre-use inspection of all equipment before works commence","Only serviceable equipment to be used"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
-    {step:"Flight operations",hazards:[{hazard:["Fuel exhaustion","Collision on ground (brown out)","Adverse weather","Airprox/mid-air collision"],rl:[3,4,7],controls:["Pilot to continually monitor and assess fuel burn for all flight operations","Cross-check fuel consumption using flight time vs fuel gauge; record on DOR","Pilots will fly with due caution in areas prone to brown-out or white-out","Weather forecast obtained prior to flight in accordance with CASA regulations","Pilots to maintain situational awareness and monitor local area radio frequencies at all times"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Inspection of wire – wire strike",hazards:[{hazard:["Wire strike during powerline patrol causing aircraft damage or loss of control"],rl:[3,5,8],controls:["Sterile cockpit during wire inspection (non-essential communication prohibited)","Approach wire at 30-degree angle from below at minimum 200 ft above wire and 60 m to the side before crossing","Follow Energy Queensland Standard Figures 7.2 and 7.3 for wire inspection approach profiles","Carry wire strike protection on aircraft where fitted","Brief observer on wire approach protocols before every flight","Never fly directly below or over wires — always approach at an angle","Observer to call wire position continuously during approach","In the event of doubt abort the approach and reassess","Maintain approach speed appropriate to conditions"],resp:["Pilot"],rr:[2,5,7]}]},
-    {step:"Inspection of wire – CFiT & change of terrain",hazards:[{hazard:["Controlled flight into terrain (CFiT)","Unexpected change of terrain during low-level patrol"],rl:[3,5,8],controls:["Pilot to maintain constant situational awareness of terrain and obstacles","Minimum safe altitude to be determined prior to each wire section","Immediate pull-up if terrain rises unexpectedly","Never descend below obstacle clearance altitude except at approved inspection points","Review terrain profile on navigation software prior to each sector"],resp:["Pilot"],rr:[2,5,7]}]},
-    {step:"Inspection of wire – loss of control in flight",hazards:[{hazard:["Loss of control in flight during low-level wire patrol"],rl:[3,5,8],controls:["Maintain airspeed above ETL (Effective Translational Lift) at all times during wire patrol","Do not manoeuvre aggressively at low level — all turns to be gentle and co-ordinated","If loss of control occurs at low level: increase collective and point aircraft at clearest open ground"],resp:["Pilot"],rr:[2,5,7]}]}
+    {step:"Pre-task briefing",hazards:[{hazard:["Crew unaware of task-specific hazards"],rl:[3,2,5],controls:["Briefing covers the patrol plan and emergency response before departure","All crew sign on to the SWMS before work begins"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
+    {step:"New hazard check",hazards:[{hazard:["Hazard present at site that wasn't in the original plan"],rl:[3,2,5],controls:["Pilot reviews the site before starting patrol work","New hazards are added to the plan before continuing","Work stops if a hazard can't be managed"],resp:["Pilot"],rr:[2,1,3]}]},
+    {step:"Weather",hazards:[{hazard:["Conditions unsuitable for low-level patrol work"],rl:[3,2,5],controls:["Forecast checked before departure","Visual reassessment made on site","Task deferred if conditions are marginal"],resp:["Pilot"],rr:[2,1,3]}]},
+    {step:"Staging area set-up",hazards:[{hazard:["Uncontrolled access to the landing area"],rl:[4,4,8],controls:["Parking kept clear of the aircraft","Only briefed personnel allowed near the aircraft","Loose items cleared before rotor start"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
+    {step:"Aircraft and crew pre-flight",hazards:[{hazard:["Loading or serviceability issue affecting the sortie"],rl:[3,4,7],controls:["Weight and balance checked before departure","Pre-flight inspection completed and signed","Equipment checked serviceable before use"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
+    {step:"In-flight operations",hazards:[{hazard:["Fuel planning error","Reduced visibility near the ground","Conflicting traffic"],rl:[3,4,7],controls:["Fuel burn monitored continuously against plan","Extra caution used in dust or haze near the surface","Situational awareness maintained on area frequency"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Wire inspection passes",hazards:[{hazard:["Contact with the conductor being inspected"],rl:[3,5,8],controls:["Non-essential conversation minimised during inspection passes","Wire approached at an angle, from below and to the side, before crossing","Observer calls wire position continuously","Approach aborted and reassessed at the first sign of doubt"],resp:["Pilot"],rr:[2,5,7]}]},
+    {step:"Terrain awareness",hazards:[{hazard:["Unexpected rise in terrain during a low-level pass"],rl:[3,5,8],controls:["Minimum safe height agreed before each section","Immediate climb if terrain rises unexpectedly","Terrain reviewed on navigation software before each sector"],resp:["Pilot"],rr:[2,5,7]}]},
+    {step:"Low-level handling",hazards:[{hazard:["Loss of control during a low-level manoeuvre"],rl:[3,5,8],controls:["Airspeed kept above effective translational lift where practical","Turns kept gentle and coordinated at low level","Recovery technique briefed before the sortie"],resp:["Pilot"],rr:[2,5,7]}]}
   ]
 },{
-  id:"form17",formNo:"Form 17",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form17",formNo:"SWMS-04",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"SWMS – Incendiary Operations",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
@@ -1774,18 +1735,18 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    {step:"Incendiary machine installation & inspection",hazards:[{hazard:["Fire from machine during installation/operation","Stuck incendiaries causing unintended ignition","Incorrect dropping area"],rl:[3,4,7],controls:["Machine to be installed and inspected by qualified operator prior to each sortie","Machine powered off during installation and removal","Confirm dropping zone coordinates loaded and verified before flight","If incendiary becomes stuck: isolate machine power, advise base, do not attempt to clear in flight","Never operate machine over unapproved areas — abort drop if doubt about location","Ground test machine operation before each use"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Incendiary dropping operations",hazards:[{hazard:["Slow/low flight creating autorotational risk","Downwind operations in smoke obscuring visibility","Fire escape route blocked"],rl:[4,4,8],controls:["Maintain airspeed above ETL during dropping operations where possible","Minimum drop altitude to be briefed and agreed before each sortie","Establish escape route before commencing each dropping run","Avoid downwind operations in dense smoke — abort and reposition","Monitor wind continuously; cease if wind exceeds brief limits","Maintain continuous radio contact with ground operations controller"],resp:["Pilot"],rr:[3,2,5]}]},
-    {step:"Hot refuelling of aircraft",hazards:[{hazard:["Fire/explosion during hot refuelling","Fuel contamination","Fuel spill"],rl:[3,4,7],controls:["Hot refuelling in accordance with company hot refuel procedures only","Incendiary machine powered OFF during hot refuelling","Fire extinguisher positioned and ready during hot refuelling","Spill kit available at refuelling location","No smoking within 15 m of aircraft during refuelling","Pilot to remain at controls during hot refuelling with engine at idle","Confirm fuel grade and conduct drain check before uplift"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Doors off operations",hazards:[{hazard:["Loose articles exiting aircraft and entering tail rotor","Inadvertent contact with door frame","Crew not secured properly"],rl:[3,4,7],controls:["All loose articles secured or removed from aircraft before doors-off operations","Crew to wear helmet, gloves and appropriate PPE at all times","Safety harness/restraint system fitted and checked before doors-off departure","All crew briefed on doors-off hazards before flight","No equipment to be used near door aperture without being lanyard-attached"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Obstacles – low level operations",hazards:[{hazard:["Collision with obstacles during low-level incendiary dropping operations"],rl:[3,4,7],controls:["Conduct reconnaissance flight of dropping area before operations commence","Mark obstacles on navigation software prior to operations","Establish minimum safe altitude for each dropping run","Never operate below minimum briefed altitude","Abort run if any unexpected obstacle identified during approach"],resp:["Pilot"],rr:[2,3,5]}]},
-    {step:"Aircraft and crew pre-flight",hazards:[{hazard:["Incorrect loading including machine weight","Aircraft malfunction","Incendiary machine interfering with aircraft systems"],rl:[3,4,7],controls:["W&B calculation including machine and incendiary load before every flight","Pre-flight inspection of aircraft and incendiary machine completed and signed","Maintenance release current and valid","Confirm machine installation does not interfere with flight controls or emergency egress"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
-    {step:"Flight operations",hazards:[{hazard:["Fuel exhaustion","Adverse weather","Smoke obscuring visibility","Mid-air collision in fire ground airspace"],rl:[3,4,7],controls:["Continual fuel monitoring; minimum reserve maintained at all times","Weather forecast obtained and monitored continuously; Pilots will not push on in adverse weather","Visual assessment of smoke density before each run — abort if visibility impaired","Maintain radio calls on area frequency; monitor for other aircraft","Pre-planned abort procedures briefed before each sortie"],resp:["Pilot"],rr:[2,3,5]}]},
-    {step:"Passengers embarking/disembarking",hazards:[{hazard:["Rotor wash/hot exhaust hazard","Passenger contact with tail rotor","Doors not secured"],rl:[3,4,7],controls:["Safety briefing including incendiary-specific hazards prior to all flights","Passengers remain in designated waiting area until signalled by pilot","All doors confirmed secured before engine start","No passenger approaches aircraft without pilot signal","Seatbelts and door latches confirmed before departure"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]}
+    {step:"Machine fit and check",hazards:[{hazard:["Ignition device fault during fitting or operation","Incorrect drop coordinates"],rl:[3,4,7],controls:["Machine fitted and checked by a qualified operator before every sortie","Machine kept powered off during fitting and removal","Drop coordinates confirmed and loaded before flight","Ground function test carried out before each use"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Drop operations",hazards:[{hazard:["Low-speed flight near the edge of the operating envelope","Reduced visibility in smoke"],rl:[4,4,8],controls:["Escape route agreed before each run","Airspeed kept above ETL where practical during drop runs","Downwind work in dense smoke avoided — reposition instead","Continuous radio contact kept with ground control"],resp:["Pilot"],rr:[3,2,5]}]},
+    {step:"Hot refuelling",hazards:[{hazard:["Fire risk during refuelling with rotors turning"],rl:[3,4,7],controls:["Hot refuel procedure followed exactly","Ignition machine powered off throughout refuelling","Extinguisher positioned and ready","Pilot remains at the controls throughout"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Doors-off configuration",hazards:[{hazard:["Loose items departing the cabin","Crew not properly restrained"],rl:[3,4,7],controls:["All loose items secured or removed before departure","Restraint system checked before doors-off flight","Crew briefed on doors-off hazards each time"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Obstacle awareness",hazards:[{hazard:["Collision with an obstacle during a low pass"],rl:[3,4,7],controls:["Reconnaissance flight before operations begin","Known obstacles marked on navigation software","Minimum height set for each run and not reduced without review"],resp:["Pilot"],rr:[2,3,5]}]},
+    {step:"Aircraft and crew pre-flight",hazards:[{hazard:["Loading calculation missing the machine and payload weight"],rl:[3,4,7],controls:["Weight and balance recalculated including machine and load","Pre-flight inspection covers the machine as well as the aircraft"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
+    {step:"In-flight operations",hazards:[{hazard:["Fuel planning error","Smoke reducing visibility","Other aircraft in the fire area"],rl:[3,4,7],controls:["Reserve fuel maintained throughout","Visual check of smoke density before each run","Radio calls made on the area frequency throughout"],resp:["Pilot"],rr:[2,3,5]}]},
+    {step:"Passenger handling",hazards:[{hazard:["Rotor wash or exhaust hazard on boarding"],rl:[3,4,7],controls:["Task-specific briefing given before boarding","Passengers wait for a clear signal before approaching"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]}
   ]
 },{
-  id:"form18",formNo:"Form 18",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form18",formNo:"SWMS-05",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"SWMS – Underslung Load",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
@@ -1798,22 +1759,21 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    {step:"General site works – noise & environment",hazards:[{hazard:["Noise impact on public and wildlife during underslung load operations"],rl:[3,2,5],controls:["Notify relevant land owners and public of operations and expected noise levels","Operations to comply with noise abatement procedures in company Operations Manual","Minimise idle time at staging area to reduce noise impact"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
-    {step:"Safety/risk analysis briefing",hazards:[{hazard:["All personnel not briefed on underslung load hazards and risks"],rl:[3,2,5],controls:["Safety/risk briefing conducted prior to all operations","All personnel to sign SWMS before works commence","Emergency Response Plan briefed to all personnel","Signal conventions between pilot and ground crew confirmed and demonstrated"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
-    {step:"Load composition & rigging details",hazards:[{hazard:["Unknown load weight causing W&B exceedance","Incorrect rigging causing load detachment in flight","Hazardous contents creating additional risk"],rl:[3,3,6],controls:["Written details of load composition, weight and dimensions provided to pilot before operations","Pilot to verify load weight against W&B calculation before every lift","All rigging checked by certified rigger — SWL confirmed on all lifting gear","Load clearly marked with weight and special handling requirements","Pilot to conduct slow pull test before committing to full lift","Jettison (load release) system to be tested before each operation"],resp:["Pilot","Ground Crew"],rr:[2,2,4]}]},
-    {step:"Ensure no new worksite hazards",hazards:[{hazard:["New hazards at worksite not identified in original SWMS"],rl:[3,2,5],controls:["Pilot to conduct aerial inspection of site prior to operations commencing","Any new hazards to be added to SWMS before works commence","All ground personnel to report new hazards to pilot before operations begin","Operations to cease if new hazard cannot be controlled"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
-    {step:"Weather",hazards:[{hazard:["Weather not suitable for underslung load operations (wind, visibility)"],rl:[3,2,5],controls:["Wind speed and direction assessed before and during operations — exceed operational limit = suspend","Weather forecast obtained from NAIPS prior to operations","Pilots will not commence or continue operations outside brief limits","Visibility minimum for underslung load operations agreed and briefed"],resp:["Pilot"],rr:[2,1,3]}]},
-    {step:"Site preparation & staging area",hazards:[{hazard:["Unauthorised personnel in load path or landing area","Non-secured objects becoming airborne","Insufficient load delivery area"],rl:[4,4,8],controls:["Exclusion zone established around load pickup and delivery points — all non-essential personnel to withdraw","Ground crew to confirm exclusion zone clear before every lift via radio","Delivery area inspected and cleared before operations","Fixed hazards (power lines, structures) identified and marked on navigation software","All personnel wearing hi-vis and hard hat in load working area"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Helicopter and crew pre-flight",hazards:[{hazard:["Incorrect loading including underslung load weight","Sling gear defect","Aircraft malfunction"],rl:[3,4,7],controls:["W&B to include estimated max load plus fuel and crew — total must be within MTOW","Pre-flight inspection including sling gear, cargo hook and load release","Maintenance release current and valid","Cargo hook to be tested (release function) prior to operations"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
-    {step:"Flight operations",hazards:[{hazard:["Fuel exhaustion","Load oscillation/pendulum swing","Emergency landing with load attached"],rl:[3,4,7],controls:["Monitor fuel burn; adequate reserve maintained throughout operations","Maintain appropriate airspeed to avoid load oscillation — never try to outrun a pendulum swing","In emergency: jettison load into safest available area before committing to landing","Confirm load jettison zone before each lift; brief ground crew on jettison signal"],resp:["Pilot"],rr:[2,3,5]}]},
-    {step:"Wire inspection during underslung load ops",hazards:[{hazard:["Wire strike with sling or load during low-level underslung operations"],rl:[3,5,8],controls:["Conduct thorough wire reconnaissance of entire load path before operations","Mark all wires on navigation software and brief ground crew","Maintain minimum clearance of 60 m laterally from wires during transit with load","Approach delivery points at 30-degree angle, confirming wire clearance before descent","If wire strike suspected: jettison load immediately and climb","Observer to call wire clearances continuously during all load movements"],resp:["Pilot"],rr:[2,5,7]}]},
-    {step:"Arrival/Departure of helicopter – staging area",hazards:[{hazard:["Landing/departure with underslung gear — hook snag or sling contact","Non-essential personnel in area"],rl:[4,4,8],controls:["Sling gear to be stowed/secured before landing unless operationally required","Designated personnel only in staging area during aircraft operations","Ground crew to confirm area clear before any movement with load attached","Slow approach to any staging area to allow time for hazard assessment"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Load hauling",hazards:[{hazard:["Load contacting terrain or structures during transit","Load detachment in flight","Exceeding structural limits of sling gear"],rl:[4,4,8],controls:["Maintain continuous visual contact with load during all hauling operations","If visual contact lost: stop transit, hover, regain visual before continuing","Never exceed rated SWL of any component in sling system","Confirm load security at low hover before each transit","Ground spotter to maintain continuous radio call on load clearance from obstacles"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Delivery of load to site",hazards:[{hazard:["Personnel in load delivery zone","Uneven or unstable receiving surface","Load pendulum on set-down"],rl:[4,4,8],controls:["Ground crew to confirm delivery zone completely clear before any descent","Receiving surface assessed for stability before set-down","Reduce load swing before attempting set-down — if swing uncontrollable abort and re-approach","Set load down slowly and confirm stable before releasing from hook","Ground crew to stand clear until load confirmed stable and pilot has released hook"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]}
+    {step:"Neighbour and noise consideration",hazards:[{hazard:["Noise disturbance to nearby residents or livestock"],rl:[3,2,5],controls:["Nearby landholders notified ahead of operations","Idle time at the staging area kept to a minimum"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
+    {step:"Pre-task briefing",hazards:[{hazard:["Crew unclear on load-handling hazards"],rl:[3,2,5],controls:["Briefing covers rigging, signals and emergency jettison before work starts","All crew sign on to the SWMS before the first lift"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
+    {step:"Load and rigging check",hazards:[{hazard:["Load weight not confirmed before lifting","Rigging not rated for the load"],rl:[3,3,6],controls:["Load weight and dimensions confirmed with the client beforehand","Rigging checked and rated gear used for every lift","A light test lift is done before committing to a full lift","Jettison system tested before operations begin"],resp:["Pilot","Ground Crew"],rr:[2,2,4]}]},
+    {step:"New hazard check",hazards:[{hazard:["Hazard present at site not covered in the original plan"],rl:[3,2,5],controls:["Aerial check of the site made before starting","New hazards added to the plan before work continues"],resp:["Pilot","Ground Crew"],rr:[2,1,3]}]},
+    {step:"Weather",hazards:[{hazard:["Wind or visibility outside safe limits for load work"],rl:[3,2,5],controls:["Wind checked before and during operations against the briefed limit","Operations suspended if conditions move outside limits"],resp:["Pilot"],rr:[2,1,3]}]},
+    {step:"Staging and delivery area set-up",hazards:[{hazard:["Personnel in the load path","Unsecured items near the pick-up or drop zone"],rl:[4,4,8],controls:["Exclusion zone set around pick-up and delivery points","Zone confirmed clear by radio before every lift","Hi-vis and head protection worn in the working area"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
+    {step:"Aircraft and crew pre-flight",hazards:[{hazard:["Sling gear defect","Loading calculation excludes the load weight"],rl:[3,4,7],controls:["Weight and balance includes the maximum anticipated load","Cargo hook and release tested before operations begin"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
+    {step:"In-flight with load attached",hazards:[{hazard:["Load swinging out of control","Need to jettison in an emergency"],rl:[3,4,7],controls:["Airspeed kept appropriate to avoid load oscillation","Jettison area confirmed before each lift"],resp:["Pilot"],rr:[2,3,5]}]},
+    {step:"Wire awareness with a load attached",hazards:[{hazard:["Contact between the load or sling and a powerline"],rl:[3,5,8],controls:["Full route reconnaissance completed before operations","Wires marked on navigation software and briefed to ground crew","Minimum lateral clearance maintained throughout transit"],resp:["Pilot"],rr:[2,5,7]}]},
+    {step:"Transit with the load",hazards:[{hazard:["Load contacting terrain or a structure in transit"],rl:[4,4,8],controls:["Continuous visual contact kept with the load","If visual contact is lost, stop and regain it before continuing","Rated limits of the sling system never exceeded"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
+    {step:"Set-down at the delivery point",hazards:[{hazard:["Personnel in the delivery zone","Unstable ground at set-down"],rl:[4,4,8],controls:["Delivery zone confirmed clear before descent","Ground stability assessed before releasing the load","Ground crew stay clear until the load is confirmed stable"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]}
   ]
 },{
-  id:"form19",formNo:"Form 19",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form19",formNo:"SWMS-06",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"SWMS – Fire Fighting",category:"safety",
   header:[
     {id:"pilotName",label:"Pilot Name",type:"crew",required:true},
@@ -1826,36 +1786,36 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    {step:"Weather",hazards:[{hazard:["Weather not suitable for fire fighting operations (MIN DAY VFR)"],rl:[3,2,5],controls:["Pilot to get updated weather from NAIPS prior to commencing task","Visual weather assessment including assessment of smoke movement and density","Delay task if weather not suitable","Pilots will not push on in adverse weather — safety always prevails"],resp:["Pilot"],rr:[2,1,3]}]},
-    {step:"Departure point",hazards:[{hazard:["Unauthorised vehicles and personnel entering HLS","Uncontrolled passengers","Aircraft positioning hazards (tail rotor)"],rl:[4,4,8],controls:["Designated vehicle parking area established; no vehicle near aircraft without pilot approval","Only company staff or supervised personnel on HLS","Passenger to wait in designated area until signalled by pilot","Aircraft parked with tail away from personnel wherever possible","No person to move further aft than baggage compartment while helicopter is running","Safety briefing conducted before boarding"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
-    {step:"Refuelling of aircraft",hazards:[{hazard:["Fire/explosion","Fuel contamination","Fuel spill"],rl:[3,4,7],controls:["Only ground crew and pilots to undertake refuelling","All refuelling in accordance with Operations Manual","Fuel drain inspection conducted to confirm fuel quality","Spill kits and fire extinguishers available at all refuelling sites","Refueller to carry rag to capture drips; no smoking within 15 m"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Helicopter and crew pre-flight",hazards:[{hazard:["Incorrect aircraft loading","Aircraft malfunction","Fire-fighting equipment malfunction (bucket, snorkel, tank)"],rl:[3,4,7],controls:["Gross weight not to exceed aircraft limitations; W&B completed in accordance with Flight Manual","Pre-flight inspection completed and maintenance release signed","Pre-use inspection of all fire-fighting equipment before use","Maintenance by approved personnel in accordance with schedule"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
-    {step:"Flight operations",hazards:[{hazard:["Fuel exhaustion","Collision on ground","Adverse weather","Mid-air collision in congested fire ground airspace"],rl:[3,4,7],controls:["Continual fuel monitoring and recording on DOR; land if unsure","Weather forecast obtained and monitored continuously; Pilots will not push on in adverse weather","Maintain situational awareness of all other aircraft on fire ground","Monitor and comply with Air Attack Supervisor (AAS) instructions at all times","All air operations on fire ground coordinated through AAS"],resp:["Pilot"],rr:[2,3,5]}]},
-    {step:"Passengers embarking/disembarking",hazards:[{hazard:["Rotor wash/hot exhaust hazard","Passenger contact with tail rotor","Doors not secured"],rl:[3,4,7],controls:["Safety briefing prior to boarding including fire-ground specific hazards","Passengers wait in designated area until signalled by pilot","All doors confirmed secured before departure","No passenger approaches aircraft without pilot signal","Seatbelts and harnesses confirmed secure before departure"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
-    {step:"Fire fighting – visibility, other aircraft & water operations",hazards:[{hazard:["Reduced visibility in smoke (L5\xd7C5=RL10)","Other aircraft on fire ground","Water pick-up dip — collision or capsize","Water drop over structures or personnel"],rl:[5,5,10],controls:["Never enter smoke where visibility drops below 400 m — abort and reposition upwind","Monitor fire ground frequency continuously; all aircraft to announce position on approach","Water pick-up dips: survey landing zone before each dip for obstacles, depth markers, vessels","Never dip in water body below minimum stated depth for aircraft type","Water drops only on confirmed clear coordinates — AAS to confirm target before every drop","Maintain minimum 500 ft AGL when transiting smoke unless approved by AAS","Mandatory water and rest breaks every 90 minutes in high-temperature operations"],resp:["Pilot"],rr:[3,3,6]}]},
-    {step:"Mountain flying",hazards:[{hazard:["Aircraft collision with terrain/ridgeline (L5\xd7C5=RL10)","Unsuitable landing area in mountains","Changing weather and low cloud","Turbulence and wind shear near ridges","Loose articles/equipment in cabin"],rl:[5,5,10],controls:["Never commit to crossing a ridge unless clearance is certain — always be able to turn back","Assess landing areas from altitude before committing to descent","Mountain weather can change rapidly — plan escape route before every mountain sector","Maintain published minimum safe altitude at all times","All equipment secured and confirmed before departure","Brief crew on mountain flying protocols including abort criteria","Turbulence: reduce to turbulence penetration speed; avoid steep banks at low level","Collision with powerlines: confirm line clearance before any descent in mountain valleys"],resp:["Pilot"],rr:[3,3,6]}]},
-    {step:"Hover exit & entry",hazards:[{hazard:["Crew contact with rotor disc during hover exit or entry","Landing area insufficient for hover exit/entry","Crew member fall during exit/entry"],rl:[4,4,8],controls:["Hover exit/entry only in approved locations assessed to be suitable","Brief crew member on exact procedure before commencing — confirm verbal understanding","Crew member to check rotor clearance before any movement outside aircraft","All crew members to wear appropriate PPE during hover exit/entry operations","Pilot to hold stable hover with no drift throughout crew movement","Ground spotter to monitor crew member and advise pilot continuously","Abort hover exit/entry immediately if aircraft becomes unstable"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]}
+    {step:"Weather",hazards:[{hazard:["Conditions unsuitable for fireground flying"],rl:[3,2,5],controls:["Forecast obtained before tasking","Smoke movement and density assessed visually","Task deferred if conditions are unsafe"],resp:["Pilot"],rr:[2,1,3]}]},
+    {step:"Staging area",hazards:[{hazard:["Uncontrolled access to the landing point","Tail rotor proximity hazard"],rl:[4,4,8],controls:["Parking kept well clear of the aircraft","Aircraft positioned tail away from foot traffic where possible","Safety briefing given before boarding"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]},
+    {step:"Refuelling",hazards:[{hazard:["Fire risk","Contamination","Spillage"],rl:[3,4,7],controls:["Refuelling carried out by trained personnel only","Drain check completed before uplift","Spill kit and extinguisher available on site"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Aircraft and crew pre-flight",hazards:[{hazard:["Loading or equipment issue affecting the sortie"],rl:[3,4,7],controls:["Weight and balance checked before every load","Firefighting equipment checked serviceable before use","Pre-flight inspection completed and signed"],resp:["Pilot","Approved Maintenance Provider"],rr:[2,3,5]}]},
+    {step:"In-flight operations",hazards:[{hazard:["Fuel planning error","Multiple aircraft working the same fireground"],rl:[3,4,7],controls:["Fuel burn tracked and recorded continuously","All aircraft coordinate through the air attack supervisor","Position calls made on the fireground frequency"],resp:["Pilot"],rr:[2,3,5]}]},
+    {step:"Passenger handling",hazards:[{hazard:["Rotor wash and exhaust hazards near a running aircraft"],rl:[3,4,7],controls:["Briefing given before boarding, including fireground-specific hazards","Passengers wait for a clear signal before approaching"],resp:["Pilot","Ground Crew"],rr:[2,3,5]}]},
+    {step:"Working in smoke and near water sources",hazards:[{hazard:["Reduced visibility in smoke","Other aircraft nearby","Hazards at a water pick-up point","Drop accuracy near structures or people"],rl:[5,5,10],controls:["Smoke areas below a safe visibility threshold are avoided — reposition upwind instead","Position calls made continuously on the fireground frequency","Water pick-up points checked for obstacles and depth before use","Drop targets confirmed with the air attack supervisor before release","Regular rest breaks scheduled during sustained hot-weather operations"],resp:["Pilot"],rr:[3,3,6]}]},
+    {step:"Operating near high terrain",hazards:[{hazard:["Proximity to ridgelines and rising terrain","Rapidly changing mountain weather","Turbulence near terrain features"],rl:[5,5,10],controls:["Ridge crossings only attempted with a confirmed safe margin and an escape option","Landing areas assessed from altitude before committing to a descent","Published minimum safe altitudes maintained at all times","Turbulence penetration speed used and steep banking avoided at low level"],resp:["Pilot"],rr:[3,3,6]}]},
+    {step:"Crew transfer by hover",hazards:[{hazard:["Crew contact with the rotor disc during a hover transfer","Unstable hover platform"],rl:[4,4,8],controls:["Hover transfers only conducted at assessed, approved locations","Procedure briefed and confirmed with the crew member beforehand","Stable hover maintained throughout by the pilot","Ground spotter monitors the transfer and advises the pilot continuously"],resp:["Pilot","Ground Crew"],rr:[3,2,5]}]}
   ]
 },{
-  id:"form-dor",formNo:"DOR",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form-dor",formNo:"DOR",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"Daily Operations Record",category:"flight",type:"dor"
 },{
-  id:"form-psbr",formNo:"PSBR",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form-psbr",formNo:"PSBR",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"Passenger Safety Briefing Record",category:"flight",type:"psbr"
 },{
-  id:"form-hir",formNo:"HIR",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form-hir",formNo:"HIR",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"Hazard / Incident Report",category:"safety",type:"hir"
 },{
-  id:"form-mdr",formNo:"MDR",issue:"Issue 1.0",issueDate:"June 2022",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
+  id:"form-mdr",formNo:"MDR",issue:"Issue 1.0",issueDate:"March 2025",
+  company:"SOUTHERN SKY ROTOR SERVICES PTY LTD",
   title:"Maintenance Defect / Unserviceability Record",category:"maint",type:"mdr"
 },{
-  id:"form22", formNo:"Form 22", issue:"Issue 1.0", issueDate:"January 2024",
-  company:"OUTBACK HELICOPTER AIRWORK NT PTY LTD",
-  title:"SWMS – Aerial Spraying",
+  id: "form22", formNo: "SWMS-07", issue: "Issue 1.0", issueDate: "March 2025",
+  company: "SOUTHERN SKY ROTOR SERVICES PTY LTD",
+  title: "SWMS – Aerial Spraying",
   header:[
     { id:"pilotName",   label:"Pilot – Task Specialist Name", type:"crew",    required:true },
     { id:"trainerName", label:"Trainer Name",                  type:"crewOpt" },
@@ -1867,172 +1827,159 @@ const FORM_DEFS = [{
   ],
   ackText:"Reviewed & understood — controls in place",
   sections:[
-    { step:"Block Checklist before start",
-      hazards:[{ hazard:["Accommodation, landing site details, windsock/approach/departure/reject, Air Traffic Services, Navaids (VOR/NDB/ILS/DME/GPS), services (crash/fire/rescue/hangar), fuel supplier, fuel storage/delivery method, fuel filtration/quality control, flight following primary comm. method, alternate method, planned communication time interval"],
-        rl:[3,2,5], controls:["Contract review by Chief Pilot – Client"],
+    { step:"Site briefing pack",
+      hazards:[{ hazard:["Missing or out of date site information — access, nearest services, fuel arrangements, communications plan"],
+        rl:[3,2,5], controls:["Site pack reviewed and signed off by the chief pilot before the contract begins"],
         resp:["Pilot","Ground Crew","Project Manager"], rr:[2,2,4] }]
     },
-    { step:"Geography and Hazards",
-      hazards:[{ hazard:["Powerlines, towers/masts, known bird activity, known aircraft, urban areas, farm houses, airstrips, blasting areas, restricted/danger areas, politically sensitive areas"],
-        rl:[3,2,5], controls:["Contract review by Chief Pilot – Client"],
+    { step:"Local hazard mapping",
+      hazards:[{ hazard:["Powerlines, masts, known bird activity, nearby airstrips or sensitive areas not identified in advance"],
+        rl:[3,2,5], controls:["Hazard map reviewed with the client before work begins"],
         resp:["Pilot","Ground Crew","Project Manager"], rr:[2,2,4] }]
     },
     { step:"Weather",
-      hazards:[{ hazard:["Prevailing wind direction, avg. wind speed (knots), mean min/max temp (°C), remarks"],
+      hazards:[{ hazard:["Wind, temperature or visibility unsuitable for spraying"],
         rl:[3,2,5],
         controls:[
-          "Weather forecast obtained prior to flight in accordance with CASA regulations",
-          "Pilots to show due caution with poor weather conditions",
-          "Pilots maintain the ability to access weather updates in flight",
-          "Pilots will not 'push on' in adverse weather — safety always prevails over pressure to complete a task in unsafe conditions"
+          "Forecast obtained before flight",
+          "Conditions reassessed visually on site",
+          "Spraying deferred if conditions risk drift or are otherwise unsafe",
+          "Task not pushed on if conditions deteriorate mid-job"
         ],
         resp:["Pilot"], rr:[2,2,4] }]
     },
-    { step:"Wire Strike & Other Potential Hazards",
+    { step:"Wire strike and other en-route hazards",
       hazards:[
-        { hazard:["Unmarked towers / powerlines not shown on available maps"],
+        { hazard:["Powerlines or structures not marked on available maps"],
           rl:[3,2,5],
           controls:[
-            "All available charts showing the location of lines are to be consulted and available to operational staff on site",
-            "An aerial reconnaissance to locate lines within the day's work area is to be completed prior to commencing operations",
-            "The survey is to be flown at a height above the highest known line in the operational area, also noting lines in the turning area outside of the operational area"
+            "Available charts checked and carried by ground staff",
+            "A reconnaissance pass made over the work area before spraying begins",
+            "Reconnaissance flown above the highest known obstacle in the area"
           ],
           resp:[], rr:[2,2,4] },
-        { hazard:["Known aircraft — unscheduled flights, local properties with own aircraft at low level"],
+        { hazard:["Other low-level aircraft in the area"],
           rl:[3,4,7],
           controls:[
-            "Local aircraft frequencies are to be monitored by the pilot and appropriate location calls made",
-            "Pilot to be aware of unscheduled flights into local airports",
-            "Local properties may have own aircraft involved in low level flights — maintain vigilance at all times"
+            "Local frequency monitored and calls made as appropriate",
+            "Awareness kept for unscheduled traffic near nearby airstrips"
           ],
           resp:[], rr:[2,3,5] },
-        { hazard:["Elevation — maintaining minimum separation distances from built up areas and stock"],
+        { hazard:["Proximity to built-up areas or stock during low passes"],
           rl:[2,2,4],
           controls:[
-            "Due care is to be taken by the pilot while maintaining minimum separation distances from built up areas and in preventing injury or alarm to stock",
-            "Local authorities are to be made aware of operations prior to commencement"
+            "Safe separation kept from buildings and stock at all times",
+            "Neighbours notified ahead of operations where relevant"
           ],
           resp:[], rr:[2,1,3] }
       ]
     },
-    { step:"Helicopter and Crew Pre-Flight",
+    { step:"Aircraft and crew pre-flight",
       hazards:[
-        { hazard:["Weight and Balance — correct aircraft loading"],
+        { hazard:["Aircraft loaded outside its approved weight and balance"],
           rl:[3,4,7],
-          lead:"Pilots are responsible to:",
+          lead:"Before every load the pilot confirms:",
           controls:[
-            "Ensure the gross weight of the aircraft does not exceed the aircraft limitations and is such that flight performance in accordance with the standards specified by CASA for the type of operation to be undertaken is possible under the prevailing conditions",
-            "Ensure any directions of CASA with respect to the loading of the aircraft have been complied with",
-            "Aircraft shall at all times be loaded in accordance with the weight and balance limitations specified in its approved FM and the loading system. Zero Fuel Weight, Ramp Weight, Take-off Weight, Landing Weight and any performance limited weights must be considered as appropriate"
+            "Gross weight and CG remain within flight manual limits for the load carried",
+            "Chemical load weight is confirmed before each fill",
+            "Fuel load adjusted so the aircraft stays within limits for the sortie"
           ],
           resp:["Pilot"], rr:[2,3,5] },
-        { hazard:["Fuel storage / delivery method (tanker, buried tanks, bladder, drums)"],
+        { hazard:["Fuel supply arrangements not confirmed for a remote site"],
           rl:[2,4,6],
           controls:[
-            "Pre-Flight inspection conducted prior to flight and maintenance release signed",
-            "Maintenance conducted by approved maintenance personnel in accordance with aircraft maintenance schedule",
-            "ECTM program in use"
+            "Pre-flight inspection completed and signed before first flight",
+            "Maintenance carried out only by an approved provider"
           ],
           resp:["Pilot","Approved Maintenance Provider"], rr:[2,2,4] },
-        { hazard:["Fuel filtration / quality control"],
+        { hazard:["Spray system not checked before use"],
           rl:[2,4,6],
           controls:[
-            "Pre-use inspection of equipment conducted prior to work starting",
-            "Only serviceable equipment to be used",
-            "A register of equipment is maintained with a service inspection history"
+            "Equipment checked before work starts each day",
+            "Only serviceable equipment used",
+            "A simple inspection log is kept for spray equipment"
           ],
           resp:["Pilot","Ground Crew","Approved Safety Inspectors"], rr:[2,2,4] },
-        { hazard:["Flight following — take-off and landing direction, HLS size"],
+        { hazard:["Take-off and landing direction not agreed with ground crew"],
           rl:[2,4,6],
           controls:[
-            "The aircraft take-off and landing direction shall be discussed with the ground crew at the pre-start meeting",
-            "Minimum HLS size is 2 × D"
+            "Direction discussed with ground crew before the first load",
+            "Landing area kept clear and appropriately sized"
           ],
           resp:["Pilot","Ground Crew"], rr:[2,2,4] }
       ]
     },
-    { step:"Flight Operations",
+    { step:"In-flight operations",
       hazards:[
-        { hazard:["Fuel monitoring — burn rate variance from gauge reading"],
+        { hazard:["Fuel burn tracking error over a long spray day"],
           rl:[3,4,7],
           controls:[
-            "Pilots are to continually monitor and assess fuel burn for all flight operations",
-            "Pilots will cross check fuel consumption using flight time and known consumption vs fuel gauge — in the event of a substantial variance, work with the worst scenario",
-            "Pilots will record and calculate actual fuel burn for every flight and record on the DOR as per CASA regulations and Company Operating Procedures. Any variations will be reported to the Chief Pilot",
-            "Fuel monitoring and calculations are included in all company flight reviews",
-            "Land if unsure — fuel can always be delivered"
+            "Fuel burn tracked continuously against plan",
+            "Gauge readings cross-checked against known consumption",
+            "Land early if any doubt about remaining fuel"
           ],
           resp:["Pilot"], rr:[2,3,5] },
-        { hazard:["Reduced visibility — brownout / whiteout (dust, fog, cloud, drizzle, smoke)"],
+        { hazard:["Reduced visibility from dust or haze during low passes"],
           rl:[3,4,7],
           controls:[
-            "Pilots will fly with due caution in areas prone to brownouts or whiteouts",
-            "Where available, pilots will converse with ground crew as to the conditions at a proposed landing site",
-            "An alternate site will be used if there is any doubt about safety",
-            "Hand held radios or mobile phones can be used to provide air-to-ground communications",
-            "Where dust is of concern, water trucks may be utilised to wet down the landing site",
-            "Minimum HLS size is 2 × D"
+            "Extra caution used in areas prone to reduced visibility",
+            "An alternate approach used if there is any doubt about safety",
+            "Radios or phones used to confirm ground conditions where practical"
           ],
           resp:["Pilot","Ground Crew"], rr:[2,3,5] },
-        { hazard:["Loose items in cabin — tail rotor strike risk (cameras, phones, tablets — doors-off operations)"],
+        { hazard:["Loose cabin items during doors-off configuration"],
           rl:[3,4,7],
           controls:[
-            "Safety briefing to include the instruction that no equipment (cameras, phones, tablets etc.) is to be used during doors-off operations",
-            "All items to be stowed in cargo bays or left at departure / return point",
-            "Windows to remain closed whenever practical"
+            "Loose items stowed or removed before doors-off work",
+            "Windows kept closed where practical"
           ],
           resp:["Pilot","Ground Crew","Site Personnel"], rr:[2,3,5] },
-        { hazard:["Emergency landings — remote area operations"],
+        { hazard:["Precautionary landing away from base"],
           rl:[3,5,8],
           controls:[
-            "Before commencing works, all persons involved will receive a safety briefing from the pilot (on the HLS or in the aircraft)",
-            "Satellite phones to be carried for remote area operations",
-            "All personnel to have general emergency training"
+            "Crew briefed on emergency procedure before departure",
+            "Satellite communicator carried for remote sectors"
           ],
           resp:["Pilot","Ground Crew","Site Personnel"], rr:[2,4,6] },
-        { hazard:["Adverse weather"],
+        { hazard:["Deteriorating weather mid-task"],
           rl:[3,3,6],
           controls:[
-            "Weather forecast obtained prior to flight in accordance with CASA regulations",
-            "Pilots to show due caution with poor weather conditions",
-            "Pilots maintain the ability to access weather updates in flight",
-            "Pilots will not 'push on' in adverse weather — safety always prevails over pressure to complete a task in unsafe conditions"
+            "Conditions monitored throughout the task",
+            "Task is not pushed on in unsafe conditions"
           ],
           resp:["Pilot"], rr:[2,2,4] },
-        { hazard:["No Fly / Restricted Zones"],
+        { hazard:["Airspace restrictions along the spray route"],
           rl:[2,2,4],
           controls:[
-            "Pilots will check any airspace restrictions along the prescribed route prior to flight",
-            "Pilots can access airspace restrictions and changes/updates via Oz Runways en-route"
+            "Restrictions checked before flight",
+            "In-flight updates checked via the operator's navigation app"
           ],
           resp:["Pilot"], rr:[2,1,3] },
-        { hazard:["Airprox / Loss of Separation / Mid Air Collision"],
+        { hazard:["Conflicting traffic in the operating area"],
           rl:[3,5,8],
           controls:[
-            "Pilots will maintain situational awareness at all times",
-            "Pilots will monitor local area radio frequencies and converse with any traffic that may cause a conflict during flight operations",
-            "Ground crew will alert air crew via radio/phone or text if any aircraft are observed operating in the vicinity"
+            "Situational awareness maintained at all times",
+            "Position calls made on area frequency as needed"
           ],
           resp:["Pilot","Ground Crew"], rr:[2,5,7] }
       ]
     },
-    { step:"Spray Gear Daily Inspection — R44 & JetRanger",
+    { step:"Spray gear daily inspection",
       hazards:[{
-        hazard:["Spray equipment defect or failure causing chemical leak, system malfunction, or flight control interference"],
+        hazard:["Spray system defect causing a chemical leak or control interference"],
         rl:[3,4,7],
-        lead:"Complete ALL items before each day's spray operations:",
+        lead:"Completed before each day's spraying:",
         controls:[
-          "1. Test Jettison/dump door before flight. Inspect dump door/seal for leaking before spraying. Remove debris from seal surface. Replace gasket if torn or cracked.",
-          "2. Verify hose clamp tightness.",
-          "3. Verify installation hardware is secure for cockpit cyclic control.",
-          "4. Boom camlocks — Check for damage or leaks at this interface.",
-          "5. Pump — Check that installation hardware is secure.",
-          "6. Tank attach hardware — Check for damage, loose hardware, evidence of unusual wear or condition. Replace or secure hardware as required.",
-          "7. Pump motor mount — check that clamps are secure.",
-          "8. Wiring harness — check for chaffing, or loose bundle.",
-          "9. Check engine oil level. Fill with SAE 10W-30 oil.",
-          "10. Flush tank, pump and booms after spraying chemicals each day. Rinse off external surfaces of entire system.",
-          "11. Check the Cable Clamp and Cable Tie supporting the LH and RH pressure lines at the Fwd RH boom support assembly."
+          "1. Dump/jettison function tested and seal checked for leaks",
+          "2. Hose clamps checked for tightness",
+          "3. Cockpit control hardware checked secure",
+          "4. Boom fittings checked for damage or leaks",
+          "5. Pump mounting hardware checked secure",
+          "6. Tank attachment hardware checked for wear or damage",
+          "7. Wiring harness checked for chafing or loose bundles",
+          "8. Engine oil level checked and topped up as needed",
+          "9. Tank, pump and booms flushed and rinsed at the end of each spray day",
+          "10. Pressure line clamps and supports checked at the boom mounts"
         ],
         resp:["Pilot"], rr:[2,3,5]
       }]
@@ -2395,11 +2342,11 @@ const App = {
       if (this.S.configured) await DB.put('kv', this.S, 'settings');
     }
     this.syncFleetFromServer(); // fire-and-forget: picks up any admin fleet/W&B changes since this device last opened, offline-safe
-    window.addEventListener('online',  () => { this.updatePill(); this.trySync(); this.syncFleetFromServer(); });
+    window.addEventListener('online',  () => { this.updatePill(); this.trySync(); this.syncFleetFromServer(); if (typeof jAutoSync === 'function') jAutoSync(); });
     window.addEventListener('offline', () => this.updatePill());
     this.setChip(this.fleetChip());
     if (!this.S.configured) this.show('scr-setup');
-    else { this.goHome(); this.trySync(); }
+    else { this.goHome(); this.trySync(); if (typeof jAutoSync === 'function') jAutoSync(); }
     jLoadPilotsAndFleet(); // Populate job module dropdowns from shared settings
     this.updatePill();
     // Auto-dismiss splash after 2.2s
@@ -2678,8 +2625,6 @@ const App = {
         if (res.ok && json.ok) {
           f.status = 'sent'; f.sentAt = Date.now();
           f.sendNote = json.spacesUrl ? 'Archived to DO Spaces' : 'Emailed to ops';
-          f.pdfBase64 = json.pdfBase64 || null;
-          f.pdfFilename = json.filename || (f.bundleName + '.pdf');
           sent++;
         } else {
           f.status = 'failed'; f.failNote = json.error || ('HTTP ' + res.status);
@@ -3889,9 +3834,7 @@ const App = {
       '<div class="kv"><div class="k">3. Passengers</div><div class="v">' + (f.noPax ? 'None carried' : f.pax.map(p => esc(p.name) + ' — signed ' + esc(p.date) + ' ' + esc(p.time)).join('<br>')) + '</div></div>' +
       (f.sms.sigs.pilotSig ? '<div class="kv"><div class="k">Pilot signature</div><div class="v"><img src="' + f.sms.sigs.pilotSig + '" style="height:54px;border:1px solid var(--line);border-radius:6px;"></div></div>' : '') +
       (f.pax.length ? '<div class="kv"><div class="k">Pax signatures</div><div class="v">' + f.pax.map(p => '<img src="' + p.sig + '" style="height:46px;border:1px solid var(--line);border-radius:6px;margin:2px 4px 2px 0;">').join('') + '</div></div>' : '') +
-      '<div class="btnrow">' +
-      (f.status === 'sent' && f.pdfBase64 ? '<button class="btn amber small" onclick="openPdfFromBase64(\'' + f.pdfBase64 + '\',' + JSON.stringify(f.pdfFilename || (f.bundleName + '.pdf')) + ')">📄 View PDF sent to office</button>' : (f.status === 'sent' ? '<span class="sub" style="align-self:center;">PDF preview unavailable</span>' : '')) +
-      '<button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
+      '<div class="btnrow"><button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
     );
   },
 
@@ -4303,7 +4246,7 @@ async function jRenderReviewStep() {
 async function jInitForm(keepJobNo=false) {
   // No real number until the pilot actually submits — showing a guessed
   // one here is exactly what caused numbers to collide across devices.
-  if (!keepJobNo) { const el=document.getElementById('f-jobno'); el.value=jFmtJobNo(0); el.dataset.jobno=0; }
+  if (!keepJobNo) { const el=document.getElementById('f-jobno'); el.value=jFmtJobNo(0); el.dataset.jobno=0; el.dataset.jobcode=''; }
   document.getElementById('f-client').value = '';
   document.getElementById('f-notes').value = '';
   document.getElementById('f-dual').checked = false;
@@ -4320,7 +4263,13 @@ async function jInitForm(keepJobNo=false) {
   jShowStep(1);
   jDraftId = null;
 }
-function jFmtJobNo(n) { return n ? ('A' + String(n).padStart(4,'0')) : 'DRAFT'; }
+function jFmtJobNo(n, code) {
+  // Historic jobs (submitted before per-pilot numbering) have no code —
+  // keep showing those exactly as before ("A0007"). New jobs get their
+  // own pilot's consecutive sequence, shown as "<CODE>-0007".
+  if (!n) return 'DRAFT';
+  return code ? (code + '-' + String(n).padStart(4,'0')) : ('A' + String(n).padStart(4,'0'));
+}
 /* Returns a job's extra pilots/aircraft as an array, whichever shape the
    record was saved in — new records have job.crew, older ones (saved before
    multi-aircraft support) only have the single pilot2Name/aircraft2Reg pair. */
@@ -4329,21 +4278,37 @@ function jJobCrew(job) {
   if (job.isDual && job.pilot2Name) return [{ pilotName: job.pilot2Name, aircraftReg: job.aircraft2Reg||'', aircraftType: job.aircraft2Type||'' }];
   return [];
 }
-async function jPeekNextJobNo() { const last=await jKvGet('jobCounter',0); return last+1; } // local-only preview, offline fallback only
-async function jConsumeJobNo() {
-  // Ask the server for the next number so it goes up the same way on every
-  // device. Only falls back to a local guess if there's no connection —
-  // that guess isn't guaranteed unique against other devices.
+function jLocalPilotCode(name) {
+  // Rough offline-only fallback (no server round-trip possible) — doesn't
+  // consult the shared pilot-code registry, so it's not guaranteed to
+  // match once this device is back online, same tradeoff already accepted
+  // by the rest of this offline fallback path.
+  const parts = String(name||'').trim().split(/\s+/).filter(Boolean);
+  return (((parts[0]||'')[0]||'X') + ((parts[parts.length-1]||'')[0]||'X')).toUpperCase();
+}
+async function jPeekNextJobNo(pilotName) {
+  // local-only preview, offline fallback only — keyed per pilot so two
+  // different pilots working offline on the same device don't collide
+  const key = 'jobCounter:' + String(pilotName||'').trim().toLowerCase();
+  const last = await jKvGet(key, 0);
+  return last + 1;
+}
+async function jConsumeJobNo(pilotName) {
+  // Ask the server for the next number so each pilot's own sequence goes
+  // up the same way no matter which device they submit from. Only falls
+  // back to a local per-pilot guess if there's no connection — that guess
+  // isn't guaranteed unique against other devices.
+  const key = 'jobCounter:' + String(pilotName||'').trim().toLowerCase();
   try {
-    const res = await apiFetch('/api/job-number/next', { method: 'POST' });
+    const res = await apiFetch('/api/job-number/next', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ pilotName }) });
     if (res.ok) {
       const data = await res.json();
-      if (data && data.number) { await jKvSet('jobCounter', data.number); return data.number; }
+      if (data && data.number) { await jKvSet(key, data.number); return { number: data.number, code: data.code || '' }; }
     }
   } catch (e) { /* offline — fall through */ }
-  const next = await jPeekNextJobNo();
-  await jKvSet('jobCounter', next);
-  return next;
+  const next = await jPeekNextJobNo(pilotName);
+  await jKvSet(key, next);
+  return { number: next, code: jLocalPilotCode(pilotName) };
 }
 
 function jStartNewJob() {
@@ -4636,13 +4601,14 @@ async function jBuildRec(status) {
   });
   const totalHours=lines.reduce((s,l)=>s+l.hours,0);
   const jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||0;
+  const jobCode=document.getElementById('f-jobno').dataset.jobcode||'';
   // No single job-level date field anymore — each line carries its own date
   // (Step 2). Use the earliest line date as the job's canonical date for
   // sorting/history/sync; fall back to today if no line has a date yet.
   const lineDates=lines.map(l=>l.date).filter(Boolean).sort();
   const jobDate=lineDates[0]||todayISO();
   return {
-    jobNo, date:jobDate,
+    jobNo, jobCode, date:jobDate,
     client:document.getElementById('f-client').value.trim(),
     pilotName, aircraftReg:aircraftObj.reg||aircraftReg, aircraftType:aircraftObj.type||'',
     hireType:jCurrentHire, isDual:isDual&&crew.length>0, crew,
@@ -4658,14 +4624,17 @@ async function jBuildRec(status) {
 async function jSubmitJob(status) {
   if(status==='submitted'&&!jValidateFinal()) return;
   jClearFieldErrors();
-  // Only burn a real, shared job number on final submit — saving as a
+  // Only burn a real, per-pilot job number on final submit — saving as a
   // draft shouldn't consume one, or the sequence races ahead of actual jobs.
   let jobNo=parseInt(document.getElementById('f-jobno').dataset.jobno)||0;
+  let jobCode=document.getElementById('f-jobno').dataset.jobcode||'';
   if (status==='submitted') {
-    jobNo=await jConsumeJobNo();
-    const jNoEl=document.getElementById('f-jobno'); jNoEl.value=jFmtJobNo(jobNo); jNoEl.dataset.jobno=jobNo;
+    const pilotName=document.getElementById('f-pilot').value||'';
+    const result=await jConsumeJobNo(pilotName);
+    jobNo=result.number; jobCode=result.code;
+    const jNoEl=document.getElementById('f-jobno'); jNoEl.value=jFmtJobNo(jobNo,jobCode); jNoEl.dataset.jobno=jobNo; jNoEl.dataset.jobcode=jobCode;
   }
-  const rec=await jBuildRec(status); rec.jobNo=jobNo;
+  const rec=await jBuildRec(status); rec.jobNo=jobNo; rec.jobCode=jobCode;
 
   // Track most recently used pilot so they appear first next time
   if (rec.pilotName) {
@@ -4681,24 +4650,11 @@ async function jSubmitJob(status) {
   if(status==='submitted'){
     const savedJob={...rec,id:savedId};
     jShowConfirm(savedJob);
-    jSyncJobToServer(savedJob).then(async result=>{
-      const ok=!!(result&&result.ok);
+    jSyncJobToServer(savedJob).then(async ok=>{
       const cvEl=document.getElementById('confirm-cloud-status');
       if(cvEl){ cvEl.textContent=ok?'☁ Sent to office':'⚠ Saved offline — will sync'; cvEl.className='cv '+(ok?'sent':'offline'); }
-      const pdfBtn=document.getElementById('confirm-pdf-btn');
-      if(pdfBtn){
-        if(ok&&result.pdfBase64){
-          pdfBtn.disabled=false; pdfBtn.textContent='📄 View PDF sent to office';
-          pdfBtn.onclick=()=>openPdfFromBase64(result.pdfBase64, result.filename||(jFmtJobNo(savedJob.jobNo)+'.pdf'));
-        } else {
-          pdfBtn.textContent=ok?'📄 PDF preview unavailable':'📄 Will preview once synced';
-        }
-      }
       await jUpdateSyncBadge();
-    }).catch(()=>{
-      const pdfBtn=document.getElementById('confirm-pdf-btn');
-      if(pdfBtn) pdfBtn.textContent='📄 Will preview once synced';
-    });
+    }).catch(()=>{});
     await jUpdateSyncBadge();
   } else {
     toast('📋 Saved as draft');
@@ -4710,7 +4666,7 @@ async function jSubmitJob(status) {
 function jShowConfirm(job) {
   document.querySelectorAll('.jsub').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.jtab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('confirm-title').textContent=jFmtJobNo(job.jobNo)+' Submitted';
+  document.getElementById('confirm-title').textContent=jFmtJobNo(job.jobNo,job.jobCode)+' Submitted';
   document.getElementById('confirm-date').textContent=jFmtDate(job.date);
   document.getElementById('confirm-card').innerHTML=`
     <div class="ckv"><span class="ck">Pilot</span><span class="cv">${esc(job.pilotName)}</span></div>
@@ -4720,61 +4676,8 @@ function jShowConfirm(job) {
     <div class="ckv"><span class="ck">Office</span><span class="cv offline" id="confirm-cloud-status">Sending…</span></div>
   `;
   document.getElementById('screen-confirm').classList.add('active');
-  const btnRow=document.querySelector('#screen-confirm .confirm-btns');
-  const oldPdfBtn=document.getElementById('confirm-pdf-btn'); if(oldPdfBtn) oldPdfBtn.remove();
-  if(btnRow){
-    const pdfBtn=document.createElement('button');
-    pdfBtn.id='confirm-pdf-btn'; pdfBtn.className='btn ghost'; pdfBtn.disabled=true;
-    pdfBtn.textContent='📄 Preparing PDF preview…';
-    btnRow.insertBefore(pdfBtn, btnRow.firstChild);
-  }
   window.scrollTo(0,0);
   setTimeout(()=>jInitForm(),200);
-}
-
-/* ── PDF preview (what the office actually receives) ───────────
-   /api/send hands the real generated PDF back as base64 (see server.js
-   comment above its res.json call) so pilots can see exactly what lands
-   in the office inbox, not just a text summary. Shown in an in-page
-   full-screen iframe rather than window.open — iOS Safari (the real
-   target device, an iPad) frequently blocks or silently no-ops
-   window.open on a blob: URL, especially when the button lives inside
-   dynamically-injected modal HTML. An iframe in the same document
-   always has access to the blob URL and Safari renders PDFs inside
-   iframes natively, so this is far more reliable. */
-function openPdfFromBase64(b64, filename) {
-  if (!b64) return toast('PDF not ready yet — try again in a moment');
-  try {
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const blob = new Blob([bytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    showPdfOverlay(url, filename || 'document.pdf');
-  } catch (e) { toast('Could not open PDF preview'); }
-}
-function showPdfOverlay(url, filename) {
-  const old = document.getElementById('pdf-overlay'); if (old) old.remove();
-  const ov = document.createElement('div');
-  ov.id = 'pdf-overlay';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;background:#0b0d18;';
-  ov.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;padding-top:max(12px,env(safe-area-inset-top));background:var(--navy);color:#fff;">' +
-      '<span style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(filename) + '</span>' +
-      '<div style="display:flex;gap:8px;flex:none;">' +
-        '<a href="' + url + '" download="' + esc(filename) + '" style="color:#fff;text-decoration:none;font-size:19px;line-height:1;padding:6px 8px;background:rgba(255,255,255,.15);border-radius:8px;">⬇</a>' +
-        '<button type="button" onclick="closePdfOverlay()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:16px;width:34px;height:34px;border-radius:8px;">✕</button>' +
-      '</div>' +
-    '</div>' +
-    '<iframe src="' + url + '" title="PDF preview" style="flex:1;border:none;width:100%;background:#fff;"></iframe>';
-  ov._blobUrl = url;
-  document.body.appendChild(ov);
-}
-function closePdfOverlay() {
-  const ov = document.getElementById('pdf-overlay');
-  if (!ov) return;
-  if (ov._blobUrl) URL.revokeObjectURL(ov._blobUrl);
-  ov.remove();
 }
 
 /* ── History ─────────────────────────────────────────────────── */
@@ -4788,11 +4691,11 @@ async function jRenderHistory() {
   const q=(document.getElementById('hist-search').value||'').trim().toLowerCase();
   let list=jobs.sort((a,b)=>b.createdAt-a.createdAt);
   if(jHistFilter!=='all') list=list.filter(j=>j.status===jHistFilter);
-  if(q) list=list.filter(j=>(j.client||'').toLowerCase().includes(q)||(j.pilotName||'').toLowerCase().includes(q)||String(j.jobNo).includes(q)||jFmtJobNo(j.jobNo).toLowerCase().includes(q));
+  if(q) list=list.filter(j=>(j.client||'').toLowerCase().includes(q)||(j.pilotName||'').toLowerCase().includes(q)||String(j.jobNo).includes(q)||jFmtJobNo(j.jobNo,j.jobCode).toLowerCase().includes(q));
   const el=document.getElementById('hist-list');
   if(!list.length){ el.innerHTML='<div class="no-results">No records found</div>'; return; }
   const groups=jGroupByDate(list);
-  el.innerHTML=groups.map(g=>`<div class="date-group-label">${g.label}</div>${g.jobs.map(j=>`<div class="hist-row" onclick="jShowDetail(${j.id})"><div class="hr-left"><div class="hr-job">${jFmtJobNo(j.jobNo)} — ${esc(j.client)}</div><div class="hr-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${esc(j.aircraftReg)}</div><div class="hr-meta" style="margin-top:3px;"><span class="badge ${j.status}">${jStatusLabel(j.status)}</span></div></div><div class="hr-right"><div class="hr-hours">${(j.totalHours||0).toFixed(1)}</div><div class="hr-hrs-label">hrs</div></div></div>`).join('')}`).join('');
+  el.innerHTML=groups.map(g=>`<div class="date-group-label">${g.label}</div>${g.jobs.map(j=>`<div class="hist-row" onclick="jShowDetail(${j.id})"><div class="hr-left"><div class="hr-job">${jFmtJobNo(j.jobNo,j.jobCode)} — ${esc(j.client)}</div><div class="hr-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${esc(j.aircraftReg)}</div><div class="hr-meta" style="margin-top:3px;"><span class="badge ${j.status}">${jStatusLabel(j.status)}</span></div></div><div class="hr-right"><div class="hr-hours">${(j.totalHours||0).toFixed(1)}</div><div class="hr-hrs-label">hrs</div></div></div>`).join('')}`).join('');
 }
 function jGroupByDate(jobs) {
   const now=new Date(), today=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
@@ -4812,7 +4715,7 @@ async function jRenderDetail(id) {
   const crew=jJobCrew(job);
   const crewHTML=crew.map((c,i)=>`<div class="kv-row"><div class="k">Pilot ${i+2}</div><div class="v">${esc(c.pilotName)||'—'}</div></div><div class="kv-row"><div class="k">Aircraft ${i+2}</div><div class="v">${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</div></div>`).join('');
   document.getElementById('detail-content').innerHTML=`
-    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo)}${crew.length?' 🚁🚁':''}</div><div class="dh-sub"><span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
+    <div class="detail-hdr"><div class="dh-jobno">${jFmtJobNo(job.jobNo,job.jobCode)}${crew.length?' 🚁🚁':''}</div><div class="dh-sub"><span class="badge ${job.status}">${jStatusLabel(job.status)}</span></div><div class="dh-client">${esc(job.client)}</div></div>
     <div class="card"><div class="kv-row"><div class="k">Pilot</div><div class="v">${esc(job.pilotName)}</div></div><div class="kv-row"><div class="k">Aircraft</div><div class="v">${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</div></div><div class="kv-row"><div class="k">Hire Type</div><div class="v">${hireMap[job.hireType]||job.hireType}${crew.length?` · ${crew.length+1} aircraft`:''}</div></div>${crewHTML}${job.notes?`<div class="kv-row"><div class="k">Notes</div><div class="v">${esc(job.notes)}</div></div>`:''}</div>
     <div class="card"><div class="card-title">Flight Hours</div>${linesHTML}<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0 0;border-top:2px solid var(--navy);margin-top:4px;"><div style="font-weight:700;color:var(--navy);font-size:14px;">Total Flight Hours</div><div style="font-size:22px;font-weight:800;color:var(--orange);">${(job.totalHours||0).toFixed(1)} hrs</div></div></div>
     ${job.signatureDataURL?`<div class="card"><div class="card-title">Pilot Signature</div><img src="${job.signatureDataURL}" style="max-width:100%;max-height:100px;border:1px solid var(--line);border-radius:8px;"></div>`:''}
@@ -4826,7 +4729,7 @@ async function jEditJob() {
   const job=await jGet(jCurrentDetailId); if(!job) return;
   await jDel(jCurrentDetailId); jCurrentDetailId=null;
   await jInitForm(true);
-  const jeEl=document.getElementById('f-jobno'); jeEl.value=jFmtJobNo(job.jobNo||0); jeEl.dataset.jobno=job.jobNo||0;
+  const jeEl=document.getElementById('f-jobno'); jeEl.value=jFmtJobNo(job.jobNo||0,job.jobCode||''); jeEl.dataset.jobno=job.jobNo||0; jeEl.dataset.jobcode=job.jobCode||'';
   document.getElementById('f-client').value=job.client||'';
   document.getElementById('f-notes').value=job.notes||'';
   await jLoadPilotsAndFleet();
@@ -4868,7 +4771,7 @@ function jBuildPrint(job) {
   const padRows=Array(pad).fill(`<tr><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;padding:14px 8px;">&nbsp;</td><td style="border:1px solid #000;">&nbsp;</td></tr>`).join('');
   const crew=jJobCrew(job);
   const crewRows=crew.map((c,i)=>`<tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT ${i+2}:</b> ${esc(c.pilotName)||'—'}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT ${i+2}:</b> ${esc(c.aircraftReg)||'—'}${c.aircraftType?' — '+esc(c.aircraftType):''}</td></tr>`).join('');
-  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${crew.length?` — ${crew.length+1} Aircraft`:''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${crewRows}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
+  document.getElementById('screen-print').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11pt;"><tr><td colspan="2" style="border:1px solid #000;padding:10px 12px;"><div style="font-weight:bold;font-size:13pt;text-transform:uppercase;">${BRAND.companyName}</div><div style="font-size:9pt;margin-top:3px;">ABN: ${BRAND.abn} | ACN: ${BRAND.acn||''}</div><div style="font-size:9pt;">${BRAND.address||''} | ${BRAND.phone||''}</div></td><td style="border:1px solid #000;padding:10px 12px;vertical-align:top;width:180px;"><div style="font-weight:bold;font-size:13pt;">Job No: ${jFmtJobNo(job.jobNo,job.jobCode)}</div></td></tr><tr><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>CLIENT / PLACE:</b> ${esc(job.client)}</td><td style="border:1px solid #000;padding:7px 12px;"><b>HIRE TYPE:</b> ${hireMap[job.hireType]||job.hireType}${crew.length?` — ${crew.length+1} Aircraft`:''}</td></tr><tr><td style="border:1px solid #000;padding:7px 12px;"><b>PILOT:</b> ${esc(job.pilotName)}</td><td colspan="2" style="border:1px solid #000;padding:7px 12px;"><b>AIRCRAFT:</b> ${esc(job.aircraftReg)}${job.aircraftType?' — '+esc(job.aircraftType):''}</td></tr>${crewRows}<tr style="background:#eee;"><th style="border:1px solid #000;padding:6px 8px;text-align:left;width:95px;">DATE</th><th style="border:1px solid #000;padding:6px 8px;text-align:left;">DESCRIPTION</th><th style="border:1px solid #000;padding:6px 8px;text-align:center;">HOURS</th></tr>${rows}${padRows}<tr><td colspan="3" style="border:1px solid #000;padding:10px 12px;"><div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-weight:bold;font-size:13pt;">TOTAL FLIGHT HOURS</span><span style="font-weight:bold;font-size:18pt;">${(job.totalHours||0).toFixed(1)}</span></div></td></tr>${job.notes?`<tr><td colspan="3" style="border:1px solid #000;padding:8px 12px;"><b>NOTES:</b> ${esc(job.notes)}</td></tr>`:''}<tr><td colspan="2" style="border:1px solid #000;padding:12px;"><b>PILOT SIGNATURE:</b><br>${job.signatureDataURL?`<img src="${job.signatureDataURL}" style="max-height:65px;max-width:200px;margin-top:6px;">`:''}</td><td style="border:1px solid #000;padding:12px;vertical-align:top;"><b>DATE:</b> ${jFmtDate(job.date)}</td></tr></table>`;
 }
 
 /* ── Sync ────────────────────────────────────────────────────── */
@@ -4878,10 +4781,10 @@ async function jRenderSync() {
   const synced=jobs.filter(j=>j.status==='synced').sort((a,b)=>(b.syncedAt||0)-(a.syncedAt||0));
   document.getElementById('jsync-pending-count').textContent=pending.length;
   document.getElementById('jsync-queue').innerHTML=pending.length
-    ?pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">${jFmtJobNo(j.jobNo)} — ${esc(j.client)}</div><div class="sq-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
+    ?pending.map(j=>`<div class="sq-item"><div class="sq-info"><div class="sq-job">${jFmtJobNo(j.jobNo,j.jobCode)} — ${esc(j.client)}</div><div class="sq-meta">${jFmtDate(j.date)} · ${esc(j.pilotName)} · ${(j.totalHours||0).toFixed(1)} hrs</div></div><span class="badge submitted">Submitted</span></div>`).join('')
     :'<div class="no-results">All synced ✓</div>';
   document.getElementById('jsync-log').innerHTML=synced.length
-    ?synced.slice(0,10).map(j=>`<div class="log-item">✅ ${jFmtJobNo(j.jobNo)} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
+    ?synced.slice(0,10).map(j=>`<div class="log-item">✅ ${jFmtJobNo(j.jobNo,j.jobCode)} — ${esc(j.client)} — ${new Date(j.syncedAt).toLocaleString('en-AU')}</div>`).join('')
     :'<div class="no-results">No sync activity yet</div>';
 }
 function jBuildServerBundle(job) {
@@ -4894,7 +4797,7 @@ function jBuildServerBundle(job) {
     isDual:!!job.isDual, crew:jJobCrew(job),
     pilot2Name:job.pilot2Name||'', aircraft2Reg:job.aircraft2Reg||'', aircraft2Type:job.aircraft2Type||'',
     lines:job.lines||[], totalHours:job.totalHours||0, notes:job.notes||'', jobNo:job.jobNo||0,
-    jobNoFormatted:jFmtJobNo(job.jobNo||0),
+    jobCode:job.jobCode||'', jobNoFormatted:jFmtJobNo(job.jobNo||0,job.jobCode||''),
     calendarJobId:job.calendarJobId||null,
   };
 }
@@ -4902,14 +4805,11 @@ async function jSyncJobToServer(job) {
   try {
     const ctrl=new AbortController(), t=setTimeout(()=>ctrl.abort(),45000);
     const res=await apiFetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(jBuildServerBundle(job)),signal:ctrl.signal});
-    clearTimeout(t); if(!res.ok) return {ok:false};
+    clearTimeout(t); if(!res.ok) return false;
     const data=await res.json();
-    if(data.ok){
-      await jSave({...job,status:'synced',syncedAt:Date.now(),oneDriveUrl:data.oneDriveUrl||null});
-      return {ok:true, pdfBase64:data.pdfBase64||null, filename:data.filename||null};
-    }
-    return {ok:false};
-  } catch{ return {ok:false}; }
+    if(data.ok){ await jSave({...job,status:'synced',syncedAt:Date.now(),oneDriveUrl:data.oneDriveUrl||null}); return true; }
+    return false;
+  } catch{ return false; }
 }
 async function jSyncNow() {
   const jobs=await jAll(), pending=jobs.filter(j=>j.status==='submitted');
@@ -4917,10 +4817,25 @@ async function jSyncNow() {
   const btn=document.getElementById('jsync-now-btn');
   if(btn){ btn.disabled=true; btn.textContent='⏳ Syncing…'; }
   let ok=0,fail=0;
-  for(const j of pending){ (await jSyncJobToServer(j)).ok?ok++:fail++; await jUpdateSyncBadge(); jRenderSync(); }
+  for(const j of pending){ (await jSyncJobToServer(j))?ok++:fail++; await jUpdateSyncBadge(); jRenderSync(); }
   if(btn){ btn.disabled=false; btn.innerHTML='☁️ Sync Now'; }
   if(ok)   toast(`✅ Synced ${ok} sheet${ok>1?'s':''} to office!`);
   if(fail) toast(`⚠ ${fail} sheet${fail>1?'s':''} failed — check internet`);
+}
+/* Silent background retry for Job Advice Sheets — mirrors the auto-retry the
+   other form type already gets on reconnect/app-open (see App's 'online'
+   listener and startup call to trySync()). Job Advice Sheets only ever
+   retried on the very next manual "Sync Now" tap; if the first attempt
+   right after submit failed (no signal in the field), the job just sat
+   queued until someone remembered to open the Sync tab. This runs the same
+   send quietly — no toasts, no button state — whenever connectivity returns
+   or the app opens, so a queued job files itself as soon as it can. */
+async function jAutoSync() {
+  if (!navigator.onLine) return;
+  const jobs = await jAll(), pending = jobs.filter(j => j.status === 'submitted');
+  if (!pending.length) return;
+  for (const j of pending) { await jSyncJobToServer(j); await jUpdateSyncBadge(); }
+  jRenderSync();
 }
 async function jUpdateSyncBadge() {
   const jobs=await jAll(), n=jobs.filter(j=>j.status==='submitted').length;
@@ -4935,7 +4850,9 @@ async function jExportCSV() {
   const jobs=await jAll(), filtered=jobs.filter(j=>j.status!=='draft');
   if(!filtered.length){ toast('No submitted records to export'); return; }
   const header='Date,Job No,Client,Pilot,Aircraft,Hire Type,Total Flight Hours';
-  const rows=filtered.sort((a,b)=>a.jobNo-b.jobNo).map(j=>[j.date,jFmtJobNo(j.jobNo),`"${(j.client||'').replace(/"/g,'""')}"`,`"${(j.pilotName||'').replace(/"/g,'""')}"`,`"${(j.aircraftReg||'').replace(/"/g,'""')}"`,j.hireType,(j.totalHours||0).toFixed(1)].join(','));
+  // Sort by date, not jobNo — now that numbers are per-pilot, jobNo no
+  // longer implies chronological order once more than one pilot is involved.
+  const rows=filtered.sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map(j=>[j.date,jFmtJobNo(j.jobNo,j.jobCode),`"${(j.client||'').replace(/"/g,'""')}"`,`"${(j.pilotName||'').replace(/"/g,'""')}"`,`"${(j.aircraftReg||'').replace(/"/g,'""')}"`,j.hireType,(j.totalHours||0).toFixed(1)].join(','));
   const csv=[header,...rows].join('\n');
   const blob=new Blob([csv],{type:'text/csv'}), url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`job-hours-${todayISO()}.csv`; a.click();

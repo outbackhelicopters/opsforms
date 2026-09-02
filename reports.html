@@ -381,7 +381,7 @@ function renderAllJobs() {
     <div class="tbl-wrap"><table>
     <thead><tr><th>#</th><th>Date</th><th>Client</th><th>Pilot</th><th>Aircraft</th><th>Type</th><th>Hrs</th><th>PDF</th></tr></thead>
     <tbody>${jobs.map(j=>`<tr>
-      <td class="small">${j.jobNo||'—'}</td>
+      <td class="small">${fmtJobNo(j)}</td>
       <td style="white-space:nowrap;">${fmtDate(j.flightDate)}</td>
       <td>${esc(j.client||'—')}</td>
       <td>${esc(j.pilotName||'—')}</td>
@@ -442,7 +442,7 @@ function exportCSV() {
   const rows = [...FILTERED]
     .sort((a,b)=>a.flightDate?.localeCompare(b.flightDate))
     .map(j=>[
-      j.jobNo||'', j.flightDate||'',
+      fmtJobNo(j), j.flightDate||'',
       q(j.client), q(j.pilotName), q(j.aircraftReg), q(j.aircraftType||''),
       q(j.hireType||'wet'), (j.totalHours||0).toFixed(1),
       q(j.pilot2Name||''), j.fuelUplift||0, q(j.notes||''),
@@ -464,6 +464,10 @@ function noData()  { set('<div class="no-data">No records match the selected fil
 function esc(s)    { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function q(s)      { return '"'+String(s||'').replace(/"/g,'""')+'"'; }
 function cap(s)    { return s?s.charAt(0).toUpperCase()+s.slice(1):''; }
+function fmtJobNo(j) {
+  if (!j || !j.jobNo) return '—';
+  return j.jobCode ? `${j.jobCode}-${String(j.jobNo).padStart(4,'0')}` : `A${String(j.jobNo).padStart(4,'0')}`;
+}
 function fmtDate(d) {
   if (!d) return '—';
   try { return new Date(d+'T00:00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }

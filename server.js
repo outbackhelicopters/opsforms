@@ -1325,7 +1325,13 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
     const trainer = bundle.sms?.values?.trainerName || '';
     const formName = bundle.formName || bundle.sms?.formId || 'Flight Operations Form';
     const formNo   = bundle.formNo   || '';
-    const subject = `Flight Paperwork — ${bundle.callsign} — ${formName} — ${dateStr}`;
+    /* Defect reports (red ! button on the SWMS, or the standalone MDR form) */
+    const isDefect = bundle.kind === 'defect' || bundle.sms?.formId === 'form-mdr';
+    const dv = bundle.sms?.values || {};
+    const defStatus = dv.grounded ? 'AIRCRAFT GROUNDED' : (dv.deferred ? 'Deferred' : 'Unserviceability');
+    const subject = isDefect
+      ? `⚠ DEFECT REPORT — ${bundle.callsign} — ${defStatus} — ${dv.systemAffected || 'Defect'} — ${dateStr}`
+      : `Flight Paperwork — ${bundle.callsign} — ${formName} — ${dateStr}`;
     const sender  = process.env.SENDER_EMAIL;
     const opsTo   = process.env.OPS_EMAIL;
 
@@ -1419,6 +1425,35 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
         }).join('')
       : `<div style="padding:12px 16px;font-size:13px;color:#aaa;font-style:italic;">No passengers carried this flight</div>`;
 
+    /* ── Defect blocks ── */
+    const nl2br = t => esc(t || '').replace(/\n/g, '<br>');
+    let defectSection = '';
+    if (isDefect) {
+      const pill = (bg, fg, bd, t) => `<span style="display:inline-block;background:${bg};color:${fg};border:1px solid ${bd};border-radius:20px;padding:3px 12px;font-size:12.5px;font-weight:700;">${t}</span>`;
+      const statusPill = dv.grounded ? pill('#FEE2E2', '#B91C1C', '#FECACA', '⛔ AIRCRAFT GROUNDED — NOT AIRWORTHY')
+        : dv.deferred ? pill('#FEF3C7', '#92400E', '#FDE68A', 'Deferred — MEL / CDL ' + esc(dv.melReference || '—'))
+        : pill('#F2F4FA', '#18224A', '#E8EBF2', 'Reported — not grounded');
+      const ctx = bundle.defectContext || {};
+      defectSection = section('⚠️', 'Defect / Unserviceability',
+        kv('Status', statusPill) +
+        kv('System affected', esc(dv.systemAffected || '—')) +
+        (dv.aircraftHours ? kv('Aircraft hours', esc(dv.aircraftHours)) : '') +
+        kv('Description', nl2br(dv.defectDescription)) +
+        (dv.actionTaken ? kv('Action taken', nl2br(dv.actionTaken)) : '') +
+        (dv.maintenanceProvider ? kv('Maintenance notified', esc(dv.maintenanceProvider) + (dv.notifiedAt ? ' — ' + esc(String(dv.notifiedAt).replace('T', ' ')) : '')) : '') +
+        (ctx.step ? kv('Raised during', esc((ctx.swmsFormNo ? ctx.swmsFormNo + ' ' : '') + (ctx.swmsForm || 'SWMS') + ' — step: ' + ctx.step)) : '') +
+        kv('Reported by', esc(pilot), true));
+    }
+    let defectsListSection = '';
+    const swmsDefects = !isDefect && Array.isArray(bundle.defects) ? bundle.defects : [];
+    if (swmsDefects.length) {
+      defectsListSection = section('⚠️', `Defects reported during this SWMS (${swmsDefects.length})`,
+        swmsDefects.map((d, i) => kv(esc(d.step || 'General'),
+          `<b>${esc(d.systemAffected || '')}</b>` + (d.grounded ? ' — <b style="color:#B91C1C;">GROUNDED</b>' : d.deferred ? ' — Deferred' + (d.melReference ? ' (' + esc(d.melReference) + ')' : '') : '') +
+          `<br><span style="color:#555;">${esc(d.desc || '')}</span><br><span style="color:#aaa;font-size:11.5px;">Sent separately as its own defect report</span>`,
+          i === swmsDefects.length - 1)).join(''));
+    }
+
     const submittedTime = new Date().toLocaleString('en-AU', { timeZone: 'Australia/Darwin', hour:'2-digit', minute:'2-digit', hour12:false });
 
     const html = `
@@ -1428,14 +1463,14 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
 
   <!-- Header -->
   <div style="${S.hdr}">
-    <span style="${S.badge}">Flight Paperwork</span>
+    <span style="${S.badge}">${isDefect ? 'Defect Report' : 'Flight Paperwork'}</span>
     <div style="${S.coName}">${BRAND.shortName}</div>
     <div style="${S.coSub}">ABN ${BRAND.abn} &nbsp;·&nbsp; ${BRAND.location}</div>
   </div>
 
   <!-- Body -->
   <div style="${S.body}">
-    <div style="${S.title}">Flight Paperwork Received</div>
+    <div style="${S.title}">${isDefect ? 'Defect Report Received' : 'Flight Paperwork Received'}</div>
     <div style="${S.sub}">Submitted ${dateStr} at ${submittedTime} ACST — PDF attached</div>
 
     ${section('✈', 'Flight Details',
@@ -1448,7 +1483,9 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
         (oneDriveUrl ? kv('OneDrive', `<a href="${oneDriveUrl}" style="color:#18224A;font-weight:600;">View filed PDF ↗</a>`, true) : kv('PDF file', esc(filename), true))
     )}
 
-    ${section('⚖️', 'Weight &amp; Balance',
+    ${defectSection}${defectsListSection}
+
+    ${isDefect ? '' : section('⚖️', 'Weight &amp; Balance',
         kv('Result',        wbPill) +
         kv('Aircraft (BEW)', (wb.emptyWeight || '—') + ' kg') +
         kv('Pilot',          (wb.kg?.pilot   || 0) + ' kg') +
@@ -1464,7 +1501,7 @@ app.post(['/send', '/api/send'], requireDevice, async (req, res) => {
 
     ${acksSection}
 
-    ${section('👤', 'Passengers &amp; Safety Briefing', paxInner)}
+    ${isDefect ? '' : section('👤', 'Passengers &amp; Safety Briefing', paxInner)}
 
     ${(() => {
       const pilotSig   = bundle.sms?.sigs?.pilotSig;
@@ -1534,7 +1571,21 @@ async function saveJobRecord(token, bundle, oneDriveUrl) {
     paxCount:     (bundle.pax || []).length,
     wbPass:       bundle.wb?.result?.pass ?? null,
     oneDriveUrl:  oneDriveUrl || '',
+    formName:     bundle.formName || '',
+    formNo:       bundle.formNo   || '',
+    kind:         (bundle.kind === 'defect' || bundle.sms?.formId === 'form-mdr') ? 'defect' : (bundle.kind || 'flight'),
+    defectsReported: Array.isArray(bundle.defects) ? bundle.defects.length : 0,
   };
+  if (record.kind === 'defect') {
+    const dv = bundle.sms?.values || {};
+    record.defect = {
+      systemAffected: dv.systemAffected || '', description: dv.defectDescription || '',
+      grounded: !!dv.grounded, deferred: !!dv.deferred, melReference: dv.melReference || '',
+      aircraftHours: dv.aircraftHours || '', actionTaken: dv.actionTaken || '',
+      maintenanceProvider: dv.maintenanceProvider || '', swmsStep: dv.swmsStep || '',
+      parentFlightId: bundle.parentFlightId || null,
+    };
+  }
 
   const ts  = new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
   const reg = (record.aircraftReg).replace(/[^A-Z0-9]/gi,'');
@@ -1695,6 +1746,38 @@ async function buildPDF(bundle) {
     kv('Date', flightDateStr);
     kv('Time', flightTimeStr);
     if (bundle.sms?.values?.trainerName) kv('Trainer', bundle.sms.values.trainerName);
+
+    /* ── Defect report (red ! on SWMS / standalone MDR) ── */
+    const para = (k, v, color) => {
+      checkY(34);
+      const y = doc.y;
+      doc.font('Helvetica-Bold').fontSize(9.5).fillColor(MUT).text(k, 50, y, { width: 128 });
+      const yk = doc.y;
+      doc.font('Helvetica').fontSize(9.5).fillColor(color || '#1C1F28')
+         .text(String(v || '—'), 185, y, { width: W - 135 });
+      doc.y = Math.max(doc.y, yk, y + 17) + 3;
+    };
+    const pdv = bundle.sms?.values || {};
+    const pIsDefect = bundle.kind === 'defect' || bundle.sms?.formId === 'form-mdr';
+    if (pIsDefect) {
+      secHead('DEFECT / UNSERVICEABILITY');
+      kv('Status', pdv.grounded ? 'AIRCRAFT GROUNDED — NOT AIRWORTHY' : pdv.deferred ? 'DEFERRED — MEL / CDL ' + (pdv.melReference || '—') : 'Reported — not grounded',
+         pdv.grounded ? '#B91C1C' : pdv.deferred ? '#92400E' : null);
+      kv('System affected', pdv.systemAffected || '—');
+      if (pdv.aircraftHours) kv('Aircraft hours', pdv.aircraftHours);
+      para('Description', pdv.defectDescription);
+      if (pdv.actionTaken) para('Action taken', pdv.actionTaken);
+      if (pdv.maintenanceProvider) kv('Maintenance notified', pdv.maintenanceProvider + (pdv.notifiedAt ? ' — ' + String(pdv.notifiedAt).replace('T', ' ') : ''));
+      const ctx = bundle.defectContext || {};
+      if (ctx.step) para('Raised during', (ctx.swmsFormNo ? ctx.swmsFormNo + ' ' : '') + (ctx.swmsForm || 'SWMS') + ' — step: ' + ctx.step);
+    }
+    if (!pIsDefect && Array.isArray(bundle.defects) && bundle.defects.length) {
+      secHead(`DEFECTS REPORTED DURING THIS SWMS (${bundle.defects.length})`);
+      bundle.defects.forEach(d => para(d.step || 'General',
+        (d.grounded ? 'GROUNDED — ' : d.deferred ? 'DEFERRED' + (d.melReference ? ' (' + d.melReference + ')' : '') + ' — ' : '') +
+        (d.systemAffected || '') + ': ' + (d.desc || '') + '  [sent separately as its own defect report]',
+        d.grounded ? '#B91C1C' : null));
+    }
 
     /* ── Job Advice: Client & hire type ── */
     if (bundle.client) {

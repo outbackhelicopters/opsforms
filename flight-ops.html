@@ -264,17 +264,37 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
 .risk-ref .rr-legend{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
 .risk-ref .rr-leg{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:4px;}
 .sec{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow);}
-.sec>.sechead{
+.sec .sechead{
   display:flex;align-items:center;gap:10px;width:100%;
   background:#fff;border:0;border-bottom:1px solid transparent;
   padding:13px 15px;font-size:15px;font-weight:700;
   color:var(--navy);cursor:pointer;text-align:left;
 }
 .sec.open>.sechead{border-bottom-color:var(--line);}
-.sec>.sechead .chev{margin-left:auto;font-size:16px;color:var(--mut);transition:transform .15s;}
-.sec.open>.sechead .chev{transform:rotate(90deg);}
+.sec .sechead .chev{margin-left:auto;font-size:16px;color:var(--mut);transition:transform .15s;}
+.sec.open .sechead .chev{transform:rotate(90deg);}
 .sec .secbody{display:none;padding:4px 15px 12px;}
 .sec.open .secbody{display:block;}
+/* ── Defect report — red ! button on every SWMS step ─────── */
+.sechd{display:flex;align-items:center;background:#fff;border-bottom:1px solid transparent;}
+.sec.open>.sechd{border-bottom-color:var(--line);}
+.sechd .sechead{flex:1;min-width:0;border-bottom:0!important;}
+.defbtn{flex:none;margin-right:12px;width:44px;height:44px;border-radius:50%;border:0;
+  background:var(--red);color:#fff;font-size:24px;font-weight:900;line-height:1;cursor:pointer;
+  box-shadow:0 2px 6px rgba(188,32,24,.35);display:flex;align-items:center;justify-content:center;
+  position:relative;-webkit-tap-highlight-color:transparent;}
+.defbtn:active{transform:scale(.93);}
+.defbtn .defn{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;border-radius:10px;
+  background:#fff;color:var(--red);border:2px solid var(--red);font-size:11px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;padding:0 3px;}
+.def-topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.def-topbar .btn{margin:0;}
+.defbtn-lg{display:inline-flex;align-items:center;gap:10px;min-height:44px;padding:4px 18px 4px 4px;
+  border-radius:999px;border:0;background:var(--red-bg);color:var(--red);font-weight:800;font-size:14px;cursor:pointer;}
+.defbtn-lg .defbtn{margin:0;width:36px;height:36px;font-size:20px;}
+.def-list{border:2px solid var(--red);background:var(--red-bg);border-radius:var(--r);padding:10px 14px;margin-bottom:10px;}
+.def-list .dl-t{font-weight:800;color:var(--red);font-size:14px;margin-bottom:4px;}
+.def-list .dl-i{font-size:13.5px;color:var(--ink);padding:4px 0;border-top:1px solid rgba(188,32,24,.15);}
 .hz{border-top:1px solid #F0F0EB;padding:11px 0;}
 .hz:first-child{border-top:0;}
 .hz .hzt{font-weight:700;font-size:14.5px;margin-bottom:5px;color:var(--ink);}
@@ -449,7 +469,7 @@ input.bad,select.bad{border-color:var(--red);background:#FFF8F7;}
   .risk-ref th,.risk-ref td:first-child{background:#101828!important;}
   .vh-prefix{background:#1A1D28;border-color:#242838;}
   .sec,.paxcard{background:var(--card);}
-  .sec>.sechead{background:var(--card);}
+  .sec .sechead,.sechd{background:var(--card);}
   .ackrow{background:#101318;}
   .ackrow.on{background:var(--green-bg);}
   .warn-banner{background:#220808;}
@@ -1349,7 +1369,7 @@ select.has-value{font-weight:700;color:var(--navy);}
 </div><!-- end maintab-safety -->
 
 <!-- modal + toast -->
-<div id="modal-bg"><div id="modal"></div></div>
+<div id="modal-bg"><div id="modal" class="modal-box"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -2183,7 +2203,7 @@ const Modal = {
 $('modal-bg').addEventListener('click', e => { if (e.target === $('modal-bg')) Modal.hide(); });
 function riskClass(v) { return v <= 3 ? 'rG' : v <= 5 ? 'rY' : v <= 7 ? 'rO' : 'rR'; }
 function pad2(n) { return String(n).padStart(2, '0'); }
-const APP_VERSION = 'v60'; // keep in step with CACHE_NAME in sw.js — one bump, both places
+const APP_VERSION = 'v62'; // keep in step with CACHE_NAME in sw.js — one bump, both places
 function todayISO() { const d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 
 /* All server calls go through here so the device token rides along.
@@ -2592,7 +2612,8 @@ const App = {
                  : '<span class="badge queued">WAITING TO SEND</span>';
           return '<div class="qitem" onclick="App.openBundle(\'' + f.id + '\')">' +
             '<div style="flex:1;"><div class="qname">' + esc(f.bundleName) + '.pdf</div>' +
-            '<div class="qmeta">' + esc(f.sms && f.sms.values.pilotName || '') + ' · ' + (f.pax ? f.pax.length : 0) + ' pax · ' + fmtDT(f.createdAt) +
+            '<div class="qmeta">' + (f.kind === 'defect' ? '<b style="color:var(--red)">⚠ DEFECT' + (f.sms.values.grounded ? ' · GROUNDED' : '') + '</b> · ' + esc(f.sms.values.systemAffected || '') + ' · ' : '') +
+            esc(f.sms && f.sms.values.pilotName || '') + (f.kind === 'defect' ? '' : ' · ' + (f.pax ? f.pax.length : 0) + ' pax') + ' · ' + fmtDT(f.createdAt) +
             (f.sentAt ? ' · sent ' + fmtDT(f.sentAt) : '') + '</div></div>' + b + '</div>';
         }).join('');
   },
@@ -2890,7 +2911,10 @@ const App = {
     let h = '<div class="swms-head"><div class="t1">' + esc(F.title) + '</div>' +
       '<div class="t2">' + esc(F.company) + ' &nbsp;·&nbsp; ' + esc(F.formNo) + ' | ' + esc(F.issue) + ' | ' + esc(F.issueDate) +
       ' &nbsp;·&nbsp; ' + esc(this.flight.callsign) + ' · ' + esc(ns.date) + ' ' + ns.time + '</div></div>' +
-      '<button class="btn ghost small" style="margin-bottom:10px;" onclick="App.showRiskGuide()">📋 Risk Guide (Form 27)</button>';
+      '<div class="def-topbar">' +
+      '<button class="btn ghost small" onclick="App.showRiskGuide()">📋 Risk Guide (Form 27)</button>' +
+      '<button type="button" class="defbtn-lg" onclick="App.openDefect(-1)"><span class="defbtn">!</span>Report a defect</button>' +
+      '</div>' + this._defListHtml();
 
     const showTrainer = !!v.showTrainer;
     h += '<div class="card"><h2>Sign-on</h2><div class="grid2">' +
@@ -2932,8 +2956,9 @@ const App = {
     h += F.sections.map((sec, si) => {
       const on = !!acks[si];
       return '<div class="sec' + (si === 0 ? ' open' : '') + '" id="sec-' + si + '">' +
-        '<button type="button" class="sechead" onclick="App.toggleSec(' + si + ')">' +
+        '<div class="sechd"><button type="button" class="sechead" onclick="App.toggleSec(' + si + ')">' +
         '<span>' + esc(sec.step) + '</span>' + (on ? '<span class="oklabel">✓</span>' : '') + '<span class="chev">›</span></button>' +
+        this._defBtnHtml(si) + '</div>' +
         '<div class="secbody">' +
         sec.hazards.map(hz =>
           '<div class="hz"><div class="hzt">' + hz.hazard.map(esc).join('<br>') + '</div>' +
@@ -2966,6 +2991,168 @@ const App = {
       this._sigs[k] = new SigPad($('sig-' + k), () => { this.flight.sms.sigs[k] = this._sigs[k].data(); this.saveDraft(); });
       if (this.flight.sms.sigs[k]) this._sigs[k].load(this.flight.sms.sigs[k]);
     });
+  },
+  /* ================== DEFECT REPORT (red ! on every SWMS step) ==================
+     Opens the Maintenance Defect / Unserviceability Record (MDR) fields in a
+     pop-up without leaving the SWMS. Each report is saved as its own bundle
+     (formId 'form-mdr', kind 'defect') and goes through the normal send queue
+     -> /api/send -> PDF + email + OneDrive, like any other form. A short
+     summary is also kept on the SWMS (flight.defects) so it shows on the
+     SWMS PDF, and a GROUNDED defect stops the paperwork moving on to W&B. */
+  _defSwms() { return FORM_DEFS.find(d => d.id === this.flight.sms.formId) || {}; },
+  _defStep(si) { const F = this._defSwms(); return (si >= 0 && F.sections && F.sections[si]) ? F.sections[si].step : 'General (not tied to a step)'; },
+  _defBtnHtml(si) {
+    const n = (this.flight.defects || []).filter(d => d.si === si).length;
+    return '<button type="button" class="defbtn" title="Report a defect" aria-label="Report a defect — ' + esc(this._defStep(si)) + '" onclick="App.openDefect(' + si + ')">!' +
+      (n ? '<span class="defn">' + n + '</span>' : '') + '</button>';
+  },
+  _defListHtml() {
+    const list = this.flight.defects || [];
+    if (!list.length) return '';
+    const gr = list.some(d => d.grounded);
+    return '<div class="def-list"><div class="dl-t">⚠ ' + list.length + ' defect' + (list.length > 1 ? 's' : '') + ' reported on ' + esc(this.flight.callsign) +
+      (gr ? ' — AIRCRAFT GROUNDED' : '') + '</div>' +
+      list.map(d => '<div class="dl-i"><b>' + esc(d.systemAffected) + '</b>' +
+        (d.grounded ? ' · <b style="color:var(--red)">GROUNDED</b>' : d.deferred ? ' · Deferred' + (d.melReference ? ' (' + esc(d.melReference) + ')' : '') : '') +
+        ' · ' + esc(d.step) + '<br><span style="color:var(--mut)">' + esc(d.desc) + '</span></div>').join('') +
+      '<div class="sub" style="margin:6px 0 0;font-size:12px;">Each report is sent to the office straight away as its own form — see Sync status on the home screen.</div></div>';
+  },
+  openDefect(si) {
+    const sv = this.flight.sms.values;
+    let d = this._defDraft;
+    if (!d || d.flightId !== this.flight.id || d.si !== si) {
+      d = this._defDraft = { flightId: this.flight.id, si, pilotName: sv.pilotName || '', aircraftHours: '', systemAffected: '',
+        defectDescription: '', grounded: false, deferred: false, melReference: '', actionTaken: '', maintenanceProvider: '', notifiedAt: '', sig: null };
+    }
+    this._renderDefect();
+  },
+  _renderDefect() {
+    const d = this._defDraft, ns = nowStamp();
+    const SYSTEMS = ['Airframe','Engine / powerplant','Rotor system (main)','Rotor system (tail)','Avionics / communications','Instruments / avionics','Electrical system','Hydraulics','Fuel system','Transmission / gearbox','Landing gear / skids','Doors / windows','Emergency equipment','Other'];
+    const crew = (this.S && this.S.crew) ? this.S.crew : [];
+    const isOther = !!d._other || (d.pilotName && !crew.find(c => c.name === d.pilotName));
+    const pilotSel = '<option value="">— Select pilot —</option>' +
+      crew.map(c => '<option value="' + esc(c.name) + '"' + (!isOther && d.pilotName === c.name ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('') +
+      '<option value="__other__"' + (isOther ? ' selected' : '') + '>Other…</option>';
+    const tg = (field, label, strong) => '<div class="tgl-field"' + (d[field] ? ' style="background:var(--red-bg)"' : '') + '><span class="tgl-lab"' + (strong ? ' style="font-weight:800;' + (d[field] ? 'color:var(--red)' : '') + '"' : '') + '>' + label + '</span>' +
+      '<button type="button" class="tgl' + (d[field] ? ' on' : '') + '" onclick="App.defToggle(\'' + field + '\')"></button></div>';
+    Modal.show(
+      '<button class="modal-close" onclick="App.closeDefect()" aria-label="Close">×</button>' +
+      '<h3 style="color:var(--red);">⚠ Report a defect</h3>' +
+      '<p class="sub" style="margin:-6px 0 12px;"><b>' + esc(this.flight.callsign) + '</b> · ' + esc(this.flight.aircraftType || '') + ' · ' + esc(ns.date) + ' ' + ns.time +
+      '<br>Step: ' + esc(this._defStep(d.si)) + '</p>' +
+      (d.grounded ? '<div class="warn-banner">⚠ AIRCRAFT GROUNDED — NOT AIRWORTHY</div>' : '') +
+      '<div class="grid2">' +
+      '<div><label class="fl">Pilot name <span class="req">*</span></label><select id="def-pilot" onchange="App.defPilotPick()">' + pilotSel + '</select>' +
+      (isOther ? '<input type="text" id="def-pilotOther" style="margin-top:6px;" placeholder="Enter pilot name" value="' + esc(d.pilotName) + '">' : '') + '</div>' +
+      '<div><label class="fl">System affected <span class="req">*</span></label><select id="def-system"><option value="">— Select —</option>' +
+      SYSTEMS.map(o => '<option value="' + o + '"' + (d.systemAffected === o ? ' selected' : '') + '>' + o + '</option>').join('') + '</select></div>' +
+      '<div><label class="fl">Total aircraft hours at time of defect</label><input type="number" id="def-hours" min="0" step="0.1" inputmode="decimal" value="' + esc(d.aircraftHours) + '"></div>' +
+      '</div>' +
+      '<label class="fl">Defect description <span class="req">*</span></label>' +
+      '<textarea id="def-desc" rows="4" placeholder="What did you find? Where on the aircraft, and how bad…">' + esc(d.defectDescription) + '</textarea>' +
+      tg('grounded', 'AIRCRAFT GROUNDED (unairworthy — no flight permitted)', true) +
+      tg('deferred', 'Defect DEFERRED (MEL / CDL reference applicable)') +
+      (d.deferred ? '<label class="fl">MEL / CDL reference number</label><input type="text" id="def-mel" placeholder="e.g. MEL 27-1-1" value="' + esc(d.melReference) + '">' : '') +
+      '<label class="fl">Action taken / rectification notes</label>' +
+      '<textarea id="def-action" rows="2" placeholder="Action taken, work order raised, maintenance provider notified…">' + esc(d.actionTaken) + '</textarea>' +
+      '<div class="grid2">' +
+      '<div><label class="fl">Maintenance provider notified</label><input type="text" id="def-provider" placeholder="Company name or LAME" value="' + esc(d.maintenanceProvider) + '"></div>' +
+      '<div><label class="fl">Date/time notified</label><input type="datetime-local" id="def-notified" value="' + esc(d.notifiedAt) + '"></div>' +
+      '</div>' +
+      '<label class="fl">Pilot signature <span class="req">*</span></label>' +
+      '<div class="sigwrap" id="wrap-defSig"><canvas id="sig-def" style="height:150px;"></canvas></div>' +
+      '<div class="sigbar"><span class="hint">Sign with your finger</span><button class="btn ghost small" onclick="App._defPad.clear();App._defDraft.sig=null;">Clear / redo</button></div>' +
+      '<div class="btnrow"><button class="btn ghost" onclick="App.closeDefect()">Cancel</button>' +
+      '<button class="btn danger" onclick="App.submitDefect()">Send defect report</button></div>'
+    );
+    this._defPad = new SigPad($('sig-def'), () => { this._defDraft.sig = this._defPad.data(); });
+    if (d.sig) this._defPad.load(d.sig);
+    $('modal').oninput = () => { if ($('def-desc')) this._defRead(); };   // keep the draft if they tap outside the pop-up
+  },
+  _defRead() {
+    const d = this._defDraft; if (!d) return;
+    const val = id => ($(id) || {}).value;
+    const ps = val('def-pilot');
+    if (ps === '__other__') { d._other = true; d.pilotName = (val('def-pilotOther') || '').trim(); }
+    else if (ps != null) { d._other = false; d.pilotName = ps; }
+    d.systemAffected = val('def-system') || '';
+    d.aircraftHours = val('def-hours') || '';
+    d.defectDescription = val('def-desc') || '';
+    if ($('def-mel')) d.melReference = val('def-mel') || '';
+    d.actionTaken = val('def-action') || '';
+    d.maintenanceProvider = val('def-provider') || '';
+    d.notifiedAt = val('def-notified') || '';
+    if (this._defPad && !this._defPad.empty) d.sig = this._defPad.data();
+  },
+  defPilotPick() {
+    this._defRead();
+    const other = $('def-pilot').value === '__other__';
+    if (other) this._defDraft.pilotName = '';
+    this._renderDefect();
+    if (other) setTimeout(() => $('def-pilotOther') && $('def-pilotOther').focus(), 50);
+  },
+  defToggle(field) { this._defRead(); this._defDraft[field] = !this._defDraft[field]; this._renderDefect(); },
+  closeDefect() { this._defRead(); Modal.hide(); },   // draft kept — tapping the same ! again picks up where they left off
+  async submitDefect() {
+    this._defRead();
+    const d = this._defDraft;
+    if (!d.pilotName) return toast('Pilot name is required');
+    if (!d.systemAffected) return toast('System affected is required');
+    if (!d.defectDescription || d.defectDescription.trim().length < 5) return toast('Describe the defect');
+    if (!d.sig) return toast('Pilot signature is required');
+    const fl = this.flight, ns = nowStamp(), now = Date.now();
+    const MDR = FORM_DEFS.find(x => x.id === 'form-mdr') || { title: 'Maintenance Defect / Unserviceability Record', formNo: 'MDR' };
+    const SW = this._defSwms(), step = this._defStep(d.si);
+    const id = 'd_' + now;
+    const bundle = {
+      id, kind: 'defect', parentFlightId: fl.id,
+      createdAt: now, flightDate: ns.date, flightTime: ns.time,
+      aircraftId: fl.aircraftId, callsign: fl.callsign, aircraftType: fl.aircraftType,
+      bundleName: fl.callsign + '_' + ns.date + '_' + ns.time.replace(':', '') + '_DEFECT',
+      formName: MDR.title, formNo: MDR.formNo,
+      defectContext: { swmsForm: SW.title || '', swmsFormNo: SW.formNo || '', step },
+      sms: { formId: 'form-mdr', done: true, completedAt: now, acks: {}, sigs: { pilotSig: d.sig },
+        values: { pilotName: d.pilotName, reviewDate: ns.date, aircraftHours: d.aircraftHours, systemAffected: d.systemAffected,
+          defectDescription: d.defectDescription.trim(), grounded: !!d.grounded, deferred: !!d.deferred,
+          melReference: d.deferred ? d.melReference : '', actionTaken: d.actionTaken, maintenanceProvider: d.maintenanceProvider,
+          notifiedAt: d.notifiedAt, swmsForm: SW.title || '', swmsStep: step } },
+      wb: { kg: { pilot: 0, pax: 0, fuel: 0, baggage: 0 }, fuelL: 0, fuelMode: 'L', result: null, done: false },
+      pax: [], noPax: true, paxBriefAcks: {},
+      status: 'queued', queuedAt: now
+    };
+    this.flights.unshift(bundle);
+    await DB.put('flights', bundle);
+    fl.defects = fl.defects || [];
+    fl.defects.push({ id, si: d.si, step, systemAffected: d.systemAffected, grounded: !!d.grounded, deferred: !!d.deferred,
+      melReference: d.deferred ? d.melReference : '', desc: d.defectDescription.trim().slice(0, 160), pilotName: d.pilotName, at: now });
+    this._defDraft = null;
+    Modal.hide();
+    await this.saveDraftNow();
+    const y = window.scrollY;
+    this.renderSms();
+    if (d.si >= 0) { document.querySelectorAll('#sms-form-mount .sec').forEach(s => s.classList.remove('open')); const s = $('sec-' + d.si); if (s) s.classList.add('open'); }
+    window.scrollTo(0, y);
+    this.updatePill();
+    toast(d.grounded ? '⚠ Defect sent — aircraft marked GROUNDED' : (navigator.onLine ? '✓ Defect report sending to the office' : 'Defect saved — will send when back online'));
+    this.trySync();
+  },
+  openDefectBundle(f, fresh) {
+    const v = f.sms.values || {};
+    Modal.show(
+      '<h3 style="color:var(--red);">⚠ Defect report — ' + esc(f.callsign) + '</h3>' +
+      (v.grounded ? '<div class="warn-banner">⚠ AIRCRAFT GROUNDED — NOT AIRWORTHY</div>' : '') +
+      '<div class="kv"><div class="k">Status</div><div class="v">' + (f.status === 'sent' ? 'Sent ' + fmtDT(f.sentAt) : f.status === 'queued' ? 'Waiting to send' : esc(f.status) + (f.failNote ? ' · ' + esc(f.failNote) : '')) + '</div></div>' +
+      '<div class="kv"><div class="k">Reported</div><div class="v">' + fmtDT(f.createdAt) + ' by ' + esc(v.pilotName || '') + '</div></div>' +
+      '<div class="kv"><div class="k">Raised during</div><div class="v">' + esc((f.defectContext && f.defectContext.swmsFormNo) || '') + ' — ' + esc(v.swmsStep || '') + '</div></div>' +
+      '<div class="kv"><div class="k">System</div><div class="v">' + esc(v.systemAffected || '') + (v.aircraftHours ? ' · ' + esc(v.aircraftHours) + ' hrs' : '') + '</div></div>' +
+      '<div class="kv"><div class="k">Defect</div><div class="v" style="white-space:pre-wrap;">' + esc(v.defectDescription || '') + '</div></div>' +
+      (v.deferred ? '<div class="kv"><div class="k">Deferred</div><div class="v">MEL / CDL ' + esc(v.melReference || '—') + '</div></div>' : '') +
+      (v.actionTaken ? '<div class="kv"><div class="k">Action taken</div><div class="v" style="white-space:pre-wrap;">' + esc(v.actionTaken) + '</div></div>' : '') +
+      (v.maintenanceProvider ? '<div class="kv"><div class="k">Maint. notified</div><div class="v">' + esc(v.maintenanceProvider) + (v.notifiedAt ? ' · ' + esc(v.notifiedAt.replace('T', ' ')) : '') + '</div></div>' : '') +
+      (f.sms.sigs && f.sms.sigs.pilotSig ? '<div class="kv"><div class="k">Pilot signature</div><div class="v"><img src="' + f.sms.sigs.pilotSig + '" style="height:54px;border:1px solid var(--line);border-radius:6px;"></div></div>' : '') +
+      '<div class="btnrow"><button class="btn ghost small" onclick="Modal.hide()">Close</button></div>'
+    );
   },
   showRiskGuide() {
     Modal.show(
@@ -3403,6 +3590,14 @@ const App = {
     if (!this.flight.sms.sigs.pilotSig) miss.push('pilot signature');
     if (v.trainerName && !this.flight.sms.sigs.trainerSig) miss.push('trainer signature');
     if (miss.length) { toast('Required before continuing — ' + miss[0] + (miss.length > 1 ? ' (+' + (miss.length - 1) + ' more)' : '')); return; }
+    if ((this.flight.defects || []).some(d => d.grounded)) {
+      Modal.show('<h3 style="color:var(--red);">⚠ ' + esc(this.flight.callsign) + ' is grounded</h3>' +
+        '<p>A defect on this aircraft was reported as <b>GROUNDED — not airworthy</b>. This paperwork can\'t continue to weight &amp; balance until maintenance has dealt with it.</p>' +
+        '<p class="sub">The defect report has already gone to the office. If you\'re switching aircraft, use “Save &amp; exit” and start new paperwork for the other helicopter.</p>' +
+        '<div class="btnrow"><button class="btn ghost" onclick="Modal.hide()">Back to SWMS</button>' +
+        '<button class="btn" onclick="Modal.hide();App.exitFlight()">Save &amp; exit</button></div>');
+      return;
+    }
     this.flight.sms.done = true;
     this.flight.sms.completedAt = Date.now();
     this.saveDraftNow();
@@ -3821,6 +4016,7 @@ const App = {
   openBundle(id, fresh) {
     const f = this.flights.find(x => x.id === id);
     if (!f) return;
+    if (f.kind === 'defect') return this.openDefectBundle(f, fresh);
     const month = f.bundleName ? f.bundleName.split('_')[1].slice(0, 7) : '';
     Modal.show(
       '<h3>' + (fresh ? 'Paperwork complete — ' : 'Bundle — ' ) + esc(f.bundleName) + '.pdf</h3>' +
